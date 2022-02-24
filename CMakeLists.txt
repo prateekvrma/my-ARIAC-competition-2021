@@ -122,7 +122,7 @@ add_library(agv_lib src/agv.cpp)
 add_library(sensors_lib src/sensors.cpp)
 
 ## Declare a C++ executable
-add_executable(${PROJECT_NAME}_test_agv_node src/main.cpp)
+add_executable(${PROJECT_NAME}_test_agv_node src/test_agv.cpp)
 target_link_libraries(${PROJECT_NAME}_test_agv_node
   agv_lib
   ${catkin_LIBRARIES}
