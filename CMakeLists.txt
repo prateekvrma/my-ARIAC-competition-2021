@@ -119,6 +119,7 @@ catkin_package(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_library(agv_lib src/agv.cpp)
+add_library(sensors_lib src/sensors.cpp)
 
 ## Declare a C++ executable
 add_executable(${PROJECT_NAME}_test_agv_node src/main.cpp)
@@ -127,6 +128,11 @@ target_link_libraries(${PROJECT_NAME}_test_agv_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(${PROJECT_NAME}_test_sensors_node src/test_sensors.cpp)
+target_link_libraries(${PROJECT_NAME}_test_sensors_node
+  sensors_lib
+  ${catkin_LIBRARIES}
+)
 #############
 ## Install ##
 #############

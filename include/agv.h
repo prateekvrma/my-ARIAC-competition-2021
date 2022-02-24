@@ -2,6 +2,7 @@
 #define AGV_H
 
 #include <string>
+
 #include <ros/ros.h>
 
 class AGV {
@@ -11,8 +12,9 @@ class AGV {
     void submit_shipment(const std::string &shipment_type,
                          const std::string &station_id); 
 
-  private:
+    void to_as(const std::string &station_id); 
 
+  private:
     ros::NodeHandle m_nh; 
     std::string m_id; 
 }; 
