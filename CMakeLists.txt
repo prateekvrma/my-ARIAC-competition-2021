@@ -120,6 +120,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_library(agv_lib src/agv.cpp)
 add_library(sensors_lib src/sensors.cpp)
+add_library(factory_manager_lib src/factory_manager.cpp)
 
 ## Declare a C++ executable
 add_executable(${PROJECT_NAME}_test_agv_node src/test_agv.cpp)
@@ -133,6 +134,13 @@ target_link_libraries(${PROJECT_NAME}_test_sensors_node
   sensors_lib
   ${catkin_LIBRARIES}
 )
+
+add_executable(${PROJECT_NAME}_competitor_node src/main.cpp)
+target_link_libraries(${PROJECT_NAME}_competitor_node
+  factory_manager_lib
+  ${catkin_LIBRARIES}
+)
+
 #############
 ## Install ##
 #############
