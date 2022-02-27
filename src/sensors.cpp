@@ -60,10 +60,17 @@ void LaserProfiler::sensor_callback(const sensor_msgs::LaserScan::ConstPtr & msg
 BreakBeam::BreakBeam(ros::NodeHandle* nodehandle, const std::string &id): 
   Sensors(nodehandle, id){
     m_sensor_subscriber = m_nh.subscribe("/ariac/" + id, 10, &BreakBeam::sensor_callback, this); 
+    m_sensor_change_subscriber = m_nh.subscribe("/ariac/" + id + "_change", 10, &BreakBeam::sensor_change_callback, this); 
 }
 
 void BreakBeam::sensor_callback(const nist_gear::Proximity::ConstPtr & msg){
     if (msg->object_detected) {  // If there is an object in proximity.
       ROS_INFO("%s triggered.", m_id.c_str());
+    }
+}
+
+void BreakBeam::sensor_change_callback(const nist_gear::Proximity::ConstPtr & msg){
+    if (msg->object_detected) {  // If there is an object in proximity.
+      ROS_INFO("%s triggered.", (m_id + "_change").c_str());
     }
 }

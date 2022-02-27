@@ -50,6 +50,9 @@ class BreakBeam: private Sensors{
   public:
     BreakBeam(ros::NodeHandle* nodehandle, const std::string &id); 
     void sensor_callback(const nist_gear::Proximity::ConstPtr & msg); 
+    void sensor_change_callback(const nist_gear::Proximity::ConstPtr & msg); 
+  private:
+    ros::Subscriber m_sensor_change_subscriber; 
 }; 
 
 
