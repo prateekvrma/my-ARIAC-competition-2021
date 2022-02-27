@@ -126,6 +126,7 @@ add_library(factory_manager_lib src/factory_manager.cpp)
 ## Declare a C++ executable
 add_executable(${PROJECT_NAME}_test_agv_node src/test/test_agv.cpp)
 target_link_libraries(${PROJECT_NAME}_test_agv_node
+  sensors_lib
   agv_lib
   ${catkin_LIBRARIES}
 )

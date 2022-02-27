@@ -7,9 +7,12 @@ using AGVToAssem = nist_gear::AGVToAssemblyStation;
 
 AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_nh{*nodehandle}, 
-  m_id{id}{
+  m_id{id}, 
+  m_quality_control_sensor(nodehandle,
+                           m_quality_control_sensor_id += id.back()) {  
     m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
     m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
+
 }
 
 void AGV::state_callback(const std_msgs::String::ConstPtr &msg){

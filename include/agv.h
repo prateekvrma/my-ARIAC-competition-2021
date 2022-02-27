@@ -7,6 +7,8 @@
 
 #include <std_msgs/String.h>
 
+#include "sensors.h"
+
 class AGV {
   public: 
     AGV(ros::NodeHandle* nodehandle, const std::string &id); 
@@ -27,6 +29,9 @@ class AGV {
 
     std::string m_state; 
     std::string m_station; 
+
+    std::string m_quality_control_sensor_id = "quality_control_sensor_"; 
+    LogicalCamera m_quality_control_sensor; 
 
 }; 
 
