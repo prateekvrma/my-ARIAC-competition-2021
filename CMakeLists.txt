@@ -124,19 +124,19 @@ add_library(station_lib src/station.cpp)
 add_library(factory_manager_lib src/factory_manager.cpp)
 
 ## Declare a C++ executable
-add_executable(${PROJECT_NAME}_test_agv_node src/test_agv.cpp)
+add_executable(${PROJECT_NAME}_test_agv_node src/test/test_agv.cpp)
 target_link_libraries(${PROJECT_NAME}_test_agv_node
   agv_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_test_sensors_node src/test_sensors.cpp)
+add_executable(${PROJECT_NAME}_test_sensors_node src/test/test_sensors.cpp)
 target_link_libraries(${PROJECT_NAME}_test_sensors_node
   sensors_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_test_station_node src/test_station.cpp)
+add_executable(${PROJECT_NAME}_test_station_node src/test/test_station.cpp)
 target_link_libraries(${PROJECT_NAME}_test_station_node
   station_lib
   ${catkin_LIBRARIES}
