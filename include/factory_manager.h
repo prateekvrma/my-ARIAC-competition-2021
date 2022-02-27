@@ -2,12 +2,11 @@
 #define FACTORY_MANAGER_H
 
 #include <vector>
+#include <memory>
 
 #include <ros/ros.h>
 
 #include <nist_gear/Order.h>
-
-#include "order_info.h"
 
 class FactoryManager{
   public:
@@ -17,10 +16,15 @@ class FactoryManager{
     void start_competition(); 
     void end_competition(); 
 
+    void plan(); 
+
   private: 
+    //void assign_kitting_task();
+    //void assign_assembly_task();
+
     ros::NodeHandle m_nh; 
     ros::Subscriber m_order_subscriber;
-    std::vector<Order> m_orders; 
+    std::vector<std::unique_ptr<nist_gear::Order>> m_orders; 
 }; 
 
 #endif 

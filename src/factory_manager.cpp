@@ -11,42 +11,8 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
 
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr & msg){
 
-  Order order{};
-  order.order_id = msg->order_id; 
+  m_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
-  for(auto &shipment: msg->kitting_shipments){
-    std::vector<Product> products; 
-    for(auto &product: shipment.products){
-      products.emplace_back(product.type, product.pose); 
-    }
-
-    ROS_INFO("%s", shipment.shipment_type.c_str());
-    ROS_INFO("%s", shipment.agv_id.c_str());
-    ROS_INFO("%s", shipment.station_id.c_str());
-
-    order.kitting_shipments.emplace_back(shipment.shipment_type, 
-                                         shipment.agv_id,
-                                         shipment.station_id, 
-                                         products); 
-  }
-
-  for(auto &shipment: msg->assembly_shipments){
-    std::vector<Product> products; 
-    for(auto &product: shipment.products){
-      products.emplace_back(product.type, product.pose); 
-    }
-
-    ROS_INFO("%s", shipment.shipment_type.c_str());
-    ROS_INFO("%s", shipment.station_id.c_str());
-
-    std::string agv = "None"; 
-    order.assembly_shipments.emplace_back(shipment.shipment_type, 
-                                          agv, 
-                                          shipment.station_id, 
-                                          products); 
-  }
-
-  m_orders.push_back(std::move(order)); 
 }
 
 void FactoryManager::start_competition(){
@@ -93,4 +59,46 @@ void FactoryManager::end_competition(){
     ROS_ERROR("Failed to call %s", service_name.c_str()); 
   }
 
+} 
+
+void FactoryManager::plan(){
+  ROS_INFO_STREAM("vec size: " << m_orders.size()); 
+
+  for(auto &order: m_orders){
+    for(auto &shipment: order->kitting_shipments){
+      ROS_INFO("%s", shipment.shipment_type.c_str());
+      ROS_INFO("%s", shipment.agv_id.c_str());
+      ROS_INFO("%s", shipment.station_id.c_str());
+    }
+
+    for(auto &shipment: order->assembly_shipments){
+      ROS_INFO("%s", shipment.shipment_type.c_str());
+      ROS_INFO("%s", shipment.station_id.c_str());
+    }
+  }
+
 }
+
+// void FactoryManager::assign_kitting_task(Shipment &shipment){
+//   std::string topic_name = "/factory_manager/kitting_task" 
+//
+//   static auto publisher = m_nh.advertise<nist_gear::KittingShipment>(topic_name, 10); 
+//
+//   nist_gear::KittingShipment msg; 
+//   msg.shipment_type = shipment.shipment_type; 
+//   msg.agv_id = shipment.agv; 
+//   msg.station_id = shipment.station; 
+//
+//   nist_gear::
+//   for(auto &product: shipment.products){
+//
+//     msg
+//   }
+//
+// }
+//
+// void FactoryManager::assign_assembly_task(){
+//
+// }
+//
+//
