@@ -8,7 +8,7 @@ This score is depend on the used resources, finish time, success orders,  etc.
 More info are provided at the ARIAC github page.   
 https://github.com/usnistgov/ARIAC  
 
-# Install
+## Install
 1. Install the ARIAC environment  
 https://github.com/usnistgov/ARIAC/blob/master/wiki/tutorials/installation.md  
 Follow all the steps except cloning the modified versin of ARIAC instead.  
@@ -27,7 +27,7 @@ git clone https://github.com/longhongc/my-ARIAC-competition-2021.git
 catkin_make or cakin build
 ```
 
-# File Structure
+## File Structure
 ```
 ├── CMakeLists.txt  
 ├── README.md  
@@ -61,7 +61,7 @@ catkin_make or cakin build
         ├── test_sensors.cpp  
         └── test_station.cpp
 ```
-# Run
+## Run
 Start ariac simulation environment
 ```
 roslaunch nist_gear sample_environment.launch
