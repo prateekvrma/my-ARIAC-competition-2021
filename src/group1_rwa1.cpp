@@ -25,12 +25,15 @@ int main(int argc, char **argv){
     if (competition_state=="init"){
       group1.start_competition(); 
 
-      while(not group1.work_done()){
+      do{
         auto success = group1.get_order(); 
         if(success){
           group1.plan(); 
-        } 
+        }
       }
+      while(not group1.work_done()); 
+         
+      ros::Duration(5).sleep(); 
       group1.end_competition(); 
       ros::Duration(1).sleep(); 
     } 

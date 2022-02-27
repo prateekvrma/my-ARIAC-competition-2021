@@ -13,7 +13,15 @@ int main(int argc, char **argv){
 
   Station as2 = Station(&nh, "as2"); 
 
-  as2.plan(); 
+  while(ros::ok()){
+    auto success = as2.get_order(); 
+    if(success){
+      as2.plan(); 
+    }else{
+      ros::shutdown(); 
+    }
+  }
+
 
   return 0; 
 }

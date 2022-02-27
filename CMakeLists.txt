@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   std_srvs
   trajectory_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -50,11 +51,10 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+  FILES
+  Busy.msg
+)
 
 ## Generate services in the 'srv' folder
 # add_service_files(
@@ -71,10 +71,11 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   sensor_msgs#   trajectory_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  #sensor_msgs#   trajectory_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -125,6 +126,7 @@ add_library(factory_manager_lib src/factory_manager.cpp)
 
 ## Declare a C++ executable
 add_executable(${PROJECT_NAME}_test_agv_node src/test/test_agv.cpp)
+add_dependencies(${PROJECT_NAME}_test_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test_agv_node
   sensors_lib
   agv_lib
@@ -132,24 +134,28 @@ target_link_libraries(${PROJECT_NAME}_test_agv_node
 )
 
 add_executable(${PROJECT_NAME}_test_sensors_node src/test/test_sensors.cpp)
+add_dependencies(${PROJECT_NAME}_test_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test_sensors_node
   sensors_lib
   ${catkin_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_test_station_node src/test/test_station.cpp)
+add_dependencies(${PROJECT_NAME}_test_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test_station_node
   station_lib
   ${catkin_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_node src/group1_rwa1.cpp)
+add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node
   factory_manager_lib
   ${catkin_LIBRARIES}
 )
 
 add_executable(${PROJECT_NAME}_competitor_node src/main.cpp)
+add_dependencies(${PROJECT_NAME}_competitor_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_competitor_node
   factory_manager_lib
   ${catkin_LIBRARIES}

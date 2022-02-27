@@ -1,7 +1,9 @@
 #include "agv.h"
 
+
 #include <std_srvs/Trigger.h>
 #include <nist_gear/AGVToAssemblyStation.h>
+#include <my_ariac/Busy.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -13,7 +15,8 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
   m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
   m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
-
+  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 10); 
+  m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &AGV::competition_state_callback, this); 
 }
 
 void AGV::state_callback(const std_msgs::String::ConstPtr &msg){
@@ -37,18 +40,42 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr &msg){
   }
 }
 
-void AGV::plan(){
+
+void AGV::competition_state_callback(const std_msgs::String::ConstPtr &msg){
+  m_competition_state = msg->data; 
+}
+
+void AGV::publish_busy_state(){
+  my_ariac::Busy msg; 
+  msg.id = m_id; 
+  msg.state = not m_tasks.empty(); 
+  m_busy_publisher.publish(msg); 
+}
+
+bool AGV::get_order(){
+  ros::Rate wait_rate(1); 
   while(m_tasks.empty() && ros::ok()){
     ROS_INFO_THROTTLE(1, "Waiting for kitting task.");
-    ros::spinOnce(); 
-  }
 
-  // add lock
+    this->publish_busy_state(); 
+    if(m_competition_state=="done"){
+      return false; 
+    }
+    ros::spinOnce(); 
+    wait_rate.sleep(); 
+  }
+  this->publish_busy_state(); 
+  return true; 
+}
+
+void AGV::plan(){
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
   for(auto &task_ptr: m_tasks){
     this->execute_tasks(task_ptr.get()); 
   }
+
+  m_tasks.clear(); 
 }
 
 void AGV::execute_tasks(const nist_gear::KittingShipment *task_ptr){

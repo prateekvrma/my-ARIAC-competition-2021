@@ -9,11 +9,13 @@
 #include <ros/ros.h>
 
 #include <nist_gear/Order.h>
+#include <my_ariac/Busy.h>
 
 class FactoryManager{
   public:
     FactoryManager(ros::NodeHandle* nodehandle); 
     void order_callback(const nist_gear::Order::ConstPtr & msg); 
+    void busy_callback(const my_ariac::Busy & msg); 
 
     void start_competition(); 
     void end_competition(); 
@@ -38,7 +40,7 @@ class FactoryManager{
     ros::Publisher m_kitting_publisher; 
     ros::Publisher m_assembly_publisher; 
 
-    ros::Subscriber m_check_busy_subscriber;
+    ros::Subscriber m_busy_subscriber;
     std::map<std::string, bool> m_busy_state; 
 
 }; 

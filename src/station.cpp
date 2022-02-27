@@ -1,6 +1,7 @@
 #include "station.h"
 
 #include <nist_gear/AssemblyStationSubmitShipment.h>
+#include <my_ariac/Busy.h>
 
 using AssemSubmit = nist_gear::AssemblyStationSubmitShipment; 
 
@@ -8,6 +9,8 @@ Station::Station(ros::NodeHandle* nodehandle, const std::string &id):
   m_nh{*nodehandle}, 
   m_id{id}{
   m_task_subscriber = m_nh.subscribe("/factory_manager/assembly_task", 10, &Station::task_callback, this); 
+  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 50); 
+  m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &Station::competition_state_callback, this); 
 }
 
 void Station::task_callback(const nist_gear::AssemblyShipment::ConstPtr &msg){
@@ -18,18 +21,41 @@ void Station::task_callback(const nist_gear::AssemblyShipment::ConstPtr &msg){
   }
 }
 
-void Station::plan(){
+void Station::competition_state_callback(const std_msgs::String::ConstPtr &msg){
+  m_competition_state = msg->data; 
+}
+
+void Station::publish_busy_state(){
+    my_ariac::Busy msg; 
+    msg.id = m_id; 
+    msg.state = not m_tasks.empty(); 
+    m_busy_publisher.publish(msg); 
+}
+
+bool Station::get_order(){
+  ros::Rate wait_rate(1); 
   while(m_tasks.empty() && ros::ok()){
     ROS_INFO_THROTTLE(1, "Waiting for assembly task.");
-    ros::spinOnce(); 
-  }
 
-  // add lock
+    this->publish_busy_state(); 
+    if(m_competition_state=="done"){
+      return false; 
+    }
+
+    ros::spinOnce(); 
+    wait_rate.sleep(); 
+  }
+  this->publish_busy_state(); 
+}
+
+void Station::plan(){
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
   for(auto &task_ptr: m_tasks){
     this->execute_tasks(task_ptr.get()); 
   }
+
+  m_tasks.clear(); 
 }
 
 void Station::execute_tasks(const nist_gear::AssemblyShipment *task_ptr){

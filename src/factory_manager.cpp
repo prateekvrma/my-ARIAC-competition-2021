@@ -6,13 +6,14 @@
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
 
-
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}{
   m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &FactoryManager::order_callback, this); 
 
   m_kitting_publisher = m_nh.advertise<nist_gear::KittingShipment>("/factory_manager/kitting_task", 10); 
   m_assembly_publisher = m_nh.advertise<nist_gear::AssemblyShipment>("/factory_manager/assembly_task", 10); 
+
+  m_busy_subscriber = m_nh.subscribe("/worker/busy", 50, &FactoryManager::busy_callback, this); 
 
   for(auto &worker: m_workers){
     m_busy_state[worker] = false; 
@@ -24,6 +25,10 @@ void FactoryManager::order_callback(const nist_gear::Order::ConstPtr & msg){
 
   m_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
+}
+
+void FactoryManager::busy_callback(const my_ariac::Busy & msg){
+  m_busy_state[msg.id] = msg.state; 
 }
 
 void FactoryManager::start_competition(){
@@ -124,7 +129,7 @@ void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment &shipment)
 bool FactoryManager::work_done(){
   for(const auto &worker_busy_state: m_busy_state){
     if(worker_busy_state.second){
-      ROS_INFO("Waiting for workers...");
+      ROS_INFO("Waiting for worker: %s", worker_busy_state.first.c_str());
       return false; 
     }
   }
