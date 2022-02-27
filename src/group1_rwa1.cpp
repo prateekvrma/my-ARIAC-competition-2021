@@ -25,19 +25,14 @@ int main(int argc, char **argv){
     if (competition_state=="init"){
       group1.start_competition(); 
 
-      group1.plan(); 
-
-      ROS_INFO("Wait for a 10s..."); 
-      ros::Rate wait_rate(1); 
-      int count = 10; 
-      while(count --> 0){
-        ROS_INFO("Count down: %d", count); 
-        ros::spinOnce(); 
-        wait_rate.sleep(); 
+      while(not group1.work_done()){
+        auto success = group1.get_order(); 
+        if(success){
+          group1.plan(); 
+        } 
       }
-
       group1.end_competition(); 
-
+      ros::Duration(1).sleep(); 
     } 
     else if (competition_state=="done"){
       ros::shutdown(); 

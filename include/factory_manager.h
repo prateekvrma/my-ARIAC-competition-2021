@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <map>
 
 #include <ros/ros.h>
 
@@ -17,11 +18,17 @@ class FactoryManager{
     void start_competition(); 
     void end_competition(); 
 
+    bool get_order();
     void plan(); 
+
+    bool work_done(); 
 
   private: 
     void assign_kitting_task(nist_gear::KittingShipment &shipment);
     void assign_assembly_task(nist_gear::AssemblyShipment &shipment);
+
+   const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
+                                            "as1", "as2", "as3", "as4"}; 
 
     ros::NodeHandle m_nh; 
     ros::Subscriber m_order_subscriber;
@@ -30,6 +37,10 @@ class FactoryManager{
 
     ros::Publisher m_kitting_publisher; 
     ros::Publisher m_assembly_publisher; 
+
+    ros::Subscriber m_check_busy_subscriber;
+    std::map<std::string, bool> m_busy_state; 
+
 }; 
 
 #endif 

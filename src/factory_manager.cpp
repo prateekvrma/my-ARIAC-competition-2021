@@ -14,7 +14,9 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_kitting_publisher = m_nh.advertise<nist_gear::KittingShipment>("/factory_manager/kitting_task", 10); 
   m_assembly_publisher = m_nh.advertise<nist_gear::AssemblyShipment>("/factory_manager/assembly_task", 10); 
 
-
+  for(auto &worker: m_workers){
+    m_busy_state[worker] = false; 
+  }
 }
 
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr & msg){
@@ -70,12 +72,23 @@ void FactoryManager::end_competition(){
 
 } 
 
-void FactoryManager::plan(){
+bool FactoryManager::get_order(){
+  ros::Rate wait_rate(1); 
+  int count = 10; 
   while(m_orders.empty() && ros::ok()){
-    ROS_INFO_THROTTLE(1, "Waiting for orders.");
     ros::spinOnce(); 
+    ROS_INFO("Waiting orders for %ds...", count);
+    if(count < 0){
+      ROS_INFO("No order.");
+      return false; 
+    }
+    count--; 
+    wait_rate.sleep(); 
   }
+  return true; 
+}
 
+void FactoryManager::plan(){
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   ROS_INFO_STREAM("Orders: " << m_orders.size()); 
 
@@ -108,4 +121,13 @@ void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment &shipment)
   m_assembly_publisher.publish(msg); 
 }
 
+bool FactoryManager::work_done(){
+  for(const auto &worker_busy_state: m_busy_state){
+    if(worker_busy_state.second){
+      ROS_INFO("Waiting for workers...");
+      return false; 
+    }
+  }
+  return true; 
+}
 
