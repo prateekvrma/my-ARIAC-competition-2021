@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="my_ariac" 
+        type="my_ariac_test_station_node" 
+        name="my_as2" output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_node" 
+        name="my_agv2" output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_test_agv_node" 
+        name="group1_rwa1" output="screen"></node>
+</launch>
