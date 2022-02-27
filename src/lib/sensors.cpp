@@ -14,8 +14,8 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id)
 
 void LogicalCamera::sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr & msg){
   //std::cout << m_id << std::endl; 
-  //ROS_INFO_THROTTLE(1, "%s: %d objects.", m_id.c_str(), (int)msg->models.size());
-  ROS_INFO("%s: %d objects.", m_id.c_str(), (int)msg->models.size()); 
+  ROS_INFO_THROTTLE(3, "%s: %d objects.", m_id.c_str(), (int)msg->models.size());
+  //ROS_INFO("%s: %d objects.", m_id.c_str(), (int)msg->models.size()); 
 }
 
 DepthCamera::DepthCamera(ros::NodeHandle* nodehandle, const std::string &id):

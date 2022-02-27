@@ -1,14 +1,59 @@
 <?xml version="1.0"?>
 <launch>
+
+  <!-- 4 stations -->
   <node pkg="my_ariac" 
         type="my_ariac_test_station_node" 
-        name="my_as2" output="screen"></node>
+        name="my_as1_node"
+        args="as1"
+        output="screen"></node>
 
   <node pkg="my_ariac" 
-        type="my_ariac_node" 
-        name="my_agv2" output="screen"></node>
+        type="my_ariac_test_station_node" 
+        name="my_as2_node"
+        args="as2"
+        output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_test_station_node" 
+        name="my_as3_node"
+        args="as3"
+        output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_test_station_node" 
+        name="my_as4_node"
+        args="as4"
+        output="screen"></node>
+
+  <!-- 4 agvs -->
+  <node pkg="my_ariac" 
+        type="my_ariac_test_agv_node" 
+        name="my_agv1_node"
+        args="agv1"
+        output="screen"></node>
 
   <node pkg="my_ariac" 
         type="my_ariac_test_agv_node" 
+        name="my_agv2_node"
+        args="agv2"
+        output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_test_agv_node" 
+        name="my_agv3_node"
+        args="agv3"
+        output="screen"></node>
+
+  <node pkg="my_ariac" 
+        type="my_ariac_test_agv_node" 
+        name="my_agv4_node"
+        args="agv4"
+        output="screen"></node>
+
+  <!--  factory manager -->
+  <node pkg="my_ariac" 
+        type="my_ariac_node" 
         name="group1_rwa1" output="screen"></node>
+
 </launch>

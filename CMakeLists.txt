@@ -119,45 +119,40 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(agv_lib src/agv.cpp)
-add_library(sensors_lib src/sensors.cpp)
-add_library(station_lib src/station.cpp)
-add_library(factory_manager_lib src/factory_manager.cpp)
+add_library(agv_lib src/lib/agv.cpp)
+add_library(sensors_lib src/lib/sensors.cpp)
+add_library(station_lib src/lib/station.cpp)
+add_library(factory_manager_lib src/lib/factory_manager.cpp)
 
 ## Declare a C++ executable
-add_executable(${PROJECT_NAME}_test_agv_node src/test/test_agv.cpp)
-add_dependencies(${PROJECT_NAME}_test_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_test_agv_node
+add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
+add_dependencies(${PROJECT_NAME}_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_agv_node
   sensors_lib
   agv_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_test_sensors_node src/test/test_sensors.cpp)
-add_dependencies(${PROJECT_NAME}_test_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_test_sensors_node
+add_executable(${PROJECT_NAME}_sensors_node src/nodes/sensors_node.cpp)
+add_dependencies(${PROJECT_NAME}_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_sensors_node
   sensors_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_test_station_node src/test/test_station.cpp)
-add_dependencies(${PROJECT_NAME}_test_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_test_station_node
+add_executable(${PROJECT_NAME}_station_node src/nodes/station_node.cpp)
+add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_station_node
   station_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_node src/group1_rwa1.cpp)
+add_executable(${PROJECT_NAME}_node src/nodes/group1_rwa1.cpp)
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node
   factory_manager_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_competitor_node src/main.cpp)
-add_dependencies(${PROJECT_NAME}_competitor_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_competitor_node
-  factory_manager_lib
-  ${catkin_LIBRARIES}
-)
+
 
