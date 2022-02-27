@@ -18,6 +18,7 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
 }
 
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr & msg){
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
   m_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
@@ -70,6 +71,12 @@ void FactoryManager::end_competition(){
 } 
 
 void FactoryManager::plan(){
+  while(m_orders.empty() && ros::ok()){
+    ROS_INFO_THROTTLE(1, "Waiting for orders.");
+    ros::spinOnce(); 
+  }
+
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   ROS_INFO_STREAM("Orders: " << m_orders.size()); 
 
   for(auto &order: m_orders){
@@ -82,6 +89,7 @@ void FactoryManager::plan(){
     }
   }
 
+  m_orders.clear(); 
 }
 
 void FactoryManager::assign_kitting_task(nist_gear::KittingShipment &shipment){

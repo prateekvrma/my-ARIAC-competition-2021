@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #include <ros/ros.h>
 
@@ -25,6 +26,7 @@ class FactoryManager{
     ros::NodeHandle m_nh; 
     ros::Subscriber m_order_subscriber;
     std::vector<std::unique_ptr<nist_gear::Order>> m_orders; 
+    std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 
     ros::Publisher m_kitting_publisher; 
     ros::Publisher m_assembly_publisher; 

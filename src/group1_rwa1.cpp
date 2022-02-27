@@ -25,6 +25,8 @@ int main(int argc, char **argv){
     if (competition_state=="init"){
       group1.start_competition(); 
 
+      group1.plan(); 
+
       ROS_INFO("Wait for a 10s..."); 
       ros::Rate wait_rate(1); 
       int count = 10; 
@@ -34,8 +36,6 @@ int main(int argc, char **argv){
         wait_rate.sleep(); 
       }
 
-      group1.plan(); 
-      ros::Duration(5).sleep(); 
       group1.end_competition(); 
 
     } 
