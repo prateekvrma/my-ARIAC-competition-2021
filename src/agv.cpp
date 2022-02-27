@@ -10,8 +10,9 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_id{id}, 
   m_quality_control_sensor(nodehandle,
                            m_quality_control_sensor_id += id.back()) {  
-    m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
-    m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
+  m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
+  m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
+  m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
 
 }
 
@@ -27,6 +28,34 @@ void AGV::station_callback(const std_msgs::String::ConstPtr &msg){
   m_station = msg->data; 
   ROS_INFO("%s", m_station.c_str()); 
 }
+
+void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr &msg){
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
+  if(msg->agv_id == m_id){
+    m_tasks.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
+  }
+}
+
+void AGV::plan(){
+  while(m_tasks.empty() && ros::ok()){
+    ROS_INFO_THROTTLE(1, "Waiting for kitting task.");
+    ros::spinOnce(); 
+  }
+
+  // add lock
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
+  for(auto &task_ptr: m_tasks){
+    this->execute_tasks(task_ptr.get()); 
+  }
+}
+
+void AGV::execute_tasks(const nist_gear::KittingShipment *task_ptr){
+    this->submit_shipment(task_ptr->shipment_type,
+                          task_ptr->station_id); 
+}
+
 
 void AGV::submit_shipment(const std::string &shipment_type,  
                           const std::string &station_id){

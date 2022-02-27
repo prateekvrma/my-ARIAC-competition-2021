@@ -2,10 +2,14 @@
 #define AGV_H
 
 #include <string>
+#include <vector>
+#include <memory>
+#include <mutex>
 
 #include <ros/ros.h>
 
 #include <std_msgs/String.h>
+#include <nist_gear/KittingShipment.h>
 
 #include "sensors.h"
 
@@ -15,6 +19,9 @@ class AGV {
 
     void state_callback(const std_msgs::String::ConstPtr & msg);
     void station_callback(const std_msgs::String::ConstPtr & msg);
+    void task_callback(const nist_gear::KittingShipment::ConstPtr &msg); 
+    void plan();
+    void execute_tasks(const nist_gear::KittingShipment *task_ptr);
 
     void submit_shipment(const std::string &shipment_type,
                          const std::string &station_id); 
@@ -32,6 +39,10 @@ class AGV {
 
     std::string m_quality_control_sensor_id = "quality_control_sensor_"; 
     LogicalCamera m_quality_control_sensor; 
+
+    ros::Subscriber m_task_subscriber; 
+    std::vector<std::unique_ptr<nist_gear::KittingShipment>> m_tasks; 
+    std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 
 }; 
 

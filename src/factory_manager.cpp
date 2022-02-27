@@ -3,10 +3,18 @@
 #include <string>
 
 #include <std_srvs/Trigger.h>
+#include <nist_gear/KittingShipment.h>
+#include <nist_gear/AssemblyShipment.h>
+
 
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}{
   m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &FactoryManager::order_callback, this); 
+
+  m_kitting_publisher = m_nh.advertise<nist_gear::KittingShipment>("/factory_manager/kitting_task", 10); 
+  m_assembly_publisher = m_nh.advertise<nist_gear::AssemblyShipment>("/factory_manager/assembly_task", 10); 
+
+
 }
 
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr & msg){
@@ -62,43 +70,34 @@ void FactoryManager::end_competition(){
 } 
 
 void FactoryManager::plan(){
-  ROS_INFO_STREAM("vec size: " << m_orders.size()); 
+  ROS_INFO_STREAM("Orders: " << m_orders.size()); 
 
   for(auto &order: m_orders){
     for(auto &shipment: order->kitting_shipments){
-      ROS_INFO("%s", shipment.shipment_type.c_str());
-      ROS_INFO("%s", shipment.agv_id.c_str());
-      ROS_INFO("%s", shipment.station_id.c_str());
+      this->assign_kitting_task(shipment); 
     }
 
     for(auto &shipment: order->assembly_shipments){
-      ROS_INFO("%s", shipment.shipment_type.c_str());
-      ROS_INFO("%s", shipment.station_id.c_str());
+      this->assign_assembly_task(shipment); 
     }
   }
 
 }
 
-// void FactoryManager::assign_kitting_task(Shipment &shipment){
-//   std::string topic_name = "/factory_manager/kitting_task" 
-//
-//   static auto publisher = m_nh.advertise<nist_gear::KittingShipment>(topic_name, 10); 
-//
-//   nist_gear::KittingShipment msg; 
-//   msg.shipment_type = shipment.shipment_type; 
-//   msg.agv_id = shipment.agv; 
-//   msg.station_id = shipment.station; 
-//
-//   nist_gear::
-//   for(auto &product: shipment.products){
-//
-//     msg
-//   }
-//
-// }
-//
-// void FactoryManager::assign_assembly_task(){
-//
-// }
-//
-//
+void FactoryManager::assign_kitting_task(nist_gear::KittingShipment &shipment){
+  nist_gear::KittingShipment msg; 
+  msg = shipment; 
+
+  ROS_INFO("kitting task"); 
+  m_kitting_publisher.publish(msg); 
+}
+
+void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment &shipment){
+  nist_gear::AssemblyShipment msg; 
+  msg = shipment; 
+
+  ROS_INFO("assembly task"); 
+  m_assembly_publisher.publish(msg); 
+}
+
+

@@ -19,12 +19,15 @@ class FactoryManager{
     void plan(); 
 
   private: 
-    //void assign_kitting_task();
-    //void assign_assembly_task();
+    void assign_kitting_task(nist_gear::KittingShipment &shipment);
+    void assign_assembly_task(nist_gear::AssemblyShipment &shipment);
 
     ros::NodeHandle m_nh; 
     ros::Subscriber m_order_subscriber;
     std::vector<std::unique_ptr<nist_gear::Order>> m_orders; 
+
+    ros::Publisher m_kitting_publisher; 
+    ros::Publisher m_assembly_publisher; 
 }; 
 
 #endif 

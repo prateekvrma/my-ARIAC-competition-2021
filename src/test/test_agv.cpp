@@ -10,12 +10,12 @@ int main(int argc, char **argv){
   ros::NodeHandle nh; 
 
   AGV agv2 = AGV(&nh, "agv2"); 
+
+  agv2.plan(); 
   //auto shipment_type = "order_0_kitting_shipment_0"; 
-  auto station_id = "as2"; 
+  //auto station_id = "as2"; 
   //agv2.submit_shipment(shipment_type, station_id); 
 
-  agv2.to_as(station_id); 
-
-  ros::spin(); 
+  //agv2.to_as(station_id); 
   return 0; 
 }

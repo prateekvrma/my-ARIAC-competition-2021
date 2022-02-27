@@ -35,6 +35,7 @@ int main(int argc, char **argv){
       }
 
       group1.plan(); 
+      ros::Duration(5).sleep(); 
       group1.end_competition(); 
 
     } 
