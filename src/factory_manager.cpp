@@ -8,13 +8,15 @@
 
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}{
+  // Subscribers
   m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &FactoryManager::order_callback, this); 
+  m_busy_subscriber = m_nh.subscribe("/worker/busy", 50, &FactoryManager::busy_callback, this); 
 
+  // Publishers
   m_kitting_publisher = m_nh.advertise<nist_gear::KittingShipment>("/factory_manager/kitting_task", 10); 
   m_assembly_publisher = m_nh.advertise<nist_gear::AssemblyShipment>("/factory_manager/assembly_task", 10); 
 
-  m_busy_subscriber = m_nh.subscribe("/worker/busy", 50, &FactoryManager::busy_callback, this); 
-
+  // All workers are free at start
   for(auto &worker: m_workers){
     m_busy_state[worker] = false; 
   }

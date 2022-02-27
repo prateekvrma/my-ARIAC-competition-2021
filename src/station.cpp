@@ -8,9 +8,16 @@ using AssemSubmit = nist_gear::AssemblyStationSubmitShipment;
 Station::Station(ros::NodeHandle* nodehandle, const std::string &id):
   m_nh{*nodehandle}, 
   m_id{id}{
-  m_task_subscriber = m_nh.subscribe("/factory_manager/assembly_task", 10, &Station::task_callback, this); 
-  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 50); 
+  // Subscribers
   m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &Station::competition_state_callback, this); 
+  m_task_subscriber = m_nh.subscribe("/factory_manager/assembly_task", 10, &Station::task_callback, this); 
+
+  // Publishers
+  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 50); 
+}
+
+void Station::competition_state_callback(const std_msgs::String::ConstPtr &msg){
+  m_competition_state = msg->data; 
 }
 
 void Station::task_callback(const nist_gear::AssemblyShipment::ConstPtr &msg){
@@ -19,10 +26,6 @@ void Station::task_callback(const nist_gear::AssemblyShipment::ConstPtr &msg){
   if(msg->station_id == m_id){
     m_tasks.emplace_back(std::make_unique<nist_gear::AssemblyShipment>(*msg)); 
   }
-}
-
-void Station::competition_state_callback(const std_msgs::String::ConstPtr &msg){
-  m_competition_state = msg->data; 
 }
 
 void Station::publish_busy_state(){

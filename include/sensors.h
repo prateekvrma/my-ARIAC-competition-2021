@@ -25,33 +25,42 @@ class Sensors{
 class LogicalCamera: private Sensors{
   public:
     LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id); 
+
+  private:
     void sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr & msg); 
 }; 
 
 class DepthCamera: private Sensors{
   public:
     DepthCamera(ros::NodeHandle* nodehandle, const std::string &id); 
+
+  private:
     void sensor_callback(const sensor_msgs::PointCloud::ConstPtr & msg); 
 }; 
 
 class ProximitySensor: private Sensors{
   public:
     ProximitySensor(ros::NodeHandle* nodehandle, const std::string &id); 
+
+  private:
     void sensor_callback(const sensor_msgs::Range::ConstPtr & msg); 
 }; 
 
 class LaserProfiler: private Sensors{
   public:
     LaserProfiler(ros::NodeHandle* nodehandle, const std::string &id); 
+
+  private:
     void sensor_callback(const sensor_msgs::LaserScan::ConstPtr & msg); 
 }; 
 
 class BreakBeam: private Sensors{
   public:
     BreakBeam(ros::NodeHandle* nodehandle, const std::string &id); 
+
+  private:
     void sensor_callback(const nist_gear::Proximity::ConstPtr & msg); 
     void sensor_change_callback(const nist_gear::Proximity::ConstPtr & msg); 
-  private:
     ros::Subscriber m_sensor_change_subscriber; 
 }; 
 

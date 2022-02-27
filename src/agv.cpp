@@ -12,24 +12,28 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_id{id}, 
   m_quality_control_sensor(nodehandle,
                            m_quality_control_sensor_id += id.back()) {  
+  // Subscribers
   m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
   m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
-  m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
-  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 10); 
   m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &AGV::competition_state_callback, this); 
+  m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
+
+  // Publishers
+  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 10); 
 }
 
 void AGV::state_callback(const std_msgs::String::ConstPtr &msg){
-  //ROS_INFO_THROTTLE(1, "%s: %s", m_id.c_str(), msg->data.c_str());
-  //ROS_INFO("%s: %s", m_id.c_str(), msg->data.c_str());
   m_state = msg->data; 
 }
 
 void AGV::station_callback(const std_msgs::String::ConstPtr &msg){
-  //ROS_INFO_THROTTLE(1, "%s: %s", m_id.c_str(), msg->data.c_str());
   ROS_INFO("%s: %s", m_id.c_str(), msg->data.c_str());
   m_station = msg->data; 
   ROS_INFO("%s", m_station.c_str()); 
+}
+
+void AGV::competition_state_callback(const std_msgs::String::ConstPtr &msg){
+  m_competition_state = msg->data; 
 }
 
 void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr &msg){
@@ -38,11 +42,6 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr &msg){
   if(msg->agv_id == m_id){
     m_tasks.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
   }
-}
-
-
-void AGV::competition_state_callback(const std_msgs::String::ConstPtr &msg){
-  m_competition_state = msg->data; 
 }
 
 void AGV::publish_busy_state(){
