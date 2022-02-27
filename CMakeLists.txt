@@ -120,6 +120,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_library(agv_lib src/agv.cpp)
 add_library(sensors_lib src/sensors.cpp)
+add_library(station_lib src/station.cpp)
 add_library(factory_manager_lib src/factory_manager.cpp)
 
 ## Declare a C++ executable
@@ -132,6 +133,12 @@ target_link_libraries(${PROJECT_NAME}_test_agv_node
 add_executable(${PROJECT_NAME}_test_sensors_node src/test_sensors.cpp)
 target_link_libraries(${PROJECT_NAME}_test_sensors_node
   sensors_lib
+  ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_test_station_node src/test_station.cpp)
+target_link_libraries(${PROJECT_NAME}_test_station_node
+  station_lib
   ${catkin_LIBRARIES}
 )
 
