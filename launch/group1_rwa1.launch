@@ -1,6 +1,8 @@
 <?xml version="1.0"?>
 <launch>
 
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}] [${node}]: ${message}"/>
+
   <!-- 4 stations -->
   <node pkg="my_ariac" 
         type="my_ariac_test_station_node" 
