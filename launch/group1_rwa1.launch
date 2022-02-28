@@ -3,6 +3,12 @@
 
   <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}] [${node}]: ${message}"/>
 
+  <!-- sensors that are not used yet -->
+  <node pkg="my_ariac" 
+        type="my_ariac_sensors_node" 
+        name="my_sensors_node"
+        output="screen"></node>
+
   <!-- 4 stations -->
   <node pkg="my_ariac" 
         type="my_ariac_station_node" 

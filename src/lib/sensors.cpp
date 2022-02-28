@@ -14,7 +14,8 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id)
 
 void LogicalCamera::sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr & msg){
   //std::cout << m_id << std::endl; 
-  ROS_INFO_THROTTLE(3, "%s: %d objects.", m_id.c_str(), (int)msg->models.size());
+  ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
+  //ROS_INFO_THROTTLE(3, "%s: %d objects.", m_id.c_str(), (int)msg->models.size());
   //ROS_INFO("%s: %d objects.", m_id.c_str(), (int)msg->models.size()); 
 }
 
@@ -25,7 +26,8 @@ DepthCamera::DepthCamera(ros::NodeHandle* nodehandle, const std::string &id):
 
 void DepthCamera::sensor_callback(const sensor_msgs::PointCloud::ConstPtr & msg){
    //ROS_INFO_STREAM_THROTTLE(10, m_id);
-   ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
+   //ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
+   return; 
 }
 
 ProximitySensor::ProximitySensor(ros::NodeHandle* nodehandle, const std::string &id): 
@@ -34,6 +36,7 @@ ProximitySensor::ProximitySensor(ros::NodeHandle* nodehandle, const std::string 
 }
 
 void ProximitySensor::sensor_callback(const sensor_msgs::Range::ConstPtr & msg){
+  ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
   if ((msg->max_range - msg->range) > 0.01)
   {  // If there is an object in proximity.
     ROS_INFO_THROTTLE(1, "%s: sensed object", m_id.c_str());
@@ -65,12 +68,14 @@ BreakBeam::BreakBeam(ros::NodeHandle* nodehandle, const std::string &id):
 }
 
 void BreakBeam::sensor_callback(const nist_gear::Proximity::ConstPtr & msg){
+    ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
     if (msg->object_detected) {  // If there is an object in proximity.
       ROS_INFO("%s triggered.", m_id.c_str());
     }
 }
 
 void BreakBeam::sensor_change_callback(const nist_gear::Proximity::ConstPtr & msg){
+    ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
     if (msg->object_detected) {  // If there is an object in proximity.
       ROS_INFO("%s triggered.", (m_id + "_change").c_str());
     }

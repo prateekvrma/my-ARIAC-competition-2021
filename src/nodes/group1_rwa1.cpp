@@ -33,7 +33,7 @@ int main(int argc, char **argv){
       }
       while(not group1.work_done()); 
          
-      ros::Duration(5).sleep(); 
+      ros::Duration(10).sleep(); 
       group1.end_competition(); 
       ros::Duration(1).sleep(); 
     } 

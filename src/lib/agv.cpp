@@ -101,6 +101,7 @@ void AGV::submit_shipment(const std::string &shipment_type,
   srv.request.shipment_type = shipment_type; 
 
   if (client.call(srv)){
+    ROS_INFO("Calling service %s", service_name.c_str()); 
     ROS_INFO("%s", srv.response.message.c_str()); 
   }
   else{
@@ -139,6 +140,7 @@ void AGV::to_as(const std::string &station_id){
   std_srvs::Trigger srv; 
 
   if (client.call(srv)){
+    ROS_INFO("Calling service %s", service_name.c_str()); 
     ROS_INFO("%s", srv.response.message.c_str()); 
   }
   else{

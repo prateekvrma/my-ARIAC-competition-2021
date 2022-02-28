@@ -83,6 +83,7 @@ void Station::submit_shipment(const std::string &shipment_type){
   srv.request.shipment_type = shipment_type; 
 
   if (client.call(srv)){
+    ROS_INFO("Calling service %s", service_name.c_str()); 
     ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
   }
   else{
