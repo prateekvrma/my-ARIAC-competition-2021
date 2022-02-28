@@ -8,6 +8,9 @@ This score is depend on the used resources, finish time, success orders,  etc.
 More info are provided at the ARIAC github page.   
 https://github.com/usnistgov/ARIAC  
 
+Detailed explanation of this project:  
+https://longhongc.notion.site/ARIAC-RWA1-dad9e700be6a44698f7eca4c956f02c4
+
 ## Install
 1. Install the ARIAC environment  
 https://github.com/usnistgov/ARIAC/blob/master/wiki/tutorials/installation.md  
