@@ -143,6 +143,7 @@ target_link_libraries(${PROJECT_NAME}_sensors_node
 add_executable(${PROJECT_NAME}_station_node src/nodes/station_node.cpp)
 add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_station_node
+  sensors_lib
   station_lib
   ${catkin_LIBRARIES}
 )

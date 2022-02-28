@@ -7,7 +7,9 @@ using AssemSubmit = nist_gear::AssemblyStationSubmitShipment;
 
 Station::Station(ros::NodeHandle* nodehandle, const std::string &id):
   m_nh{*nodehandle}, 
-  m_id{id}{
+  m_id{id},
+  m_logical_camera(nodehandle,
+                  m_logical_camera_id += id.back()) {  
   // Subscribers
   m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &Station::competition_state_callback, this); 
   m_task_subscriber = m_nh.subscribe("/factory_manager/assembly_task", 10, &Station::task_callback, this); 
@@ -38,7 +40,7 @@ void Station::publish_busy_state(){
 bool Station::get_order(){
   ros::Rate wait_rate(1); 
   while(m_tasks.empty() && ros::ok()){
-    ROS_INFO_THROTTLE(1, "Waiting for assembly task.");
+    ROS_INFO_THROTTLE(3, "Waiting for assembly task.");
 
     this->publish_busy_state(); 
     if(m_competition_state=="done"){

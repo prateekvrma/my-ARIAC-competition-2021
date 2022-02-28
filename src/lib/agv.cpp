@@ -54,7 +54,7 @@ void AGV::publish_busy_state(){
 bool AGV::get_order(){
   ros::Rate wait_rate(1); 
   while(m_tasks.empty() && ros::ok()){
-    ROS_INFO_THROTTLE(1, "Waiting for kitting task.");
+    ROS_INFO_THROTTLE(3, "Waiting for kitting task.");
 
     this->publish_busy_state(); 
     if(m_competition_state=="done"){
