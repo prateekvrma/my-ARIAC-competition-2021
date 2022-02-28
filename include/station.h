@@ -15,16 +15,16 @@
 
 class Station {
   public:
-    Station(ros::NodeHandle* nodehandle, const std::string &id); 
+    Station(ros::NodeHandle* nodehandle, const std::string& id); 
     bool get_order();
     void plan();
-    void execute_tasks(const nist_gear::AssemblyShipment *task_ptr);
-    void submit_shipment(const std::string &shipment_type); 
+    void execute_tasks(const nist_gear::AssemblyShipment* task_ptr);
+    void submit_shipment(const std::string& shipment_type); 
 
   private:
     // Callback functions
-    void competition_state_callback(const std_msgs::String::ConstPtr &msg);
-    void task_callback(const nist_gear::AssemblyShipment::ConstPtr &msg); 
+    void competition_state_callback(const std_msgs::String::ConstPtr& msg);
+    void task_callback(const nist_gear::AssemblyShipment::ConstPtr& msg); 
 
     void publish_busy_state(); 
 

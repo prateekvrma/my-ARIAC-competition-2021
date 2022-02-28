@@ -6,11 +6,13 @@
 
 std::string competition_state;  
 
-void competition_state_callback(const std_msgs::String::ConstPtr &msg){
+void competition_state_callback(const std_msgs::String::ConstPtr &msg)
+{
   competition_state = msg->data; 
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
   ros::init(argc, argv, "my_ariac_competitor_node"); 
 
   ros::NodeHandle nh; 
@@ -21,23 +23,23 @@ int main(int argc, char **argv){
   FactoryManager group1 = FactoryManager(&nh); 
   ROS_INFO("Checking for competition state"); 
 
-  while(ros::ok()){
-    if (competition_state=="init"){
+  while (ros::ok()) {
+    if (competition_state=="init") {
       group1.start_competition(); 
 
-      do{
+      do {
         auto success = group1.get_order(); 
-        if(success){
+        if (success) {
           group1.plan(); 
         }
       }
-      while(not group1.work_done()); 
+      while (not group1.work_done()); 
          
       ros::Duration(10).sleep(); 
       group1.end_competition(); 
       ros::Duration(1).sleep(); 
     } 
-    else if (competition_state=="done"){
+    else if (competition_state=="done") {
       ros::shutdown(); 
     }
 

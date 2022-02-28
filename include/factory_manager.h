@@ -11,7 +11,7 @@
 #include <nist_gear/Order.h>
 #include <my_ariac/Busy.h>
 
-class FactoryManager{
+class FactoryManager {
   public:
     FactoryManager(ros::NodeHandle* nodehandle); 
     void start_competition(); 
@@ -24,12 +24,12 @@ class FactoryManager{
 
   private: 
     // Callback functions
-    void order_callback(const nist_gear::Order::ConstPtr & msg); 
-    void busy_callback(const my_ariac::Busy & msg); 
+    void order_callback(const nist_gear::Order::ConstPtr& msg); 
+    void busy_callback(const my_ariac::Busy& msg); 
 
     // Publisher functions
-    void assign_kitting_task(nist_gear::KittingShipment &shipment);
-    void assign_assembly_task(nist_gear::AssemblyShipment &shipment);
+    void assign_kitting_task(nist_gear::KittingShipment& shipment);
+    void assign_assembly_task(nist_gear::AssemblyShipment& shipment);
 
     // Workers control by factory manager
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",

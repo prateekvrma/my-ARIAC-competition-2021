@@ -6,11 +6,12 @@
 
 
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
 
   ros::init(argc, argv, "test_agv"); 
 
-  if(argc != 2){
+  if (argc != 2) {
     ROS_INFO("Please enter an argument for the name of the agv."); 
     exit(1); 
   }
@@ -19,13 +20,14 @@ int main(int argc, char **argv){
 
   AGV agv = AGV(&nh, argv[1]); 
 
-  while(ros::ok()){
+  while (ros::ok()) {
     auto success = agv.get_order(); 
-    if(success){
+
+    if (success) 
       agv.plan(); 
-    }else{
+    else
       ros::shutdown(); 
-    }
+    
   }
 
   return 0; 

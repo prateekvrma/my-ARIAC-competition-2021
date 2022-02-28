@@ -11,9 +11,9 @@
 #include <sensor_msgs/Range.h>
 #include <sensor_msgs/PointCloud.h>
 
-class Sensors{
+class Sensors {
   public:
-    Sensors(ros::NodeHandle* nodehandle, const std::string &id); 
+    Sensors(ros::NodeHandle* nodehandle, const std::string& id); 
     virtual ~Sensors() = 0; 
 
   protected: 
@@ -22,45 +22,45 @@ class Sensors{
     ros::Subscriber m_sensor_subscriber; 
 }; 
 
-class LogicalCamera: private Sensors{
+class LogicalCamera: private Sensors {
   public:
     LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id); 
 
   private:
-    void sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr & msg); 
+    void sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr& msg); 
 }; 
 
-class DepthCamera: private Sensors{
+class DepthCamera: private Sensors {
   public:
-    DepthCamera(ros::NodeHandle* nodehandle, const std::string &id); 
+    DepthCamera(ros::NodeHandle* nodehandle, const std::string& id); 
 
   private:
-    void sensor_callback(const sensor_msgs::PointCloud::ConstPtr & msg); 
+    void sensor_callback(const sensor_msgs::PointCloud::ConstPtr& msg); 
 }; 
 
-class ProximitySensor: private Sensors{
+class ProximitySensor: private Sensors {
   public:
-    ProximitySensor(ros::NodeHandle* nodehandle, const std::string &id); 
+    ProximitySensor(ros::NodeHandle* nodehandle, const std::string& id); 
 
   private:
-    void sensor_callback(const sensor_msgs::Range::ConstPtr & msg); 
+    void sensor_callback(const sensor_msgs::Range::ConstPtr& msg); 
 }; 
 
-class LaserProfiler: private Sensors{
+class LaserProfiler: private Sensors {
   public:
-    LaserProfiler(ros::NodeHandle* nodehandle, const std::string &id); 
+    LaserProfiler(ros::NodeHandle* nodehandle, const std::string& id); 
 
   private:
-    void sensor_callback(const sensor_msgs::LaserScan::ConstPtr & msg); 
+    void sensor_callback(const sensor_msgs::LaserScan::ConstPtr& msg); 
 }; 
 
-class BreakBeam: private Sensors{
+class BreakBeam: private Sensors {
   public:
-    BreakBeam(ros::NodeHandle* nodehandle, const std::string &id); 
+    BreakBeam(ros::NodeHandle* nodehandle, const std::string& id); 
 
   private:
-    void sensor_callback(const nist_gear::Proximity::ConstPtr & msg); 
-    void sensor_change_callback(const nist_gear::Proximity::ConstPtr & msg); 
+    void sensor_callback(const nist_gear::Proximity::ConstPtr& msg); 
+    void sensor_change_callback(const nist_gear::Proximity::ConstPtr& msg); 
     ros::Subscriber m_sensor_change_subscriber; 
 }; 
 

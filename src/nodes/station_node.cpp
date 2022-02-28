@@ -6,12 +6,13 @@
 #include "station.h"
 
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
 
   ros::init(argc, argv, "test_station"); 
 
   ROS_INFO("%d arguments", argc); 
-  if(argc != 2){
+  if (argc != 2) {
     ROS_INFO("Please enter an argument for the name of the station."); 
     exit(1); 
   }
@@ -20,13 +21,13 @@ int main(int argc, char **argv){
 
   Station as2 = Station(&nh, argv[1]); 
 
-  while(ros::ok()){
+  while (ros::ok()) {
     auto success = as2.get_order(); 
-    if(success){
+
+    if (success)
       as2.plan(); 
-    }else{
+    else
       ros::shutdown(); 
-    }
   }
 
 

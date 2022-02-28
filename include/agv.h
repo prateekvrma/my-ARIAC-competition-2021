@@ -15,21 +15,21 @@
 
 class AGV {
   public: 
-    AGV(ros::NodeHandle* nodehandle, const std::string &id); 
+    AGV(ros::NodeHandle* nodehandle, const std::string& id); 
 
     bool get_order();
     void plan();
-    void execute_tasks(const nist_gear::KittingShipment *task_ptr);
-    void submit_shipment(const std::string &shipment_type,
-                         const std::string &station_id); 
-    void to_as(const std::string &station_id); 
+    void execute_tasks(const nist_gear::KittingShipment* task_ptr);
+    void submit_shipment(const std::string& shipment_type,
+                         const std::string& station_id); 
+    void to_as(const std::string& station_id); 
 
   private:
     // callback functions
-    void state_callback(const std_msgs::String::ConstPtr & msg);
-    void station_callback(const std_msgs::String::ConstPtr & msg);
-    void competition_state_callback(const std_msgs::String::ConstPtr &msg);
-    void task_callback(const nist_gear::KittingShipment::ConstPtr &msg); 
+    void state_callback(const std_msgs::String::ConstPtr& msg);
+    void station_callback(const std_msgs::String::ConstPtr& msg);
+    void competition_state_callback(const std_msgs::String::ConstPtr& msg);
+    void task_callback(const nist_gear::KittingShipment::ConstPtr& msg); 
 
     void publish_busy_state(); 
 
@@ -61,7 +61,7 @@ class AGV {
 
 }; 
 
-bool valid_station(const std::string &agv, const std::string &station);
+bool valid_station(const std::string& agv, const std::string& station);
 
 #endif
 

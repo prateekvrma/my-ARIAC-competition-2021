@@ -8,11 +8,13 @@
 
 std::string competition_state;  
 
-void competition_state_callback(const std_msgs::String::ConstPtr &msg){
+void competition_state_callback(const std_msgs::String::ConstPtr &msg)
+{
   competition_state = msg->data; 
 }
 
-int main(int argc, char **argv){
+int main(int argc, char **argv)
+{
 
   ros::init(argc, argv, "test_sensors"); 
 
@@ -27,8 +29,8 @@ int main(int argc, char **argv){
   auto breakbeam_0 =  std::make_unique<BreakBeam>(&nh, "breakbeam_0"); 
 
   ros::Rate rate(20); 
-  while(ros::ok()){
-    if (competition_state=="done"){
+  while (ros::ok()) {
+    if (competition_state=="done") {
       ros::shutdown(); 
     }
     ros::spinOnce(); 
