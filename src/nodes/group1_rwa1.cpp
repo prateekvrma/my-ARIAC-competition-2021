@@ -6,13 +6,6 @@
 
 std::string competition_state;  
 
-/* --------------------------------------------------------------------------*/
-/**
- * @Brief A subscriber callback to receive competition state
- *
- * @Param msg
- */
-/* --------------------------------------------------------------------------*/
 void competition_state_callback(const std_msgs::String::ConstPtr &msg)
 {
   competition_state = msg->data; 
