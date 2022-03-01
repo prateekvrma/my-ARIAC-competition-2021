@@ -6,6 +6,13 @@
 
 std::string competition_state;  
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief A subscriber callback to receive competition state
+ *
+ * @Param msg
+ */
+/* --------------------------------------------------------------------------*/
 void competition_state_callback(const std_msgs::String::ConstPtr &msg)
 {
   competition_state = msg->data; 
@@ -28,6 +35,7 @@ int main(int argc, char **argv)
       group1.start_competition(); 
 
       do {
+        // success = False, if waiting time exceeds setting. 
         auto success = group1.get_order(); 
         if (success) {
           group1.plan(); 
@@ -35,6 +43,7 @@ int main(int argc, char **argv)
       }
       while (not group1.work_done()); 
          
+      // wait for workers to finish their last tasks
       ros::Duration(10).sleep(); 
       group1.end_competition(); 
       ros::Duration(1).sleep(); 

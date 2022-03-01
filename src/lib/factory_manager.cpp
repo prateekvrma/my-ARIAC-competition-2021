@@ -6,6 +6,13 @@
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Constructor for FactoryManager 
+ *
+ * @Param nodehandle
+ */
+/* --------------------------------------------------------------------------*/
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {
@@ -23,19 +30,40 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   }
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief  Subscriber callback function for order information.
+ *
+ * @Param msg
+ */
+/* --------------------------------------------------------------------------*/
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
+  // emplace_back directly create object inside vector which is more efficient
+  // Use unique_ptr to store msg as resources of this vector 
   m_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
 }
 
-void FactoryManager::busy_callback(const my_ariac::Busy& msg)
-{
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief  Susbscriber callback function for recieving busy state
+ *         from every worker machine
+ *
+ * @Param msg
+ */
+/* --------------------------------------------------------------------------*/
+void FactoryManager::busy_callback(const my_ariac::Busy& msg){
   m_busy_state[msg.id] = msg.state; 
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief  Call service to start the competition
+ */
+/* --------------------------------------------------------------------------*/
 void FactoryManager::start_competition()
 {
   std::string service_name = "/ariac/start_competition"; 
@@ -59,6 +87,11 @@ void FactoryManager::start_competition()
  
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief  Call service to end the competition
+ */
+/* --------------------------------------------------------------------------*/
 void FactoryManager::end_competition()
 {
   std::string service_name = "/ariac/end_competition"; 
@@ -82,9 +115,17 @@ void FactoryManager::end_competition()
 
 } 
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Waiting for order in a loop
+ *
+ * @Returns Order exists or not
+ */
+/* --------------------------------------------------------------------------*/
 bool FactoryManager::get_order()
 {
   ros::Rate wait_rate(1); 
+  // Wait for order for 10 seconds
   int count = 10; 
   while (m_orders.empty() && ros::ok()) {
     ros::spinOnce(); 
@@ -99,8 +140,16 @@ bool FactoryManager::get_order()
   return true; 
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Plan for the orders.
+ *        Seperate orders into kitting and assembly tasks,
+ *        then assign them to the AGVs, and AssemblyStations.
+ */
+/* --------------------------------------------------------------------------*/
 void FactoryManager::plan() 
 {
+  // Lock to prevent adding new orders when assigning tasks
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   ROS_INFO_STREAM("Orders: " << m_orders.size()); 
 
@@ -117,6 +166,13 @@ void FactoryManager::plan()
   m_orders.clear(); 
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Assigning kitting tasks to AGVs 
+ *
+ * @Param shipment
+ */
+/* --------------------------------------------------------------------------*/
 void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)
 {
   nist_gear::KittingShipment msg; 
@@ -126,8 +182,14 @@ void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)
   m_kitting_publisher.publish(msg); 
 }
 
-void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment& shipment)
-{
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Assigning assembly tasks to AssemblyStations
+ *
+ * @Param shipment
+ */
+/* --------------------------------------------------------------------------*/
+void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment& shipment){
   nist_gear::AssemblyShipment msg; 
   msg = shipment; 
 
@@ -135,6 +197,13 @@ void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment& shipment)
   m_assembly_publisher.publish(msg); 
 }
 
+/* --------------------------------------------------------------------------*/
+/**
+ * @Brief Check if every worker machine is busy  
+ *
+ * @Returns Is there any worker machine still working  
+ */
+/* --------------------------------------------------------------------------*/
 bool FactoryManager::work_done()
 {
   for (const auto& worker_busy_state: m_busy_state) {
