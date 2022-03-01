@@ -13,13 +13,12 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_quality_control_sensor(nodehandle,
                            m_quality_control_sensor_id += id.back())
 {  
-  // Subscribers
+  // create subscribers
   m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
   m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
   m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &AGV::competition_state_callback, this); 
   m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
-
-  // Publishers
+  // create publisher 
   m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 10); 
 }
 
@@ -43,7 +42,7 @@ void AGV::competition_state_callback(const std_msgs::String::ConstPtr& msg)
 void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-
+  // add tasks to task vector
   if (msg->agv_id == m_id) {
     m_tasks.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
   }
@@ -51,6 +50,7 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr& msg)
 
 void AGV::publish_busy_state()
 {
+  // setup parameters to state that AGV is busy
   my_ariac::Busy msg; 
   msg.id = m_id; 
   msg.state = not m_tasks.empty(); 
@@ -60,10 +60,12 @@ void AGV::publish_busy_state()
 bool AGV::get_order()
 {
   ros::Rate wait_rate(1); 
+  // check if there are tasks and make sure ROS is running 
   while (m_tasks.empty() && ros::ok()) {
     ROS_INFO_THROTTLE(3, "Waiting for kitting task.");
 
     this->publish_busy_state(); 
+    // AGV will not receive task when the competition ended
     if (m_competition_state=="done") {
       return false; 
     }
@@ -77,7 +79,7 @@ bool AGV::get_order()
 void AGV::plan()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-
+  // execute the task one by one
   for (auto& task_ptr: m_tasks) {
     this->execute_tasks(task_ptr.get()); 
   }
@@ -98,7 +100,7 @@ void AGV::submit_shipment(const std::string& shipment_type,
 
   auto service_name = "/ariac/" + m_id + "/submit_shipment"; 
   static auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
-
+  // check if the client exists
   if (!client.exists()) {
     ROS_INFO("Waiting for the competition to be ready...");
     client.waitForExistence();
@@ -108,7 +110,7 @@ void AGV::submit_shipment(const std::string& shipment_type,
   AGVToAssem srv; 
   srv.request.assembly_station_name = station_id;  
   srv.request.shipment_type = shipment_type; 
-
+  // call the service to allow AGV to submit kitting shipment
   if (client.call(srv)) {
     ROS_INFO("Calling service %s", service_name.c_str()); 
     ROS_INFO("%s", srv.response.message.c_str()); 
@@ -127,6 +129,7 @@ void AGV::to_as(const std::string& station_id)
   }
 
   ros::Rate rate(20); 
+  // spinOnce() to receive msg from the subscriber
   while (m_station.empty() && ros::ok()) {
     ros::spinOnce(); 
     rate.sleep(); 
@@ -138,7 +141,7 @@ void AGV::to_as(const std::string& station_id)
   } 
   auto service_name = "/ariac/" + m_id + "/to_" + station_id; 
   static auto client = m_nh.serviceClient<std_srvs::Trigger>(service_name); 
-
+  // check if the client exists
   if (!client.exists()) {
     ROS_INFO("Waiting for the competition to be ready...");
     client.waitForExistence();
@@ -146,7 +149,7 @@ void AGV::to_as(const std::string& station_id)
   }
 
   std_srvs::Trigger srv; 
-
+  // call the service to send AGV to the assembly station  
   if (client.call(srv)) {
     ROS_INFO("Calling service %s", service_name.c_str()); 
     ROS_INFO("%s", srv.response.message.c_str()); 
