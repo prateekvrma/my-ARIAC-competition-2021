@@ -71,6 +71,7 @@ bool AGV::get_order()
     wait_rate.sleep(); 
   }
   this->publish_busy_state(); 
+  ROS_INFO("Received kitting task"); 
   return true; 
 }
 

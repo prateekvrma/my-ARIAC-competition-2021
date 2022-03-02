@@ -37,7 +37,7 @@ int main(int argc, char **argv)
       while (not group1.work_done()); 
          
       // wait for workers to finish their last tasks
-      ros::Duration(10).sleep(); 
+      ros::Duration(5).sleep(); 
       group1.end_competition(); 
       ros::Duration(1).sleep(); 
     } 

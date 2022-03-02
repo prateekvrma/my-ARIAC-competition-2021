@@ -125,7 +125,6 @@ void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)
   nist_gear::KittingShipment msg; 
   msg = shipment; 
 
-  ROS_INFO("kitting task"); 
   m_kitting_publisher.publish(msg); 
 }
 
@@ -133,7 +132,6 @@ void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment& shipment)
   nist_gear::AssemblyShipment msg; 
   msg = shipment; 
 
-  ROS_INFO("assembly task"); 
   m_assembly_publisher.publish(msg); 
 }
 
