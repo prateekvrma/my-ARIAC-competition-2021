@@ -1,3 +1,14 @@
+/**
+ * @file factory_manager.h
+ * @author Bo-Shiang Wang (bwang24@umd.edu), Chang-Hong Chen (markchen@umd.edu), Prateek Verma (verma@umd.edu), Sparsh Jaiswal (sjaiswal@umd.edu)
+ * @brief 
+ * @version 0.1
+ * @date 2022-03-01
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #ifndef FACTORY_MANAGER_H
 #define FACTORY_MANAGER_H
 
@@ -79,26 +90,60 @@ class FactoryManager {
      */
     void assign_assembly_task(nist_gear::AssemblyShipment& shipment);
 
-    // Workers control by factory manager
+    /**
+     * @Brief The id of all the controllable machine in ARIAC 
+     *
+     */
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
                                              "as1", "as2", "as3", "as4"}; 
 
-    // Constructor argument
+    /**
+     * @Brief node handle for AssemblyStation
+     * 
+     */
     ros::NodeHandle m_nh; 
 
-    // Publishers 
+    /**
+     * @Brief Publisher to assign kitting task to AGVs  
+     *
+     */
     ros::Publisher m_kitting_publisher; 
+
+    /**
+     * @Brief Publisher to assign assembly task to AssemblyStation
+     *
+     */
     ros::Publisher m_assembly_publisher; 
 
-    // Subscribers
+    /**
+     * @Brief Subscirber for getting orders from ARIAC 
+     *
+     */
     ros::Subscriber m_order_subscriber;
+
+    /**
+     * @Brief Subscriber forr getting working status of all the worker machine 
+     *
+     */
     ros::Subscriber m_busy_subscriber;
 
-    // Subscribe info storage
+    /**
+     * @Brief  Vector to storage the subscribed order 
+     *
+     */
     std::vector<std::unique_ptr<nist_gear::Order>> m_orders; 
+
+    /**
+     * @Brief The working status of all the worker machine  
+     *        Busy is true if the machien still have task in its task queue
+     *
+     */
     std::map<std::string, bool> m_busy_state; 
 
-    // Mutex to control the accessibility of the tasks vector
+    /**
+     * @brief mutex to control the accessibility of the orders vector
+     * 
+     */
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 
 }; 
