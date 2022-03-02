@@ -29,9 +29,7 @@ void AGV::state_callback(const std_msgs::String::ConstPtr& msg)
 
 void AGV::station_callback(const std_msgs::String::ConstPtr& msg)
 {
-  ROS_INFO("%s: %s", m_id.c_str(), msg->data.c_str());
   m_station = msg->data; 
-  ROS_INFO("%s", m_station.c_str()); 
 }
 
 void AGV::competition_state_callback(const std_msgs::String::ConstPtr& msg)
