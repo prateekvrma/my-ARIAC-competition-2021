@@ -33,7 +33,7 @@ void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)
 
 }
 
-void FactoryManager::busy_callback(const my_ariac::Busy& msg){
+void FactoryManager::busy_callback(const ariac_group1::Busy& msg){
   m_busy_state[msg.id] = msg.state; 
 }
 

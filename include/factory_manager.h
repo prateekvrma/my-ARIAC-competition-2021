@@ -20,7 +20,7 @@
 #include <ros/ros.h>
 
 #include <nist_gear/Order.h>
-#include <my_ariac/Busy.h>
+#include <ariac_group1/Busy.h>
 
 class FactoryManager {
   public:
@@ -74,7 +74,7 @@ class FactoryManager {
      *
      * @Param msg
      */
-    void busy_callback(const my_ariac::Busy& msg); 
+    void busy_callback(const ariac_group1::Busy& msg); 
 
     /**
      * @Brief Assigning kitting tasks to AGVs 

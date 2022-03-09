@@ -1,7 +1,7 @@
 #include "station.h"
 
 #include <nist_gear/AssemblyStationSubmitShipment.h>
-#include <my_ariac/Busy.h>
+#include <ariac_group1/Busy.h>
 
 using AssemSubmit = nist_gear::AssemblyStationSubmitShipment; 
 
@@ -16,7 +16,7 @@ Station::Station(ros::NodeHandle* nodehandle, const std::string& id):
   m_task_subscriber = m_nh.subscribe("/factory_manager/assembly_task", 10, &Station::task_callback, this); 
 
   // Publishers
-  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 50); 
+  m_busy_publisher = m_nh.advertise<ariac_group1::Busy>("/worker/busy", 50); 
 }
 
 void Station::competition_state_callback(const std_msgs::String::ConstPtr& msg)
@@ -35,7 +35,7 @@ void Station::task_callback(const nist_gear::AssemblyShipment::ConstPtr& msg)
 
 void Station::publish_busy_state()
 {
-    my_ariac::Busy msg; 
+    ariac_group1::Busy msg; 
     msg.id = m_id; 
     msg.state = not m_tasks.empty(); 
     m_busy_publisher.publish(msg); 

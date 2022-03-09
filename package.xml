@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>group1_rwa2</name>
+  <name>ariac_group1</name>
   <version>1.0.0</version>
-  <description>The group1_rwa1 package</description>
+  <description>The ariac group1 package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

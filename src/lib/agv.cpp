@@ -3,7 +3,7 @@
 
 #include <std_srvs/Trigger.h>
 #include <nist_gear/AGVToAssemblyStation.h>
-#include <my_ariac/Busy.h>
+#include <ariac_group1/Busy.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -19,7 +19,7 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_competition_state_subscriber = m_nh.subscribe("/ariac/competition_state", 10, &AGV::competition_state_callback, this); 
   m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
   // create publisher 
-  m_busy_publisher = m_nh.advertise<my_ariac::Busy>("/worker/busy", 10); 
+  m_busy_publisher = m_nh.advertise<ariac_group1::Busy>("/worker/busy", 10); 
 }
 
 void AGV::state_callback(const std_msgs::String::ConstPtr& msg)
@@ -49,7 +49,7 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr& msg)
 void AGV::publish_busy_state()
 {
   // setup parameters to state that AGV is busy
-  my_ariac::Busy msg; 
+  ariac_group1::Busy msg; 
   msg.id = m_id; 
   msg.state = not m_tasks.empty(); 
   m_busy_publisher.publish(msg); 
