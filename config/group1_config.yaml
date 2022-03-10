@@ -1,0 +1,127 @@
+sensors:
+  # 4 logical camera for 4 kitting stations
+  logical_camera_ks4:
+    type: logical_camera
+    pose:
+      xyz: [-2.26, -4.68, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  
+  logical_camera_ks3:
+    type: logical_camera
+    pose:
+      xyz: [-2.26, -1.33, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  
+  logical_camera_ks2:
+    type: logical_camera
+    pose:
+      xyz: [-2.26, 1.36, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  
+  logical_camera_ks1:
+    type: logical_camera
+    pose:
+      xyz: [-2.26, 4.68, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  # 4 logical camera for 4 briefcases
+  logical_camera_bfc4:
+    type: logical_camera
+    pose:
+      xyz: [-12.3, -2.96, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_bfc3:
+    type: logical_camera
+    pose:
+      xyz: [-7.3, -2.96, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_bfc2:
+    type: logical_camera
+    pose:
+      xyz: [-12.3, 2.96, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_bfc1:
+    type: logical_camera
+    pose:
+      xyz: [-7.3, 2.96, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  # 8 logical camera for 4 assembly stations
+  logical_camera_as44:
+    type: logical_camera
+    pose:
+      xyz: [-10.6, -4.67, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  logical_camera_as43:
+    type: logical_camera
+    pose:
+      xyz: [-10.6, -1.37, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  logical_camera_as34:
+    type: logical_camera
+    pose:
+      xyz: [-5.6, -4.67, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  logical_camera_as33:
+    type: logical_camera
+    pose:
+      xyz: [-5.6, -1.37, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  logical_camera_as22:
+    type: logical_camera
+    pose:
+      xyz: [-10.6, 1.37, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_as21:
+    type: logical_camera
+    pose:
+      xyz: [-10.6, 4.67, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  logical_camera_as12:
+    type: logical_camera
+    pose:
+      xyz: [-5.6, 1.37, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_as11:
+    type: logical_camera
+    pose:
+      xyz: [-5.6, 4.67, 2]
+      rpy: [3.141593, 1.570792, 0.000000]
+  # 2 logical camera for bins
+  logical_camera_bins0:
+    type: logical_camera
+    pose:
+      xyz: [-2.286283, 2.963994, 1.801095]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  logical_camera_bins1:
+    type: logical_camera
+    pose:
+      xyz: [-2.286283, -2.963994, 1.801095]
+      rpy: [3.141593, 1.570792, 0.000000]
+
+  laser_profiler_0:
+    type: laser_profiler
+    pose:
+      xyz: [-0.559490, 2.307264, 1.507532]
+      rpy: [-1.570796, 1.570796, 0]
+
+  proximity_sensor_0:
+    type: proximity_sensor
+    pose:
+      xyz: [-0.786464, 2.963990, 0.886511]
+      rpy: [3.141593, 0.000000, 0.000000]
+
+  breakbeam_0:
+    type: break_beam
+    pose:
+      xyz: [-0.279039, 4.943474, 0.894281]
+      rpy: [0.000000, 0.000000, -1.826134]
+
+robot_camera:
+  enable: false
+
+
