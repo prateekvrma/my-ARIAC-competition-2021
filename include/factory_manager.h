@@ -22,6 +22,8 @@
 #include <nist_gear/Order.h>
 #include <ariac_group1/Busy.h>
 
+#include "sensors.h"
+
 class FactoryManager {
   public:
     FactoryManager(ros::NodeHandle* nodehandle); 
@@ -96,6 +98,9 @@ class FactoryManager {
      */
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
                                              "as1", "as2", "as3", "as4"}; 
+
+
+    std::map<std::string, std::unique_ptr<LogicalCamera>> m_logical_cameras; 
 
     /**
      * @Brief node handle for AssemblyStation

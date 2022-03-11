@@ -6,6 +6,7 @@
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
 
+
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {
@@ -21,6 +22,71 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   for (auto& worker: m_workers) {
     m_busy_state[worker] = false; 
   }
+
+  // All Logical cameras in the environment
+  
+  // AGV parking spot at assembly stations
+  std::string as1_1 = "logical_camera_as1_1"; 
+  m_logical_cameras[as1_1] = std::make_unique<LogicalCamera>(nodehandle, as1_1); 
+
+  std::string as2_1 = "logical_camera_as2_1"; 
+  m_logical_cameras[as2_1] = std::make_unique<LogicalCamera>(nodehandle, as2_1); 
+
+  std::string as1_2 = "logical_camera_as1_2"; 
+  m_logical_cameras[as1_2] = std::make_unique<LogicalCamera>(nodehandle, as1_2); 
+
+  std::string as2_2 = "logical_camera_as2_2"; 
+  m_logical_cameras[as2_2] = std::make_unique<LogicalCamera>(nodehandle, as2_2); 
+
+  std::string as3_3 = "logical_camera_as3_3"; 
+  m_logical_cameras[as3_3] = std::make_unique<LogicalCamera>(nodehandle, as3_3); 
+
+  std::string as4_3 = "logical_camera_as4_3"; 
+  m_logical_cameras[as4_3] = std::make_unique<LogicalCamera>(nodehandle, as4_3); 
+
+  std::string as3_4 = "logical_camera_as3_4"; 
+  m_logical_cameras[as3_4] = std::make_unique<LogicalCamera>(nodehandle, as3_4); 
+
+  std::string as4_4 = "logical_camera_as4_4"; 
+  m_logical_cameras[as4_4] = std::make_unique<LogicalCamera>(nodehandle, as4_4); 
+
+  // Briefcase
+  std::string bfc1 = "logical_camera_bfc1"; 
+  m_logical_cameras[bfc1] = std::make_unique<LogicalCamera>(nodehandle, bfc1); 
+
+  std::string bfc2 = "logical_camera_bfc2"; 
+  m_logical_cameras[bfc2] = std::make_unique<LogicalCamera>(nodehandle, bfc2); 
+
+  std::string bfc3 = "logical_camera_bfc3"; 
+  m_logical_cameras[bfc3] = std::make_unique<LogicalCamera>(nodehandle, bfc3); 
+
+  std::string bfc4 = "logical_camera_bfc4"; 
+  m_logical_cameras[bfc4] = std::make_unique<LogicalCamera>(nodehandle, bfc4); 
+
+  // Kitting station
+  std::string ks1 = "logical_camera_ks1"; 
+  m_logical_cameras[ks1] = std::make_unique<LogicalCamera>(nodehandle, ks1); 
+
+  std::string ks2 = "logical_camera_ks2"; 
+  m_logical_cameras[ks2] = std::make_unique<LogicalCamera>(nodehandle, ks2); 
+
+  std::string ks3 = "logical_camera_ks3"; 
+  m_logical_cameras[ks3] = std::make_unique<LogicalCamera>(nodehandle, ks3); 
+
+  std::string ks4 = "logical_camera_ks4"; 
+  m_logical_cameras[ks4] = std::make_unique<LogicalCamera>(nodehandle, ks4); 
+
+  // Belt
+  std::string belt = "logical_camera_belt"; 
+  m_logical_cameras[belt] = std::make_unique<LogicalCamera>(nodehandle, belt); 
+
+  // Bins
+  std::string bins0 = "logical_camera_bins0"; 
+  m_logical_cameras[bins0] = std::make_unique<LogicalCamera>(nodehandle, bins0); 
+
+  std::string bins1 = "logical_camera_bins1"; 
+  m_logical_cameras[bins1] = std::make_unique<LogicalCamera>(nodehandle, bins1); 
+
 }
 
 void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)

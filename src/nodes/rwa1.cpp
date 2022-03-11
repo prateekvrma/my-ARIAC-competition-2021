@@ -3,6 +3,7 @@
 #include <std_msgs/String.h>
 
 #include "factory_manager.h"
+#include "sensors.h"
 
 std::string competition_state;  
 

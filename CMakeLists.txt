@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(ariac_group1)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+#add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -119,16 +119,15 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(agv_lib src/lib/agv.cpp)
 add_library(sensors_lib src/lib/sensors.cpp)
-add_library(station_lib src/lib/station.cpp)
-add_library(factory_manager_lib src/lib/factory_manager.cpp)
+add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp)
+add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp)
+add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp) 
 
-## Declare a C++ executable
+# Declare a C++ executable
 add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
 add_dependencies(${PROJECT_NAME}_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_agv_node
-  sensors_lib
   agv_lib
   ${catkin_LIBRARIES}
 )
@@ -143,17 +142,22 @@ target_link_libraries(${PROJECT_NAME}_sensors_node
 add_executable(${PROJECT_NAME}_station_node src/nodes/station_node.cpp)
 add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_station_node
-  sensors_lib
   station_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_node src/nodes/group1_rwa1.cpp)
-add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_node
+add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
+add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_rwa1_node
   factory_manager_lib
   ${catkin_LIBRARIES}
 )
 
 
+add_executable(${PROJECT_NAME}_rwa2_node src/nodes/rwa2.cpp)
+add_dependencies(${PROJECT_NAME}_rwa2_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_rwa2_node
+  factory_manager_lib
+  ${catkin_LIBRARIES}
+)
 
