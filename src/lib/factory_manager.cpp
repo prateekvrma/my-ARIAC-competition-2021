@@ -95,7 +95,12 @@ void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)
 
   // emplace_back directly create object inside vector which is more efficient
   // Use unique_ptr to store msg as resources of this vector 
-  m_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
+  if (not m_prev_orders.empty()){
+    ROS_INFO("High-priority order is announced"); 
+  }
+
+  m_new_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
+  m_prev_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
 }
 
@@ -154,13 +159,13 @@ bool FactoryManager::get_order()
   ros::Rate wait_rate(1); 
   // Wait for order for 10 seconds
   int count = 10; 
-  while (m_orders.empty() && ros::ok()) {
+  while (m_new_orders.empty() && ros::ok()) {
     ros::spinOnce(); 
-    ROS_INFO("Waiting orders for %ds...", count);
     if (count < 0) {
       ROS_INFO("No order.");
       return false; 
     }
+    ROS_INFO("Waiting orders for %ds...", count);
     count--; 
     wait_rate.sleep(); 
   }
@@ -171,20 +176,39 @@ void FactoryManager::plan()
 {
   // Lock to prevent adding new orders when assigning tasks
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-  ROS_INFO_STREAM("Orders: " << m_orders.size()); 
+  //ROS_INFO_STREAM("Orders: " << m_new_orders.size()); 
 
-  for (auto &order: m_orders) {
+  for (auto &order: m_new_orders) {
     for (auto &shipment: order->kitting_shipments) {
-      this->assign_kitting_task(shipment); 
+      //this->assign_kitting_task(shipment); 
     }
 
     for (auto &shipment: order->assembly_shipments) {
-      this->assign_assembly_task(shipment); 
+      //this->assign_assembly_task(shipment); 
     }
   }
 
-  m_orders.clear(); 
+  m_new_orders.clear(); 
 }
+
+// bool FactoryManager::check_order()
+// {
+//   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+//
+//   bool order_valid = true; 
+//   for (auto &order: m_orders) {
+//     for (auto &shipment: order->kitting_shipments) {
+//       // for every products if products is in logical sensors print position
+//       // else not in view yet
+//       // order_valid = false
+//     }
+//   }
+//   if (order_valid) {
+//     m_orders.clear(); 
+//   }
+//
+//   return order_valid; 
+// }
 
 void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)
 {

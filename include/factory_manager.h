@@ -136,7 +136,8 @@ class FactoryManager {
      * @Brief  Vector to storage the subscribed order 
      *
      */
-    std::vector<std::unique_ptr<nist_gear::Order>> m_orders; 
+    std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
+    std::vector<std::unique_ptr<nist_gear::Order>> m_prev_orders; 
 
     /**
      * @Brief The working status of all the worker machine  
