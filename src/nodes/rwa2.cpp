@@ -21,14 +21,17 @@ int main(int argc, char **argv)
 
   ros::Rate rate(20); 
   FactoryManager group1 = FactoryManager(&nh); 
+  ROS_INFO("Initializing..."); 
+  ros::Duration(3.0).sleep();
+
 
   ROS_INFO("Checking for competition state"); 
   while (ros::ok()) {
     if (competition_state=="init") {
       group1.start_competition(); 
-      auto start_time = ros::Time::now().toSec(); 
+      group1.start_time = ros::Time::now(); 
 
-      while ((ros::Time::now().toSec() - start_time) < 30) {
+      while ((ros::Time::now() - group1.start_time).toSec() < 35) {
         auto success = group1.get_order(); 
         if (success) {
           group1.plan(); 

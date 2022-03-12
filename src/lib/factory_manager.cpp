@@ -24,68 +24,15 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   }
 
   // All Logical cameras in the environment
-  
-  // AGV parking spot at assembly stations
-  std::string as1_1 = "logical_camera_as1_1"; 
-  m_logical_cameras[as1_1] = std::make_unique<LogicalCamera>(nodehandle, as1_1); 
+  for (auto& camera_id: m_logical_cameras) {
+    std::string prefix = "logical_camera_"; 
+    m_logical_cameras_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, prefix += camera_id); 
+  }
 
-  std::string as2_1 = "logical_camera_as2_1"; 
-  m_logical_cameras[as2_1] = std::make_unique<LogicalCamera>(nodehandle, as2_1); 
-
-  std::string as1_2 = "logical_camera_as1_2"; 
-  m_logical_cameras[as1_2] = std::make_unique<LogicalCamera>(nodehandle, as1_2); 
-
-  std::string as2_2 = "logical_camera_as2_2"; 
-  m_logical_cameras[as2_2] = std::make_unique<LogicalCamera>(nodehandle, as2_2); 
-
-  std::string as3_3 = "logical_camera_as3_3"; 
-  m_logical_cameras[as3_3] = std::make_unique<LogicalCamera>(nodehandle, as3_3); 
-
-  std::string as4_3 = "logical_camera_as4_3"; 
-  m_logical_cameras[as4_3] = std::make_unique<LogicalCamera>(nodehandle, as4_3); 
-
-  std::string as3_4 = "logical_camera_as3_4"; 
-  m_logical_cameras[as3_4] = std::make_unique<LogicalCamera>(nodehandle, as3_4); 
-
-  std::string as4_4 = "logical_camera_as4_4"; 
-  m_logical_cameras[as4_4] = std::make_unique<LogicalCamera>(nodehandle, as4_4); 
-
-  // Briefcase
-  std::string bfc1 = "logical_camera_bfc1"; 
-  m_logical_cameras[bfc1] = std::make_unique<LogicalCamera>(nodehandle, bfc1); 
-
-  std::string bfc2 = "logical_camera_bfc2"; 
-  m_logical_cameras[bfc2] = std::make_unique<LogicalCamera>(nodehandle, bfc2); 
-
-  std::string bfc3 = "logical_camera_bfc3"; 
-  m_logical_cameras[bfc3] = std::make_unique<LogicalCamera>(nodehandle, bfc3); 
-
-  std::string bfc4 = "logical_camera_bfc4"; 
-  m_logical_cameras[bfc4] = std::make_unique<LogicalCamera>(nodehandle, bfc4); 
-
-  // Kitting station
-  std::string ks1 = "logical_camera_ks1"; 
-  m_logical_cameras[ks1] = std::make_unique<LogicalCamera>(nodehandle, ks1); 
-
-  std::string ks2 = "logical_camera_ks2"; 
-  m_logical_cameras[ks2] = std::make_unique<LogicalCamera>(nodehandle, ks2); 
-
-  std::string ks3 = "logical_camera_ks3"; 
-  m_logical_cameras[ks3] = std::make_unique<LogicalCamera>(nodehandle, ks3); 
-
-  std::string ks4 = "logical_camera_ks4"; 
-  m_logical_cameras[ks4] = std::make_unique<LogicalCamera>(nodehandle, ks4); 
-
-  // Belt
-  std::string belt = "logical_camera_belt"; 
-  m_logical_cameras[belt] = std::make_unique<LogicalCamera>(nodehandle, belt); 
-
-  // Bins
-  std::string bins0 = "logical_camera_bins0"; 
-  m_logical_cameras[bins0] = std::make_unique<LogicalCamera>(nodehandle, bins0); 
-
-  std::string bins1 = "logical_camera_bins1"; 
-  m_logical_cameras[bins1] = std::make_unique<LogicalCamera>(nodehandle, bins1); 
+  // All quality sensors in the environment
+  for (auto& camera_id: m_quality_sensors) {
+    m_quality_sensors_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, camera_id); 
+  }
 
 }
 
@@ -95,12 +42,13 @@ void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)
 
   // emplace_back directly create object inside vector which is more efficient
   // Use unique_ptr to store msg as resources of this vector 
-  if (not m_prev_orders.empty()){
+  if (not m_orders_record.empty()){
     ROS_INFO("High-priority order is announced"); 
   }
 
   m_new_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
-  m_prev_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
+  //m_unchecked_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
+  m_orders_record.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
 
 }
 
@@ -157,6 +105,7 @@ void FactoryManager::end_competition()
 bool FactoryManager::get_order()
 {
   ros::Rate wait_rate(1); 
+  ros::Time checking_time = ros::Time::now(); 
   // Wait for order for 10 seconds
   int count = 10; 
   while (m_new_orders.empty() && ros::ok()) {
@@ -167,6 +116,8 @@ bool FactoryManager::get_order()
     }
     ROS_INFO("Waiting orders for %ds...", count);
     count--; 
+    checking_time = ros::Time::now(); 
+    this->check_orders(); 
     wait_rate.sleep(); 
   }
   return true; 
@@ -180,35 +131,45 @@ void FactoryManager::plan()
 
   for (auto &order: m_new_orders) {
     for (auto &shipment: order->kitting_shipments) {
-      //this->assign_kitting_task(shipment); 
+      this->assign_kitting_task(shipment); 
     }
 
     for (auto &shipment: order->assembly_shipments) {
-      //this->assign_assembly_task(shipment); 
+      this->assign_assembly_task(shipment); 
     }
   }
 
   m_new_orders.clear(); 
 }
 
-// bool FactoryManager::check_order()
-// {
-//   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-//
-//   bool order_valid = true; 
-//   for (auto &order: m_orders) {
-//     for (auto &shipment: order->kitting_shipments) {
-//       // for every products if products is in logical sensors print position
-//       // else not in view yet
-//       // order_valid = false
-//     }
-//   }
-//   if (order_valid) {
-//     m_orders.clear(); 
-//   }
-//
-//   return order_valid; 
-// }
+void FactoryManager::check_orders()
+{
+  ROS_INFO("Checking order"); 
+  ROS_INFO_STREAM("Orders: " << m_orders_record.size()); 
+  for (auto &order: m_orders_record){
+    order_check_time[order->order_id] = ros::Time::now().toSec(); 
+    ROS_INFO("Checking %s", order->order_id.c_str()); 
+    ROS_INFO("----------"); 
+    // check every shipment in order
+    for (auto &shipment: order->kitting_shipments) {
+      // check every product in shipment
+      for ( auto &product: shipment.products) {
+        int parts_count = 0; 
+        // check every camera to see if product exists
+        for (auto &camera_id: m_logical_cameras){
+          parts_count += m_logical_cameras_dict[camera_id]->find_parts(product.type); 
+        }
+        if (parts_count == 0) {
+          ROS_INFO("No %s in factory", product.type.c_str()); 
+        }else{
+          ROS_INFO("Found %d %s in factory", parts_count, product.type.c_str()); 
+        }
+      }
+    }
+    ROS_INFO("----------"); 
+  }
+
+}
 
 void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)
 {

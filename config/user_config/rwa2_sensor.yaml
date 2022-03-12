@@ -3,25 +3,25 @@ sensors:
   logical_camera_ks4:
     type: logical_camera
     pose:
-      xyz: [-2.26, -4.68, 2]
+      xyz: [-2.26, -4.68, 1.8]
       rpy: [3.141593, 1.570792, 0.000000]
   
   logical_camera_ks3:
     type: logical_camera
     pose:
-      xyz: [-2.26, -1.33, 2]
+      xyz: [-2.26, -1.33, 1.8]
       rpy: [3.141593, 1.570792, 0.000000]
   
   logical_camera_ks2:
     type: logical_camera
     pose:
-      xyz: [-2.26, 1.36, 2]
+      xyz: [-2.26, 1.36, 1.8]
       rpy: [3.141593, 1.570792, 0.000000]
   
   logical_camera_ks1:
     type: logical_camera
     pose:
-      xyz: [-2.26, 4.68, 2]
+      xyz: [-2.26, 4.68, 1.8]
       rpy: [3.141593, 1.570792, 0.000000]
   # 4 logical camera for 4 briefcases
   logical_camera_bfc4:

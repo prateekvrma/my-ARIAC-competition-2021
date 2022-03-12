@@ -1,9 +1,8 @@
 #include "sensors.h"
 
-#include <tf2_ros/transform_listener.h>
-#include <geometry_msgs/TransformStamped.h>
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
+#include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h> //--needed for tf2::Matrix3x3
 
 #include <nist_gear/Model.h>
@@ -18,58 +17,94 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string& id)
   Sensors(nodehandle, id)
 {
     m_sensor_subscriber = m_nh.subscribe("/ariac/" + id, 10, &LogicalCamera::sensor_callback, this); 
+
+    tf2_ros::Buffer tfBuffer;
+    tf2_ros::TransformListener tfListener(tfBuffer);
+
+    ros::Duration timeout(5.0);
+    try {
+      m_camera_frame = tfBuffer.lookupTransform("world", id + "_frame",
+                                                   ros::Time(0), timeout);
+    }
+    catch (tf2::TransformException& ex) {
+      ROS_WARN("%s", ex.what());
+      ros::Duration(1.0).sleep();
+      return; 
+    }
+
+    // m_camera_q_tf = tf2::Quaternion(
+    //   transformStamped.transform.rotation.x,
+    //   transformStamped.transform.rotation.y,
+    //   transformStamped.transform.rotation.z,
+    //   transformStamped.transform.rotation.w);
+    //
 }
 
 void LogicalCamera::sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr& msg)
 {
-  tf2_ros::Buffer tfBuffer;
-  tf2_ros::TransformListener tfListener(tfBuffer);
-
-  ros::Duration timeout(5.0);
-  geometry_msgs::TransformStamped transformStamped;
-  try {
-    ROS_INFO("%s", m_id.c_str()); 
-    transformStamped = tfBuffer.lookupTransform("world", m_id + "_frame",
-                                                 ros::Time(0), timeout);
+  // const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  m_parts_camera_frame.clear(); 
+  for (auto& model: msg->models){
+    m_parts_camera_frame.emplace_back(std::make_unique<nist_gear::Model>(model)); 
   }
-  catch (tf2::TransformException& ex) {
-    ROS_WARN("%s", ex.what());
-    ros::Duration(1.0).sleep();
-    return; 
-  }
+    //   // ROS_INFO("%s in /world frame: [%f,%f,%f]",
+  //   //     transformed_model.type.c_str(), 
+  //   //     transformed_model.pose.position.x,
+  //   //     transformed_model.pose.position.y,
+  //   //     transformed_model.pose.position.z); 
+  //
+  // }
+    
+}
 
-  tf2::Quaternion camera_q_tf(
-    transformStamped.transform.rotation.x,
-    transformStamped.transform.rotation.y,
-    transformStamped.transform.rotation.z,
-    transformStamped.transform.rotation.w);
-
-  for (auto &model: msg->models) {
-    geometry_msgs::Pose model_pose = model.pose; 
+void LogicalCamera::camera_to_world()
+{
+  m_parts_world_frame.clear(); 
+  for (auto &model: m_parts_camera_frame) {
+    geometry_msgs::Pose model_pose = model->pose; 
     geometry_msgs::Pose transformed_model_pose; 
 
-    tf2::doTransform(model_pose, transformed_model_pose, transformStamped); 
+    tf2::doTransform(model_pose, transformed_model_pose, m_camera_frame); 
 
-    // calculate orientation in world frame
-    tf2::Quaternion model_q_tf;
-    tf2::convert(transformed_model_pose.orientation, model_q_tf); 
-    model_q_tf.normalize(); 
+    nist_gear::Model transformed_model; 
+    transformed_model.type = model->type; 
+    transformed_model.pose = transformed_model_pose; 
+    m_parts_world_frame.emplace_back(std::make_unique<nist_gear::Model>(transformed_model)); 
+  }
+}
 
-    //convert Quaternion to Euler angles
-    tf2::Matrix3x3 m(model_q_tf);
-    double roll, pitch, yaw;
-    m.getRPY(roll, pitch, yaw);
+int LogicalCamera::find_parts(const std::string& product_type)
+{
+  this->camera_to_world(); 
+  // const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
-    ROS_INFO("%s in /world frame: [%f,%f,%f] [%f,%f,%f]",
-      model.type.c_str(), 
-      transformed_model_pose.position.x,
-      transformed_model_pose.position.y,
-      transformed_model_pose.position.z,
-      roll,
-      pitch,
-      yaw);
+  int count = 0; 
+  for (auto &part: m_parts_world_frame){
+    // ROS_INFO("%s", part->type.c_str()); 
+    if (part->type == product_type) {
+      // calculate orientation in world frame
+      tf2::Quaternion part_q_tf;
+      tf2::convert(part->pose.orientation, part_q_tf); 
+      part_q_tf.normalize(); 
+
+      //convert Quaternion to Euler angles
+      tf2::Matrix3x3 m(part_q_tf);
+      double roll, pitch, yaw;
+      m.getRPY(roll, pitch, yaw);
+
+      ROS_INFO("%s in /world frame: [%f,%f,%f] [%f,%f,%f]",
+        part->type.c_str(), 
+        part->pose.position.x,
+        part->pose.position.y,
+        part->pose.position.z,
+        roll,
+        pitch,
+        yaw);
+
+      count++; 
     }
-
+  }
+  return count; 
 }
 
 DepthCamera::DepthCamera(ros::NodeHandle* nodehandle, const std::string& id):

@@ -61,6 +61,8 @@ class FactoryManager {
      */
     bool work_done(); 
 
+    ros::Time start_time; 
+
   private: 
 
     /**
@@ -83,6 +85,9 @@ class FactoryManager {
      *
      * @Param shipment
      */
+
+    void check_orders(); 
+
     void assign_kitting_task(nist_gear::KittingShipment& shipment);
 
     /**
@@ -99,8 +104,27 @@ class FactoryManager {
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
                                              "as1", "as2", "as3", "as4"}; 
 
+    const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
+                                                     "as1_1", "as2_1", "as1_2", "as2_2",
+                                                     "as3_3", "as4_3", "as3_4", "as4_4", 
+                                                     // Briefcase
+                                                     "bfc1", "bfc2", "bfc3", "bfc4",  
+                                                     // Kitting Station
+                                                     "ks1", "ks2", "ks3", "ks4",
+                                                     // Belt,
+                                                     "belt",
+                                                     // Bins
+                                                     "bins0", "bins1"}; 
 
-    std::map<std::string, std::unique_ptr<LogicalCamera>> m_logical_cameras; 
+    const std::vector<std::string> m_quality_sensors{// Quality sensors on AGV 
+                                                     "quality_control_sensor_1",
+                                                     "quality_control_sensor_2",
+                                                     "quality_control_sensor_3",
+                                                     "quality_control_sensor_4"}; 
+
+
+    std::map<std::string, std::unique_ptr<LogicalCamera>> m_logical_cameras_dict; 
+    std::map<std::string, std::unique_ptr<LogicalCamera>> m_quality_sensors_dict; 
 
     /**
      * @Brief node handle for AssemblyStation
@@ -137,7 +161,8 @@ class FactoryManager {
      *
      */
     std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
-    std::vector<std::unique_ptr<nist_gear::Order>> m_prev_orders; 
+    std::vector<std::unique_ptr<nist_gear::Order>> m_unchecked_orders; 
+    std::vector<std::unique_ptr<nist_gear::Order>> m_orders_record; 
 
     /**
      * @Brief The working status of all the worker machine  

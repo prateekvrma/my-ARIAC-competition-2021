@@ -12,12 +12,16 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
+#include <memory>
 #include <string>
+#include <mutex>
 
 #include <ros/ros.h>
+#include <geometry_msgs/TransformStamped.h>
 
 #include <nist_gear/LogicalCameraImage.h>
 #include <nist_gear/Proximity.h>
+#include <nist_gear/Model.h>
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Range.h>
 #include <sensor_msgs/PointCloud.h>
@@ -45,6 +49,7 @@ class Sensors {
 class LogicalCamera: private Sensors {
   public:
     LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id); 
+    int find_parts(const std::string& part); 
 
   private:
 
@@ -54,6 +59,13 @@ class LogicalCamera: private Sensors {
      * @Param msg
      */
     void sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr& msg); 
+    void camera_to_world(); 
+
+    geometry_msgs::TransformStamped m_camera_frame;
+    std::vector<std::unique_ptr<nist_gear::Model>> m_parts_camera_frame; 
+    std::vector<std::unique_ptr<nist_gear::Model>> m_parts_world_frame; 
+
+    std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 
 
 /**
