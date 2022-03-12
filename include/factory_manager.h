@@ -1,14 +1,3 @@
-/**
- * @file factory_manager.h
- * @author Bo-Shiang Wang (bwang24@umd.edu), Chang-Hong Chen (markchen@umd.edu), Prateek Verma (verma@umd.edu), Sparsh Jaiswal (sjaiswal@umd.edu)
- * @brief 
- * @version 0.1
- * @date 2022-03-01
- * 
- * @copyright Copyright (c) 2022
- * 
- */
-
 #ifndef FACTORY_MANAGER_H
 #define FACTORY_MANAGER_H
 

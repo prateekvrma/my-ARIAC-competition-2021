@@ -1,14 +1,3 @@
-/**
- * @file sensors.h
- * @authors Bo-Shiang Wang (bwang24@umd.edu), Chang-Hong Chen (markchen@umd.edu), Prateek Verma (verma@umd.edu), Sparsh Jaiswal (sjaiswal@umd.edu)
- * @brief This header file contains the class definitions and functions for all the sensors used in ARIAC 
- * @version 0.1
- * @date 2022-03-01
- * 
- * @copyright Copyright (c) 2022
- * 
- */
-
 #ifndef SENSORS_H
 #define SENSORS_H
 
