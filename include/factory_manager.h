@@ -24,6 +24,22 @@
 
 #include "sensors.h"
 
+enum class OrderState{New, Checked, Finsih}; 
+
+class OrderInfo {
+  public: 
+    OrderInfo(const std::string& id,
+              const nist_gear::Order::ConstPtr& order_ptr); 
+
+    std::string order_id;  
+    std::unique_ptr<nist_gear::Order> order; 
+
+    // -1 if not check yet
+    double last_check = -1; 
+    OrderState state = OrderState::New; 
+    bool valid = false; 
+}; 
+
 class FactoryManager {
   public:
     FactoryManager(ros::NodeHandle* nodehandle); 
@@ -160,17 +176,11 @@ class FactoryManager {
      * @Brief  Vector to storage the subscribed order 
      *
      */
-    std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
-    std::vector<std::unique_ptr<nist_gear::Order>> m_unchecked_orders; 
+    // std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
+    std::vector<std::string> m_new_orders; 
 
-    std::map<std::string, std::unique_ptr<nist_gear::Order>> m_orders_record; 
-
-    // Records the last checking time of the order
-    std::map<std::string, ros::Time> m_order_check_time; 
-
-    std::map<std::string, bool> m_order_valid; 
-
-
+    std::vector<std::string> m_orders_id; 
+    std::map<std::string, std::unique_ptr<OrderInfo>> m_orders_record; 
 
 
     /**
