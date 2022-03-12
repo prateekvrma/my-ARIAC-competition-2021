@@ -115,8 +115,21 @@ bool FactoryManager::get_order()
     }
     ROS_INFO("Waiting orders for %ds...", count);
     count--; 
-    //checking_time = ros::Time::now(); 
-    //this->check_order(); 
+
+    for (auto& order_valid_info: m_order_valid) {
+      auto order_id = order_valid_info.first; 
+      auto valid = order_valid_info.second; 
+      if (valid == false) {
+        if ((ros::Time::now() - m_order_check_time[order_id]).toSec() > 20) {
+          valid = this->check_order(order_id); 
+          if (valid == false) {
+            ROS_INFO("Insufficient parts to complete %s", order_id.c_str()); 
+            m_order_check_time[order_id] = ros::Time::now(); 
+          }
+        }
+      }
+
+    }
     wait_rate.sleep(); 
   }
   return true; 
@@ -129,7 +142,7 @@ void FactoryManager::plan()
   //ROS_INFO_STREAM("Orders: " << m_new_orders.size()); 
 
   for (auto &order: m_new_orders) {
-    this->check_order(order->order_id); 
+    auto valid = this->check_order(order->order_id); 
     for (auto &shipment: order->kitting_shipments) {
       this->assign_kitting_task(shipment); 
     }
@@ -142,12 +155,14 @@ void FactoryManager::plan()
   m_new_orders.clear(); 
 }
 
-void FactoryManager::check_order(const std::string& order_id)
+bool FactoryManager::check_order(const std::string& order_id)
 {
   auto order = *m_orders_record[order_id]; 
-  order_check_time[order_id] = ros::Time::now(); 
+  m_order_check_time[order_id] = ros::Time::now(); 
   ROS_INFO("Checking %s", order_id.c_str()); 
   ROS_INFO("----------"); 
+  // true if all parts in order is exists
+  bool order_valid = true; 
   // check every shipment in order
   for (auto &shipment: order.kitting_shipments) {
     // check every product in shipment
@@ -159,12 +174,18 @@ void FactoryManager::check_order(const std::string& order_id)
       }
       if (parts_count == 0) {
         ROS_INFO("No %s in factory", product.type.c_str()); 
+        order_valid = false; 
       }else{
         ROS_INFO("Found %d %s in factory", parts_count, product.type.c_str()); 
       }
     }
   }
+
   ROS_INFO("----------"); 
+
+  m_order_valid[order_id] = order_valid; 
+
+  return order_valid; 
 
 }
 

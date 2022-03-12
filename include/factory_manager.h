@@ -86,7 +86,7 @@ class FactoryManager {
      * @Param shipment
      */
 
-    void check_order(const std::string& order_id); 
+    bool check_order(const std::string& order_id); 
 
     void assign_kitting_task(nist_gear::KittingShipment& shipment);
 
@@ -166,7 +166,10 @@ class FactoryManager {
     std::map<std::string, std::unique_ptr<nist_gear::Order>> m_orders_record; 
 
     // Records the last checking time of the order
-    std::map<std::string, ros::Time> order_check_time; 
+    std::map<std::string, ros::Time> m_order_check_time; 
+
+    std::map<std::string, bool> m_order_valid; 
+
 
 
 

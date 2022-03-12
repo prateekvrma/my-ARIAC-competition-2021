@@ -31,7 +31,7 @@ int main(int argc, char **argv)
       group1.start_competition(); 
       group1.start_time = ros::Time::now(); 
 
-      while ((ros::Time::now() - group1.start_time).toSec() < 35) {
+      while (ros::ok()) {
         auto success = group1.get_order(); 
         if (success) {
           group1.plan(); 
