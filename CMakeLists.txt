@@ -164,3 +164,15 @@ target_link_libraries(${PROJECT_NAME}_rwa2_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(${PROJECT_NAME}_blackout_node src/nodes/blackout.cpp)
+add_dependencies(${PROJECT_NAME}_blackout_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_blackout_node
+  ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_quality_node src/nodes/quality_checks.cpp)
+add_dependencies(${PROJECT_NAME}_quality_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_quality_node
+  ${catkin_LIBRARIES}
+)
+

@@ -8,4 +8,12 @@
         type="ariac_group1_rwa2_node" 
         name="rwa2" output="screen"></node>
 
+  <node pkg="ariac_group1" 
+        type="ariac_group1_blackout_node" 
+        name="blackout" output="screen"></node>
+
+  <node pkg="ariac_group1" 
+        type="ariac_group1_quality_node" 
+        name="quality" output="screen"></node>
+
 </launch>
