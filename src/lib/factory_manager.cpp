@@ -48,8 +48,7 @@ void FactoryManager::order_callback(const nist_gear::Order::ConstPtr& msg)
 
   m_new_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
   //m_unchecked_orders.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
-  m_orders_record.emplace_back(std::make_unique<nist_gear::Order>(*msg)); 
-
+  m_orders_record[msg->order_id] = std::make_unique<nist_gear::Order>(*msg); 
 }
 
 void FactoryManager::busy_callback(const ariac_group1::Busy& msg){
@@ -116,8 +115,8 @@ bool FactoryManager::get_order()
     }
     ROS_INFO("Waiting orders for %ds...", count);
     count--; 
-    checking_time = ros::Time::now(); 
-    this->check_orders(); 
+    //checking_time = ros::Time::now(); 
+    //this->check_order(); 
     wait_rate.sleep(); 
   }
   return true; 
@@ -130,6 +129,7 @@ void FactoryManager::plan()
   //ROS_INFO_STREAM("Orders: " << m_new_orders.size()); 
 
   for (auto &order: m_new_orders) {
+    this->check_order(order->order_id); 
     for (auto &shipment: order->kitting_shipments) {
       this->assign_kitting_task(shipment); 
     }
@@ -142,32 +142,29 @@ void FactoryManager::plan()
   m_new_orders.clear(); 
 }
 
-void FactoryManager::check_orders()
+void FactoryManager::check_order(const std::string& order_id)
 {
-  ROS_INFO("Checking order"); 
-  ROS_INFO_STREAM("Orders: " << m_orders_record.size()); 
-  for (auto &order: m_orders_record){
-    order_check_time[order->order_id] = ros::Time::now().toSec(); 
-    ROS_INFO("Checking %s", order->order_id.c_str()); 
-    ROS_INFO("----------"); 
-    // check every shipment in order
-    for (auto &shipment: order->kitting_shipments) {
-      // check every product in shipment
-      for ( auto &product: shipment.products) {
-        int parts_count = 0; 
-        // check every camera to see if product exists
-        for (auto &camera_id: m_logical_cameras){
-          parts_count += m_logical_cameras_dict[camera_id]->find_parts(product.type); 
-        }
-        if (parts_count == 0) {
-          ROS_INFO("No %s in factory", product.type.c_str()); 
-        }else{
-          ROS_INFO("Found %d %s in factory", parts_count, product.type.c_str()); 
-        }
+  auto order = *m_orders_record[order_id]; 
+  order_check_time[order_id] = ros::Time::now(); 
+  ROS_INFO("Checking %s", order_id.c_str()); 
+  ROS_INFO("----------"); 
+  // check every shipment in order
+  for (auto &shipment: order.kitting_shipments) {
+    // check every product in shipment
+    for ( auto &product: shipment.products) {
+      int parts_count = 0; 
+      // check every camera to see if product exists
+      for (auto &camera_id: m_logical_cameras){
+        parts_count += m_logical_cameras_dict[camera_id]->find_parts(product.type); 
+      }
+      if (parts_count == 0) {
+        ROS_INFO("No %s in factory", product.type.c_str()); 
+      }else{
+        ROS_INFO("Found %d %s in factory", parts_count, product.type.c_str()); 
       }
     }
-    ROS_INFO("----------"); 
   }
+  ROS_INFO("----------"); 
 
 }
 

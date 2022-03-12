@@ -86,7 +86,7 @@ class FactoryManager {
      * @Param shipment
      */
 
-    void check_orders(); 
+    void check_order(const std::string& order_id); 
 
     void assign_kitting_task(nist_gear::KittingShipment& shipment);
 
@@ -162,7 +162,13 @@ class FactoryManager {
      */
     std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
     std::vector<std::unique_ptr<nist_gear::Order>> m_unchecked_orders; 
-    std::vector<std::unique_ptr<nist_gear::Order>> m_orders_record; 
+
+    std::map<std::string, std::unique_ptr<nist_gear::Order>> m_orders_record; 
+
+    // Records the last checking time of the order
+    std::map<std::string, ros::Time> order_check_time; 
+
+
 
     /**
      * @Brief The working status of all the worker machine  
