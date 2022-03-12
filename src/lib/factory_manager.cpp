@@ -134,6 +134,7 @@ bool FactoryManager::get_order()
      * @Sparsh
      * Add sensor blackout here
      * And faulty part
+     *   access the sensor by:   m_logical_cameras_dict[camera_id].method or attribute
      *************************************/
 
     // Check for insufficient parts in order
