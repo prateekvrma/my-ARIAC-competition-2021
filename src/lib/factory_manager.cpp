@@ -130,6 +130,12 @@ bool FactoryManager::get_order()
     ROS_INFO("Waiting orders for %ds...", count);
     count--; 
 
+    /**************************************
+     * @Sparsh
+     * Add sensor blackout here
+     * And faulty part
+     *************************************/
+
     // Check for insufficient parts in order
     for (auto& order_id: m_orders_id) {
       auto& order_info = m_orders_record[order_id]; 

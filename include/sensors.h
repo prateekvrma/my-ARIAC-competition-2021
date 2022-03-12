@@ -49,7 +49,15 @@ class Sensors {
 class LogicalCamera: private Sensors {
   public:
     LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id); 
-    int find_parts(const std::string& part); 
+
+    /**
+     * @Brief Find all the products with the same type as the target under this camera  
+     *
+     * @Param product_type: the type of a part
+     *
+     * @Returns the number of same product type found  
+     */
+    int find_parts(const std::string& product_type); 
 
   private:
 
@@ -59,10 +67,25 @@ class LogicalCamera: private Sensors {
      * @Param msg
      */
     void sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr& msg); 
+
+    /**
+     * @Brief Transform the stored parts pose to pose with respect to the world frame  
+     */
     void camera_to_world(); 
 
+    /**
+     * @Brief Camera frame with respect to the world frame
+     */
     geometry_msgs::TransformStamped m_camera_frame;
+
+    /**
+     * @Brief Parts pose with respect to the camera frame 
+     */
     std::vector<std::unique_ptr<nist_gear::Model>> m_parts_camera_frame; 
+
+    /**
+     * @Brief Parts pose with respect to the world frame  
+     */
     std::vector<std::unique_ptr<nist_gear::Model>> m_parts_world_frame; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 

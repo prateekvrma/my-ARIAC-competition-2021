@@ -18,6 +18,7 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string& id)
 {
     m_sensor_subscriber = m_nh.subscribe("/ariac/" + id, 10, &LogicalCamera::sensor_callback, this); 
 
+    // Store the camera pose in world frame (camera pose is constant)
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
 
@@ -31,39 +32,32 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string& id)
       ros::Duration(1.0).sleep();
       return; 
     }
-
-    // m_camera_q_tf = tf2::Quaternion(
-    //   transformStamped.transform.rotation.x,
-    //   transformStamped.transform.rotation.y,
-    //   transformStamped.transform.rotation.z,
-    //   transformStamped.transform.rotation.w);
-    //
 }
 
 void LogicalCamera::sensor_callback(const nist_gear::LogicalCameraImage::ConstPtr& msg)
 {
-  // const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
+  // Clear and ready to recive new data
   m_parts_camera_frame.clear(); 
+
+  // Store all parts in camera frame
   for (auto& model: msg->models){
     m_parts_camera_frame.emplace_back(std::make_unique<nist_gear::Model>(model)); 
   }
-    //   // ROS_INFO("%s in /world frame: [%f,%f,%f]",
-  //   //     transformed_model.type.c_str(), 
-  //   //     transformed_model.pose.position.x,
-  //   //     transformed_model.pose.position.y,
-  //   //     transformed_model.pose.position.z); 
-  //
-  // }
     
 }
 
 void LogicalCamera::camera_to_world()
 {
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
   m_parts_world_frame.clear(); 
   for (auto &model: m_parts_camera_frame) {
     geometry_msgs::Pose model_pose = model->pose; 
     geometry_msgs::Pose transformed_model_pose; 
 
+    // Calculate the part pose in world frame
     tf2::doTransform(model_pose, transformed_model_pose, m_camera_frame); 
 
     nist_gear::Model transformed_model; 
@@ -76,18 +70,16 @@ void LogicalCamera::camera_to_world()
 int LogicalCamera::find_parts(const std::string& product_type)
 {
   this->camera_to_world(); 
-  // const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
   int count = 0; 
   for (auto &part: m_parts_world_frame){
-    // ROS_INFO("%s", part->type.c_str()); 
     if (part->type == product_type) {
-      // calculate orientation in world frame
+      // Transform msgs quaternion to tf2 quaternion 
       tf2::Quaternion part_q_tf;
       tf2::convert(part->pose.orientation, part_q_tf); 
       part_q_tf.normalize(); 
 
-      //convert Quaternion to Euler angles
+      //Convert Quaternion to Euler angles
       tf2::Matrix3x3 m(part_q_tf);
       double roll, pitch, yaw;
       m.getRPY(roll, pitch, yaw);

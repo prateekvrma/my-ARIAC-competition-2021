@@ -24,19 +24,46 @@
 
 #include "sensors.h"
 
+/**
+ * @Brief The state of the order  
+ */
 enum class OrderState{New, Checked, Finsih}; 
 
+/**
+ * @Brief Store information about an order   
+ */
 class OrderInfo {
   public: 
     OrderInfo(const std::string& id,
               const nist_gear::Order::ConstPtr& order_ptr); 
 
+    /**
+     * @Brief The id of an order
+     */
     std::string order_id;  
+
+    /**
+     * @Brief The order content 
+     */
     std::unique_ptr<nist_gear::Order> order; 
 
-    // -1 if not check yet
+    /**
+     * @Brief The last time this order has been checked 
+     *        =1 mean not checked yet
+     */
     double last_check = -1; 
+
+    /**
+     * @Brief The state of the order 
+     *        New: new recieved order
+     *        Checked: parts in order have been checked 
+     *        Finish: the order has been submitted
+     */
     OrderState state = OrderState::New; 
+
+    /**
+     * @Brief true if all parts are in environment  
+     */
     bool valid = false; 
 }; 
 
@@ -77,6 +104,9 @@ class FactoryManager {
      */
     bool work_done(); 
 
+    /**
+     * @Brief The time competition starts  
+     */
     ros::Time start_time; 
 
   private: 
@@ -97,13 +127,19 @@ class FactoryManager {
     void busy_callback(const ariac_group1::Busy& msg); 
 
     /**
+     * @Brief Check if all parts in an order is in environment
+     *
+     * @Param order_id
+     *
+     * @Returns true if all parts are in envrironment  
+     */
+    bool check_order(const std::string& order_id); 
+
+    /**
      * @Brief Assigning kitting tasks to AGVs 
      *
      * @Param shipment
      */
-
-    bool check_order(const std::string& order_id); 
-
     void assign_kitting_task(nist_gear::KittingShipment& shipment);
 
     /**
@@ -120,6 +156,10 @@ class FactoryManager {
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
                                              "as1", "as2", "as3", "as4"}; 
 
+    /**
+     * @Brief The name of logical cameras in environment  
+     *        The full name should add prefix "logical_camera_" 
+     */
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      "as1_1", "as2_1", "as1_2", "as2_2",
                                                      "as3_3", "as4_3", "as3_4", "as4_4", 
@@ -132,6 +172,9 @@ class FactoryManager {
                                                      // Bins
                                                      "bins0", "bins1"}; 
 
+    /**
+     * @Brief The name of quality sensors in environment  
+     */
     const std::vector<std::string> m_quality_sensors{// Quality sensors on AGV 
                                                      "quality_control_sensor_1",
                                                      "quality_control_sensor_2",
@@ -139,7 +182,14 @@ class FactoryManager {
                                                      "quality_control_sensor_4"}; 
 
 
+    /**
+     * @Brief Store the logical camera instant by id  
+     */
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_logical_cameras_dict; 
+
+    /**
+     * @Brief Store the quality sensors instant by id
+     */
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_quality_sensors_dict; 
 
     /**
@@ -173,13 +223,19 @@ class FactoryManager {
     ros::Subscriber m_busy_subscriber;
 
     /**
-     * @Brief  Vector to storage the subscribed order 
+     * @Brief New order recived 
      *
      */
-    // std::vector<std::unique_ptr<nist_gear::Order>> m_new_orders; 
     std::vector<std::string> m_new_orders; 
 
+    /**
+     * @Brief Id of all the past orders   
+     */
     std::vector<std::string> m_orders_id; 
+
+    /**
+     * @Brief Store all the orders information by id  
+     */
     std::map<std::string, std::unique_ptr<OrderInfo>> m_orders_record; 
 
 
