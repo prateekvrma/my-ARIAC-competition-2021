@@ -99,9 +99,20 @@ Start competition nodes
 roslaunch ariac_group1 rwa2.launch
 ```
 
-After the competition nodes starts, 
-run this script to trigger events
+Trigger events  
 ```
 roscd ariac_group1/script
 sh part_spawner.sh
 ```
+Events:  
+1. High-priority order  
+2. Sensors blackout 10s  
+3. Faulty part  
+4. Insufficient parts  
+
+After the competition nodes starts, run the above script to trigger events.  
+First a high-priority order will be triggered.  
+After 5s, sensors blackout will be triggered and last for 10s.  
+Once the blackout finishes, faulty part will be detected.  
+Insufficient order will be printed out if the parts in an order couldn't be found after 20s it was announced.   
+After all the events finish, close the program with Ctrl-C.  
