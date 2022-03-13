@@ -98,3 +98,10 @@ Start competition nodes
 ```
 roslaunch ariac_group1 rwa2.launch
 ```
+
+After the competition nodes starts, 
+run this script to trigger events
+```
+roscd ariac_group1/script
+sh part_spawner.sh
+```
