@@ -1,9 +1,11 @@
 #ifndef SENSORS_H
 #define SENSORS_H
 
+#include <vector>
 #include <memory>
 #include <string>
 #include <mutex>
+#include <map>
 
 #include <ros/ros.h>
 #include <geometry_msgs/TransformStamped.h>
@@ -14,6 +16,10 @@
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/Range.h>
 #include <sensor_msgs/PointCloud.h>
+
+#include <ariac_group1/PartInfo.h>
+
+using PartsDB = std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>>;  
 
 /**
  * @brief Class member function for sensors placed in the workcell.
@@ -47,7 +53,7 @@ class LogicalCamera: private Sensors {
      * @Returns the number of same product type found  
      */
     int find_parts(const std::string& product_type); 
-    void update_parts(); 
+    void update_parts(PartsDB& parts_database); 
 
   private:
 

@@ -19,6 +19,11 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
 void SensorManager::update_parts()
 {
   for (auto& camera_id: m_logical_cameras) {
-    m_logical_cameras_dict[camera_id]->update_parts();  
+    m_logical_cameras_dict[camera_id]->update_parts(m_parts_database);  
+  }
+
+  for (auto& data: m_parts_database) {
+    auto key = data.first; 
+    ROS_INFO("Key: %s", key.c_str()); 
   }
 }

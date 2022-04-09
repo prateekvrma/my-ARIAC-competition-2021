@@ -1,12 +1,13 @@
 #include "sensors.h"
 
+#include <cmath>
+
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h> //--needed for tf2::Matrix3x3
 
 #include <nist_gear/Model.h>
-#include <ariac_group1/PartInfo.h>
 
 Sensors::Sensors(ros::NodeHandle* nodehandle, const std::string &id): 
   m_nh{*nodehandle}, 
@@ -69,12 +70,39 @@ void LogicalCamera::camera_to_world()
   }
 }
 
-void LogicalCamera::update_parts()
+// bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2)
+// {
+//   epsilon = 1e-5; 
+//
+//   x1 = part1.pose.position.x; 
+//   y1 = part1.pose.position.y; 
+//   z1 = part1.pose.position.z; 
+//
+//   x2 = part2.pose.position.x; 
+//   y2 = part2.pose.position.y; 
+//   y2 = part2.pose.position.z; 
+//   
+//   if sqrt(((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)) < epsilon
+//     return true; 
+//   else
+//     return false; 
+// }
+
+void LogicalCamera::update_parts(PartsDB& parts_database)
 {
   this->camera_to_world(); 
-  // ROS_INFO("parts_size: %d", m_parts_world_frame.size()); 
   for (auto &part: m_parts_world_frame){
-    m_parts_publisher.publish(*part); 
+    // m_parts_publisher.publish(*part); 
+    ariac_group1::PartInfo part_info;  
+    part_info.part = *part; 
+    part_info.faulty = false; 
+    if (parts_database.count(part->type)) {
+      if (parts_database[part->type].size() <= 4) {
+        parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
+      }
+    } else {
+      parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
+    }
   }
 }
 

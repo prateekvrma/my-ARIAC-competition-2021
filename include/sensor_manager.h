@@ -40,6 +40,8 @@ class SensorManager {
 
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_quality_sensors_dict; 
 
+    std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>> m_parts_database; 
+
     ros::NodeHandle m_nh; 
 
 }; 
