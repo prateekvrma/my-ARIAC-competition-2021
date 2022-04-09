@@ -10,12 +10,14 @@
 #include <ariac_group1/PartInfo.h>
 
 #include "sensors.h"
+#include "utility.h"
 
 class SensorManager {
   public:
     SensorManager(ros::NodeHandle* nodehandle); 
 
     void update_parts(); 
+    void show_database(); 
 
   private:
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station

@@ -125,11 +125,12 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(sensors_lib src/lib/sensors.cpp)
-add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp)
-add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp)
-add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp) 
-add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp) 
+add_library(utility_lib src/lib/utility.cpp)
+add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
+add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
 
 # Declare a C++ executable
 add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)

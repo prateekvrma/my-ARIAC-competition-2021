@@ -21,9 +21,17 @@ void SensorManager::update_parts()
   for (auto& camera_id: m_logical_cameras) {
     m_logical_cameras_dict[camera_id]->update_parts(m_parts_database);  
   }
+  
+}
 
+void SensorManager::show_database()
+{
   for (auto& data: m_parts_database) {
     auto key = data.first; 
     ROS_INFO("Key: %s", key.c_str()); 
+    for (auto& part_info_ptr: data.second) {
+      Utility::print_part_pose(part_info_ptr->part); 
+    }
   }
+  ROS_INFO("============="); 
 }

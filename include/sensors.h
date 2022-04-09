@@ -19,6 +19,8 @@
 
 #include <ariac_group1/PartInfo.h>
 
+#include "utility.h"
+
 using PartsDB = std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>>;  
 
 /**

@@ -1,7 +1,5 @@
 #include "sensors.h"
 
-#include <cmath>
-
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
@@ -70,26 +68,10 @@ void LogicalCamera::camera_to_world()
   }
 }
 
-// bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2)
-// {
-//   epsilon = 1e-5; 
-//
-//   x1 = part1.pose.position.x; 
-//   y1 = part1.pose.position.y; 
-//   z1 = part1.pose.position.z; 
-//
-//   x2 = part2.pose.position.x; 
-//   y2 = part2.pose.position.y; 
-//   y2 = part2.pose.position.z; 
-//   
-//   if sqrt(((x2-x1)**2 + (y2-y1)**2 + (z2-z1)**2)) < epsilon
-//     return true; 
-//   else
-//     return false; 
-// }
 
 void LogicalCamera::update_parts(PartsDB& parts_database)
 {
+  // ROS_INFO("Sensor: %s", m_id.c_str()); 
   this->camera_to_world(); 
   for (auto &part: m_parts_world_frame){
     // m_parts_publisher.publish(*part); 
@@ -97,9 +79,20 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     part_info.part = *part; 
     part_info.faulty = false; 
     if (parts_database.count(part->type)) {
-      if (parts_database[part->type].size() <= 4) {
-        parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
+      bool in_database = false; 
+      for (auto& db_part_ptr: parts_database[part->type]) {
+        Utility::is_same_part(part_info.part, db_part_ptr->part); 
+        if (Utility::is_same_part(part_info.part, db_part_ptr->part)) {
+          in_database = true; 
+          break; 
+        }
       }
+      if (not in_database) {
+          parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
+      }
+      // if (parts_database[part->type].size() <= 4) {
+        // parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
+      // }
     } else {
       parts_database[part->type].emplace_back(std::make_unique<ariac_group1::PartInfo>(part_info)); 
     }
