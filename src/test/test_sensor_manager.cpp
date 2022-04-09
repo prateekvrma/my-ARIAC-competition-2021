@@ -10,7 +10,14 @@ int main(int argc, char **argv){
 
   SensorManager sensor_manager(&nh); 
 
-  ros::spin(); 
+  ros::Rate rate(20); 
+
+  while (ros::ok()){
+    sensor_manager.update_parts(); 
+    ros::spinOnce(); 
+    rate.sleep(); 
+  }
+
 
   return 0; 
 }

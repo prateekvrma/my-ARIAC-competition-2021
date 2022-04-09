@@ -47,6 +47,7 @@ class LogicalCamera: private Sensors {
      * @Returns the number of same product type found  
      */
     int find_parts(const std::string& product_type); 
+    void update_parts(); 
 
   private:
 
@@ -61,6 +62,8 @@ class LogicalCamera: private Sensors {
      * @Brief Transform the stored parts pose to pose with respect to the world frame  
      */
     void camera_to_world(); 
+
+    ros::Publisher m_parts_publisher; 
 
     /**
      * @Brief Camera frame with respect to the world frame

@@ -15,3 +15,10 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   }
 
 }
+
+void SensorManager::update_parts()
+{
+  for (auto& camera_id: m_logical_cameras) {
+    m_logical_cameras_dict[camera_id]->update_parts();  
+  }
+}

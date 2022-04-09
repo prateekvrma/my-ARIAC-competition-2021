@@ -6,6 +6,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h> //--needed for tf2::Matrix3x3
 
 #include <nist_gear/Model.h>
+#include <ariac_group1/PartInfo.h>
 
 Sensors::Sensors(ros::NodeHandle* nodehandle, const std::string &id): 
   m_nh{*nodehandle}, 
@@ -17,6 +18,7 @@ LogicalCamera::LogicalCamera(ros::NodeHandle* nodehandle, const std::string& id)
   Sensors(nodehandle, id)
 {
     m_sensor_subscriber = m_nh.subscribe("/ariac/" + id, 10, &LogicalCamera::sensor_callback, this); 
+    m_parts_publisher = m_nh.advertise<nist_gear::Model>("/database/parts", 10); 
 
     // Store the camera pose in world frame (camera pose is constant)
     tf2_ros::Buffer tfBuffer;
@@ -64,6 +66,15 @@ void LogicalCamera::camera_to_world()
     transformed_model.type = model->type; 
     transformed_model.pose = transformed_model_pose; 
     m_parts_world_frame.emplace_back(std::make_unique<nist_gear::Model>(transformed_model)); 
+  }
+}
+
+void LogicalCamera::update_parts()
+{
+  this->camera_to_world(); 
+  // ROS_INFO("parts_size: %d", m_parts_world_frame.size()); 
+  for (auto &part: m_parts_world_frame){
+    m_parts_publisher.publish(*part); 
   }
 }
 
