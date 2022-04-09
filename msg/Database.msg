@@ -1,0 +1,1 @@
+PartInfo[] parts_info

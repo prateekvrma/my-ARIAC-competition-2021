@@ -57,6 +57,8 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   Busy.msg
+  PartInfo.msg
+  Database.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -77,6 +79,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  nist_gear
   #sensor_msgs#   trajectory_msgs
 )
 
@@ -125,6 +128,7 @@ include_directories(include ${catkin_INCLUDE_DIRS})
 add_library(sensors_lib src/lib/sensors.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp)
+add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp) 
 add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp) 
 
 # Declare a C++ executable
@@ -173,6 +177,13 @@ target_link_libraries(${PROJECT_NAME}_blackout_node
 add_executable(${PROJECT_NAME}_quality_node src/nodes/quality_checks.cpp)
 add_dependencies(${PROJECT_NAME}_quality_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_quality_node
+  ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_test_sensor_manager_node src/test/test_sensor_manager.cpp)
+add_dependencies(${PROJECT_NAME}_test_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_test_sensor_manager_node
+  sensor_manager_lib
   ${catkin_LIBRARIES}
 )
 
