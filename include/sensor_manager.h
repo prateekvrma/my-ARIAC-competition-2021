@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <mutex>
 
 #include <ros/ros.h>
 
@@ -53,6 +54,8 @@ class SensorManager {
     std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>> m_parts_database; 
 
     ros::NodeHandle m_nh; 
+
+    std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 
 }; 
 

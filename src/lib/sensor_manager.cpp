@@ -20,10 +20,16 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
 
 void SensorManager::update_parts()
 {
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  m_parts_database.clear(); 
+
   for (auto& camera_id: m_logical_cameras) {
     m_logical_cameras_dict[camera_id]->update_parts(m_parts_database);  
   }
   
+  for (auto& camera_id: m_quality_sensors) {
+    m_quality_sensors_dict[camera_id]->update_parts(m_parts_database);  
+  }
 }
 
 void SensorManager::show_database()

@@ -89,10 +89,10 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     ariac_group1::PartInfo part_info;  
     part_info.part = *part; 
     part_info.faulty = false; 
+
     if (parts_database.count(part->type)) {
       bool in_database = false; 
       for (auto& db_part_ptr: parts_database[part->type]) {
-        Utility::is_same_part(part_info.part, db_part_ptr->part); 
         if (Utility::is_same_part(part_info.part, db_part_ptr->part)) {
           in_database = true; 
           break; 
