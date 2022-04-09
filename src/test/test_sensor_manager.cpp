@@ -15,6 +15,7 @@ int main(int argc, char **argv){
   while (ros::ok()){
     sensor_manager.update_parts(); 
     // sensor_manager.show_database(); 
+    sensor_manager.check_blackout(); 
     ros::spinOnce(); 
     rate.sleep(); 
   }

@@ -38,6 +38,34 @@ void SensorManager::show_database()
   ROS_INFO("============="); 
 }
 
+void SensorManager::check_blackout() 
+{
+  static int test_count = 0; 
+
+  for (auto& camera_id: m_logical_cameras) {
+    if (not m_logical_cameras_dict[camera_id]->is_blackout()) {
+      // If one of the sensors report false, then no blackout
+      // set test_blackout for next time
+      m_logical_cameras_dict[camera_id]->test_blackout(); 
+      test_count = 0; 
+      return; 
+    }
+  }
+
+  if (test_count < 5) {
+
+    test_count++; 
+
+  } 
+  else {
+
+    ROS_INFO("Sensors blackout"); 
+    test_count = 0; 
+
+  }
+
+}
+
 bool SensorManager::get_parts(ariac_group1::GetParts::Request &req, 
                               ariac_group1::GetParts::Response &res) 
 {

@@ -30,20 +30,23 @@ using PartsDB = std::map<std::string, std::vector<std::unique_ptr<ariac_group1::
 class Sensors {
   public:
     Sensors(ros::NodeHandle* nodehandle, const std::string& id); 
-    virtual ~Sensors() = 0; 
+    virtual ~Sensors()=0; 
+    void test_blackout(); 
+    bool is_blackout(); 
 
   protected: 
     ros::NodeHandle m_nh; 
     // sensor id
     std::string m_id; 
     ros::Subscriber m_sensor_subscriber; 
+    bool m_blackout = true; 
 }; 
 
 /**
  * @brief Class member function of Logical Camera with built-in object classification and localization system.
  *        - Reports the position and orientation of the camera in the world and collection of the objects detected within its frustum.
  */
-class LogicalCamera: private Sensors {
+class LogicalCamera: public Sensors {
   public:
     LogicalCamera(ros::NodeHandle* nodehandle, const std::string &id); 
 
@@ -95,7 +98,7 @@ class LogicalCamera: private Sensors {
  * @brief Class member function of the time-of-flight Depth Camera (Swissranger SR4000).
  * 
  */
-class DepthCamera: private Sensors {
+class DepthCamera: public Sensors {
   public:
     DepthCamera(ros::NodeHandle* nodehandle, const std::string& id); 
 
@@ -114,7 +117,7 @@ class DepthCamera: private Sensors {
  *        - detects range of ~0.5 meters. 
  * 
  */
-class ProximitySensor: private Sensors {
+class ProximitySensor: public Sensors {
   public:
     ProximitySensor(ros::NodeHandle* nodehandle, const std::string& id); 
 
@@ -133,7 +136,7 @@ class ProximitySensor: private Sensors {
  *        - output is array of ranges and intensities.
  *        - max. range of each beam = ~0.725 meters.  
  */
-class LaserProfiler: private Sensors {
+class LaserProfiler: public Sensors {
   public:
     LaserProfiler(ros::NodeHandle* nodehandle, const std::string& id); 
 
@@ -153,7 +156,7 @@ class LaserProfiler: private Sensors {
  *        - binary output tells whether there is an object crossing the beam.        
  * 
  */
-class BreakBeam: private Sensors {
+class BreakBeam: public Sensors {
   public:
     BreakBeam(ros::NodeHandle* nodehandle, const std::string& id); 
 

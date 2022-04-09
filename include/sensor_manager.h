@@ -20,6 +20,7 @@ class SensorManager {
 
     void update_parts(); 
     void show_database(); 
+    void check_blackout(); 
 
   private:
     bool get_parts(ariac_group1::GetParts::Request &req, 
