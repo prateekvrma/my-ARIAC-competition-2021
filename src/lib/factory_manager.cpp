@@ -6,6 +6,7 @@
 #include <std_srvs/Trigger.h>
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
+#include <ariac_group1/GetParts.h> 
 
 
 OrderInfo::OrderInfo(const std::string& id,
@@ -30,17 +31,6 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   // All workers are free at start
   for (auto& worker: m_workers) {
     m_busy_state[worker] = false; 
-  }
-
-  // All Logical cameras in the environment
-  for (auto& camera_id: m_logical_cameras) {
-    std::string prefix = "logical_camera_"; 
-    m_logical_cameras_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, prefix += camera_id); 
-  }
-
-  // All quality sensors in the environment
-  for (auto& camera_id: m_quality_sensors) {
-    m_quality_sensors_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, camera_id); 
   }
 
 }
@@ -130,13 +120,6 @@ bool FactoryManager::get_order()
     ROS_INFO("Waiting orders for %ds...", count);
     count--; 
 
-    /**************************************
-     * @Sparsh
-     * Add sensor blackout here
-     * And faulty part
-     *   access the sensor by:   m_logical_cameras_dict[camera_id].method or attribute
-     *************************************/
-
     // Check for insufficient parts in order
     for (auto& order_id: m_orders_id) {
       auto& order_info = m_orders_record[order_id]; 
@@ -184,6 +167,16 @@ void FactoryManager::plan()
 
 bool FactoryManager::check_order(const std::string& order_id)
 {
+  std::string service_name = "/sensor_manager/get_parts"; 
+
+  static auto client = m_nh.serviceClient<ariac_group1::GetParts>(service_name); 
+
+  if (!client.exists()) {
+    ROS_INFO("Waiting for sensor manager...");
+    client.waitForExistence();
+    ROS_INFO("Sensor information is now ready.");
+  }
+
   // Store the check time
   m_orders_record[order_id]->last_check = ros::Time::now().toSec();
   auto& order = m_orders_record[order_id]->order; 
@@ -193,37 +186,47 @@ bool FactoryManager::check_order(const std::string& order_id)
   // true if all parts in order is exists
   bool order_valid = true; 
 
+  std::map<std::string, int> wanted_type_count; 
   // check every shipment in order
   for (auto &shipment: order->kitting_shipments) {
 
-    std::set<std::string> exist_types; 
-    // check every product in shipment
     for ( auto &product: shipment.products) {
 
-      // if the product type is already searched, skiped it. 
-      if (exist_types.find(product.type) != exist_types.end()) {
-        continue; 
-      }else {
-        exist_types.insert(product.type); 
+      if (wanted_type_count.count(product.type)) {
+
+        wanted_type_count[product.type]++; 
+
       }
+      else {
 
-      int parts_count = 0; 
+        wanted_type_count[product.type] = 1; 
 
-      // check every camera to see if product exists
-      for (auto &camera_id: m_logical_cameras){
-        parts_count += m_logical_cameras_dict[camera_id]->find_parts(product.type); 
       }
+    }
+  }
 
-      // parts not exist in any camera
-      if (parts_count == 0) {
-        ROS_INFO("No %s in factory", product.type.c_str()); 
+  for (auto& wanted_type: wanted_type_count) {
+    auto type = wanted_type.first; 
+    auto type_count = wanted_type.second; 
+
+    ariac_group1::GetParts get_parts_srv; 
+    get_parts_srv.request.type = type; 
+
+    if (client.call(get_parts_srv)) {
+
+      auto parts_in_factory = get_parts_srv.response.parts_info.size(); 
+      if (parts_in_factory < type_count) {
         order_valid = false; 
-      }else {
-        ROS_INFO("Found %d %s in factory", parts_count, product.type.c_str()); 
-      }
+      } 
+
+      ROS_INFO("Found %lu %s in factory, %s needs %d", parts_in_factory, type.c_str(), order_id.c_str(), type_count); 
 
     }
+    else {
 
+      ROS_ERROR("Failed to call %s", service_name.c_str()); 
+
+    }
   }
 
   ROS_INFO("----------"); 
