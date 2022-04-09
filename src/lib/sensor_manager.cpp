@@ -3,6 +3,8 @@
 SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {
+  m_get_parts_service = m_nh.advertiseService("/sensor_manager/get_parts", &SensorManager::get_parts, this); 
+
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
     std::string prefix = "logical_camera_"; 
@@ -35,3 +37,16 @@ void SensorManager::show_database()
   }
   ROS_INFO("============="); 
 }
+
+bool SensorManager::get_parts(ariac_group1::GetParts::Request &req, 
+                              ariac_group1::GetParts::Response &res) 
+{
+  for (auto& part_info_ptr: m_parts_database[req.type]) {
+    res.parts_info.push_back(*part_info_ptr); 
+    Utility::print_part_pose(part_info_ptr->part); 
+  }
+
+  return true; 
+}
+
+

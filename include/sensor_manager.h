@@ -7,7 +7,9 @@
 #include <map>
 
 #include <ros/ros.h>
+
 #include <ariac_group1/PartInfo.h>
+#include <ariac_group1/GetParts.h>
 
 #include "sensors.h"
 #include "utility.h"
@@ -20,6 +22,11 @@ class SensorManager {
     void show_database(); 
 
   private:
+    bool get_parts(ariac_group1::GetParts::Request &req, 
+                   ariac_group1::GetParts::Response &res); 
+
+    ros::ServiceServer m_get_parts_service; 
+
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      "as1_1", "as2_1", "as1_2", "as2_2",
                                                      "as3_3", "as4_3", "as3_4", "as4_4", 
