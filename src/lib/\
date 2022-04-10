@@ -3,11 +3,9 @@
 #include <ariac_group1/GetParts.h> 
 
 OrderInfo::OrderInfo(const std::string& id,
-                     const nist_gear::Order::ConstPtr& order_ptr,
-                     const int priority_value):
+                     const nist_gear::Order::ConstPtr& order_ptr):
   order_id{id},
-  order{std::make_unique<nist_gear::Order>(*order_ptr)},
-  priority{priority_value}
+  order{std::make_unique<nist_gear::Order>(*order_ptr)}
 {
   // check every shipment in order
   for (auto &shipment: order->kitting_shipments) {
@@ -53,6 +51,8 @@ void Orders::order_callback(const nist_gear::Order::ConstPtr& msg)
 
   // Store all the order
   orders_record[msg->order_id] = std::make_unique<OrderInfo>(msg->order_id, msg, priority); 
+                                                             
+                                                             priority); 
 }
 
 bool Orders::get_order()

@@ -16,7 +16,8 @@ enum class OrderState{New, Checked, Finish};
 class OrderInfo {
   public: 
     OrderInfo(const std::string& id,
-              const nist_gear::Order::ConstPtr& order_ptr); 
+              const nist_gear::Order::ConstPtr& order_ptr,
+              const int priority_value); 
 
     std::string order_id;  
 
@@ -33,6 +34,8 @@ class OrderInfo {
 
     // insufficient if order is invalid for a duration
     bool insufficient = false; 
+
+    int priority = 0; 
 }; 
 
 class Orders {
