@@ -8,18 +8,30 @@ project(ariac_group1)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  control_msgs
   nist_gear
   roscpp
   rospy
+  rosgraph_msgs
   sensor_msgs
   std_srvs
   trajectory_msgs
   geometry_msgs
+  tf2
+  tf2_eigen
   tf2_ros
   tf2_geometry_msgs
   message_generation
+  moveit_msgs
+  moveit_core
+  moveit_ros_perception
+  moveit_ros_planning
+  moveit_ros_planning_interface
+  moveit_visual_tools
 )
 
+find_package(Eigen3 REQUIRED)
+find_package(Boost REQUIRED system filesystem date_time thread)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -57,15 +69,14 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   Busy.msg
-  PartInfo.msg
-  Database.msg
 )
 
 ## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  GetParts.srv
-)
+# add_service_files(
+#   FILES
+#   Service1.srv
+#   Service2.srv
+# )
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -78,7 +89,6 @@ add_service_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
-  nist_gear
   #sensor_msgs#   trajectory_msgs
 )
 
@@ -124,13 +134,11 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(utility_lib src/lib/utility.cpp)
-add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
-add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
-add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
-add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
-add_library(order_manager_lib src/lib/order_manager.cpp)
-add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/order_manager.cpp) 
+add_library(sensors_lib src/lib/sensors.cpp)
+add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp)
+add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp)
+add_library(arm_lib src/lib/arm.cpp src/lib/utils.cpp src/lib/agv.cpp src/lib/sensors.cpp)
+add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp) 
 
 # Declare a C++ executable
 add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
@@ -154,12 +162,12 @@ target_link_libraries(${PROJECT_NAME}_station_node
   ${catkin_LIBRARIES}
 )
 
-# add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
-# add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-# target_link_libraries(${PROJECT_NAME}_rwa1_node
-#   factory_manager_lib
-#   ${catkin_LIBRARIES}
-# )
+add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
+add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_rwa1_node
+  factory_manager_lib
+  ${catkin_LIBRARIES}
+)
 
 
 add_executable(${PROJECT_NAME}_rwa2_node src/nodes/rwa2.cpp)
@@ -181,10 +189,25 @@ target_link_libraries(${PROJECT_NAME}_quality_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_test_sensor_manager_node src/test/test_sensor_manager.cpp)
-add_dependencies(${PROJECT_NAME}_test_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_test_sensor_manager_node
-  sensor_manager_lib
+add_executable(${PROJECT_NAME}_arm_node src/nodes/arm_node.cpp)
+add_dependencies(${PROJECT_NAME}_arm_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_arm_node
+  arm_lib
   ${catkin_LIBRARIES}
 )
 
+# add_executable(${PROJECT_NAME}_arm_test_node src/nodes/rwa3_arm_test.cpp)
+# add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_arm_test_node
+#   factory_manager_lib
+#   arm_lib
+#   ${catkin_LIBRARIES}
+# )
+
+add_executable(${PROJECT_NAME}_arm_test_node src/test/test_arm.cpp)
+add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_arm_test_node
+  factory_manager_lib
+  arm_lib
+  ${catkin_LIBRARIES}
+)
