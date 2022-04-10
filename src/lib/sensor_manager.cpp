@@ -1,5 +1,7 @@
 #include "sensor_manager.h"
 
+#include <tuple>
+
 SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {

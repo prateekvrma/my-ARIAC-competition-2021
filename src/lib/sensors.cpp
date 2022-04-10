@@ -1,5 +1,9 @@
 #include "sensors.h"
 
+#include <tuple>
+#include <cmath>
+#include <string>
+
 #include <geometry_msgs/Pose.h>
 #include <geometry_msgs/Quaternion.h>
 #include <tf2_ros/transform_listener.h>
@@ -88,7 +92,22 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     // m_parts_publisher.publish(*part); 
     ariac_group1::PartInfo part_info;  
     part_info.part = *part; 
+
+    double roll, pitch, yaw;
+    std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
+    part_info.roll = roll; 
+    part_info.pitch = pitch; 
+    part_info.yaw = yaw; 
+
     part_info.faulty = false; 
+
+    // double epsilon = 0.1; 
+    // // only pump need to be flipped
+    // auto found = part->type.find("pump");  
+    // if ((abs(roll - M_PI) < epsilon) and (found != std::string::npos)) {
+    //   ROS_INFO("flipped"); 
+    //   part_info.flip = true; 
+    // }
 
     if (parts_database.count(part->type)) {
       bool in_database = false; 
@@ -117,15 +136,8 @@ int LogicalCamera::find_parts(const std::string& product_type)
   int count = 0; 
   for (auto &part: m_parts_world_frame){
     if (part->type == product_type) {
-      // Transform msgs quaternion to tf2 quaternion 
-      tf2::Quaternion part_q_tf;
-      tf2::convert(part->pose.orientation, part_q_tf); 
-      part_q_tf.normalize(); 
-
-      //Convert Quaternion to Euler angles
-      tf2::Matrix3x3 m(part_q_tf);
       double roll, pitch, yaw;
-      m.getRPY(roll, pitch, yaw);
+      std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
 
       ROS_INFO("%s in /world frame: [%f,%f,%f] [%f,%f,%f]",
         part->type.c_str(), 
