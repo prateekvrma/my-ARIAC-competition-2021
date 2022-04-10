@@ -59,6 +59,24 @@ void FactoryManager::busy_callback(const ariac_group1::Busy& msg){
   m_busy_state[msg.id] = msg.state; 
 }
 
+void FactoryManager::run_competition()
+{
+  this->start_competition(); 
+  m_start_time = ros::Time::now(); 
+
+  while (ros::ok()) {
+
+    auto success = this->get_order(); 
+
+    if (success) {
+
+      this->plan(); 
+
+    }
+  }
+  this->end_competition(); 
+}
+
 void FactoryManager::start_competition()
 {
   std::string service_name = "/ariac/start_competition"; 

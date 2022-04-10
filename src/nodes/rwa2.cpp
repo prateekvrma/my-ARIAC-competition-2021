@@ -28,19 +28,14 @@ int main(int argc, char **argv)
   ROS_INFO("Checking for competition state"); 
   while (ros::ok()) {
     if (competition_state=="init") {
-      group1.start_competition(); 
-      group1.start_time = ros::Time::now(); 
 
-      while (ros::ok()) {
-        auto success = group1.get_order(); 
-        if (success) {
-          group1.plan(); 
-        }
-      }
+      group1.run_competition(); 
 
     } 
     else if (competition_state=="done") {
+
       ros::shutdown(); 
+
     }
 
     ros::spinOnce(); 

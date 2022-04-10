@@ -153,12 +153,12 @@ target_link_libraries(${PROJECT_NAME}_station_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
-add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_rwa1_node
-  factory_manager_lib
-  ${catkin_LIBRARIES}
-)
+# add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
+# add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_rwa1_node
+#   factory_manager_lib
+#   ${catkin_LIBRARIES}
+# )
 
 
 add_executable(${PROJECT_NAME}_rwa2_node src/nodes/rwa2.cpp)

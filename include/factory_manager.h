@@ -60,43 +60,7 @@ class FactoryManager {
   public:
     FactoryManager(ros::NodeHandle* nodehandle); 
 
-    /**
-     * @Brief Call service to start the competition
-     *
-     */
-    void start_competition(); 
-
-    /**
-     * @Brief Call service to end the competition
-     *
-     */
-    void end_competition(); 
-
-    /**
-     * @Brief Waiting for orders in a loop
-     *
-     * @Returns Order exists or not  
-     */
-    bool get_order();
-
-    /**
-     * @Brief Plan for the orders.
-     *        Seperate orders into kitting and assembly tasks,
-     *        then assign them to the AGVs, and AssemblyStations.
-     */
-    void plan(); 
-
-    /**
-     * @Brief Check if every worker machine is busy   
-     *
-     * @Returns Is there any worker machine still working    
-     */
-    bool work_done(); 
-
-    /**
-     * @Brief The time competition starts  
-     */
-    ros::Time start_time; 
+    void run_competition(); 
 
   private: 
 
@@ -115,6 +79,20 @@ class FactoryManager {
      */
     void busy_callback(const ariac_group1::Busy& msg); 
 
+    void start_competition(); 
+
+    void end_competition(); 
+
+    bool get_order();
+
+    void plan(); 
+
+    /**
+     * @Brief Check if every worker machine is busy   
+     *
+     * @Returns Is there any worker machine still working    
+     */
+    bool work_done(); 
     /**
      * @Brief Check if all parts in an order is in environment
      *
@@ -150,6 +128,8 @@ class FactoryManager {
      * 
      */
     ros::NodeHandle m_nh; 
+
+    ros::Time m_start_time; 
 
     /**
      * @Brief Publisher to assign kitting task to AGVs  
