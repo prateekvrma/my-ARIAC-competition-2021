@@ -1,4 +1,4 @@
-#include "order_manager.h"
+#include "orders.h"
 
 #include <ariac_group1/GetParts.h> 
 
@@ -26,13 +26,13 @@ OrderInfo::OrderInfo(const std::string& id,
   }
 }
 
-OrderManager::OrderManager(ros::NodeHandle* nodehandle):
+Orders::Orders(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {
-  m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &OrderManager::order_callback, this); 
+  m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &Orders::order_callback, this); 
 }
 
-void OrderManager::order_callback(const nist_gear::Order::ConstPtr& msg)
+void Orders::order_callback(const nist_gear::Order::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
@@ -52,7 +52,7 @@ void OrderManager::order_callback(const nist_gear::Order::ConstPtr& msg)
                                                              msg); 
 }
 
-bool OrderManager::get_order()
+bool Orders::get_order()
 {
   ros::Rate wait_rate(1); 
 
@@ -91,23 +91,23 @@ bool OrderManager::get_order()
   return true; 
 }
 
-std::vector<std::string> OrderManager::get_new_orders_id() 
+std::vector<std::string> Orders::get_new_orders_id() 
 {
   return m_new_orders_id; 
 }
 
-void OrderManager::clear_new_orders_id()
+void Orders::clear_new_orders_id()
 {
   m_new_orders_id.clear(); 
 }
 
 
-bool OrderManager::has_order() 
+bool Orders::has_order() 
 {
   return not m_new_orders_id.empty(); 
 }
 
-void OrderManager::check_insufficient_orders() 
+void Orders::check_insufficient_orders() 
 {
   for (auto& order_id: m_orders_id) {
     auto& order_info = orders_record[order_id]; 
@@ -127,7 +127,7 @@ void OrderManager::check_insufficient_orders()
   }
 }
 
-bool OrderManager::check_order(const std::string& order_id)
+bool Orders::check_order(const std::string& order_id)
 {
   std::string service_name = "/sensor_manager/get_parts"; 
 

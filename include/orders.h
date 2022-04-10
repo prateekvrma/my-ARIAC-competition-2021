@@ -1,5 +1,5 @@
-#ifndef ORDER_MANAGER_H
-#define ORDER_MANAGER_H
+#ifndef ORDERS_H
+#define ORDERS_H
 
 #include <vector>
 #include <memory>
@@ -35,9 +35,9 @@ class OrderInfo {
     bool insufficient = false; 
 }; 
 
-class OrderManager {
+class Orders {
   public:
-    OrderManager(ros::NodeHandle* nodehandle);  
+    Orders(ros::NodeHandle* nodehandle);  
 
     bool get_order(); 
     std::vector<std::string> get_new_orders_id(); 
