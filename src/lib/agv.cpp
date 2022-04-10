@@ -4,6 +4,7 @@
 #include <std_srvs/Trigger.h>
 #include <nist_gear/AGVToAssemblyStation.h>
 #include <ariac_group1/Busy.h>
+#include <ariac_group1/PartTask.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -20,6 +21,7 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_task_subscriber = m_nh.subscribe("/factory_manager/kitting_task", 10, &AGV::task_callback, this); 
   // create publisher 
   m_busy_publisher = m_nh.advertise<ariac_group1::Busy>("/worker/busy", 10); 
+  m_part_task_publisher = m_nh.advertise<ariac_group1::PartTask>("/part_task", 10); 
 }
 
 void AGV::state_callback(const std_msgs::String::ConstPtr& msg)
@@ -80,7 +82,7 @@ void AGV::plan()
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // execute the task one by one
   for (auto& task_ptr: m_tasks) {
-    this->execute_tasks(task_ptr.get()); 
+    // this->execute_tasks(task_ptr.get()); 
   }
 
   m_tasks.clear(); 

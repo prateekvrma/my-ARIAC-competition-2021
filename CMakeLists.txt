@@ -60,6 +60,7 @@ add_message_files(
   PartInfo.msg
   Database.msg
   KittingInfo.msg
+  PartTask.msg
 )
 
 ## Generate services in the 'srv' folder
