@@ -36,8 +36,8 @@ orders:
     announcement_condition: time
     announcement_condition_value: 0.0
     kitting:
-      shipment_count: 1
-      agvs: [agv1. agv3]
+      shipment_count: 2
+      agvs: [agv1, agv3]
       destinations: [as1, as3]
       products:
         part_0:
