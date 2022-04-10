@@ -59,12 +59,14 @@ add_message_files(
   Busy.msg
   PartInfo.msg
   Database.msg
+  KittingInfo.msg
 )
 
 ## Generate services in the 'srv' folder
 add_service_files(
   FILES
   GetParts.srv
+  GetShipmentPriority.srv
 )
 
 ## Generate actions in the 'action' folder

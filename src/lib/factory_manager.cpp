@@ -6,7 +6,6 @@
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
 
-
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle},
   m_orders{nodehandle}

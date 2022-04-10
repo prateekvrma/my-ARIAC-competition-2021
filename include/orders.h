@@ -10,6 +10,7 @@
 #include <ros/ros.h>
 
 #include <nist_gear/Order.h>
+#include <ariac_group1/GetShipmentPriority.h>
 
 enum class OrderState{New, Checked, Finish}; 
 
@@ -55,11 +56,20 @@ class Orders {
     void check_insufficient_orders(); 
     bool check_order(const std::string& order_id); 
 
+    bool get_shipment_priority(ariac_group1::GetShipmentPriority::Request &req, 
+                               ariac_group1::GetShipmentPriority::Response &res); 
+
     ros::NodeHandle m_nh; 
+
+    ros::ServiceServer m_get_shipment_priority_service; 
+
     ros::Subscriber m_order_subscriber;
 
     std::vector<std::string> m_new_orders_id; 
     std::vector<std::string> m_orders_id; 
+    std::vector<std::string> m_shipments_id; 
+
+    std::map<std::string, int> m_shipments_priority; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

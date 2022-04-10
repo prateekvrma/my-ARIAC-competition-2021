@@ -1,0 +1,3 @@
+string shipment_type
+---
+int64 priority
