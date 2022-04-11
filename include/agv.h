@@ -105,6 +105,8 @@ class AGV {
      */
     std::string m_id; 
 
+    std::string m_kitting_station_id = "ks"; 
+
     /**
      * @brief create a publisher to show that AGV is busy
      * 

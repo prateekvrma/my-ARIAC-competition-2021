@@ -68,6 +68,7 @@ add_service_files(
   FILES
   GetParts.srv
   GetShipmentPriority.srv
+  IsFaulty.srv
 )
 
 ## Generate actions in the 'action' folder

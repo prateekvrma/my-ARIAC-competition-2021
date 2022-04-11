@@ -16,6 +16,8 @@ AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_quality_control_sensor(nodehandle,
                            m_quality_control_sensor_id += id.back())
 {  
+  m_kitting_station_id += id.back();
+
   // create subscribers
   m_state_subscriber = m_nh.subscribe("/ariac/" + id + "/state", 10, &AGV::state_callback, this); 
   m_station_subscriber = m_nh.subscribe("/ariac/" + id + "/station", 10, &AGV::station_callback, this); 
@@ -74,6 +76,7 @@ bool AGV::get_order()
     ros::spinOnce(); 
     wait_rate.sleep(); 
   }
+
   this->publish_busy_state(); 
   ROS_INFO("Received kitting task"); 
   return true; 
@@ -102,7 +105,6 @@ void AGV::plan()
 
       ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
       get_shipment_priority_srv.request.shipment_type = shipment_ptr->shipment_type; 
-      ROS_INFO("test"); 
 
       if (client.call(get_shipment_priority_srv)) {
         part_task.priority = get_shipment_priority_srv.response.priority; 
