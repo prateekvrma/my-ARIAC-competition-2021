@@ -90,7 +90,6 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
                               ariac_group1::IsFaulty::Response &res) 
 {
   for (auto& part_info_ptr: m_parts_database["model"]) {
-    ROS_INFO("FAULTY"); 
     Utility::print_part_pose(part_info_ptr->part); 
     if (Utility::is_same_part(part_info_ptr->part, req.part)) {
       res.faulty = true; 
