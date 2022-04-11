@@ -101,6 +101,7 @@ void FactoryManager::plan()
     auto& order = m_orders.orders_record[order_id]->order; 
 
     for (auto &shipment: order->kitting_shipments) {
+      ROS_INFO("Passing shipment"); 
       this->assign_kitting_task(shipment); 
     }
 

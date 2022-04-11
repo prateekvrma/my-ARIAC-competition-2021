@@ -110,6 +110,7 @@ class AGV {
      * 
      */
     ros::Publisher m_busy_publisher; 
+    ros::Publisher m_part_task_publisher;  
 
     /**
      * @brief create a subscriber for recieving the state of AGV
@@ -157,7 +158,7 @@ class AGV {
      * @brief the vector which stores the sequence of task
      * 
      */
-    std::vector<std::unique_ptr<nist_gear::KittingShipment>> m_tasks; 
+    std::vector<std::unique_ptr<nist_gear::KittingShipment>> m_shipments; 
 
     /**
      * @brief the prefix id of quality control sensor

@@ -4,6 +4,8 @@
 #include <std_srvs/Trigger.h>
 #include <nist_gear/AGVToAssemblyStation.h>
 #include <ariac_group1/Busy.h>
+
+#include <ariac_group1/GetShipmentPriority.h>
 #include <ariac_group1/PartTask.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
@@ -44,7 +46,7 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr& msg)
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
   if (msg->agv_id == m_id) {
-    m_tasks.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
+    m_shipments.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
   }
 }
 
@@ -53,7 +55,7 @@ void AGV::publish_busy_state()
   // setup parameters to state that AGV is busy
   ariac_group1::Busy msg; 
   msg.id = m_id; 
-  msg.state = not m_tasks.empty(); 
+  msg.state = not m_shipments.empty(); 
   m_busy_publisher.publish(msg); 
 }
 
@@ -61,7 +63,7 @@ bool AGV::get_order()
 {
   ros::Rate wait_rate(1); 
   // check if there are tasks and make sure ROS is running 
-  while (m_tasks.empty() && ros::ok()) {
+  while (m_shipments.empty() && ros::ok()) {
     ROS_INFO_THROTTLE(3, "Waiting for kitting task.");
 
     this->publish_busy_state(); 
@@ -80,12 +82,40 @@ bool AGV::get_order()
 void AGV::plan()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-  // execute the task one by one
-  for (auto& task_ptr: m_tasks) {
+
+  std::string service_name = "/orders/get_shipment_priority"; 
+  static auto client = m_nh.serviceClient<ariac_group1::GetShipmentPriority>(service_name); 
+
+  if (!client.exists()) {
+    ROS_INFO("Waiting for the get_shipment_priority_service..");
+    client.waitForExistence();
+    ROS_INFO("Shipment priority is now ready.");
+  }
+   
+
+
+  for (auto& shipment_ptr: m_shipments) {
+    for (auto& product: shipment_ptr->products) {
+      ariac_group1::PartTask part_task; 
+      part_task.shipment_type = shipment_ptr->shipment_type; 
+      part_task.part = product;  
+
+      ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
+      get_shipment_priority_srv.request.shipment_type = shipment_ptr->shipment_type; 
+      ROS_INFO("test"); 
+
+      if (client.call(get_shipment_priority_srv)) {
+        part_task.priority = get_shipment_priority_srv.response.priority; 
+        m_part_task_publisher.publish(part_task);  
+      }
+      else {
+        ROS_ERROR("Failed to call %s", service_name.c_str()); 
+      }
+    }
     // this->execute_tasks(task_ptr.get()); 
   }
 
-  m_tasks.clear(); 
+  m_shipments.clear(); 
 }
 
 void AGV::execute_tasks(const nist_gear::KittingShipment* task_ptr)

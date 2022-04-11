@@ -184,7 +184,7 @@ target_link_libraries(${PROJECT_NAME}_quality_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_sensor_manager_node src/test/test_sensor_manager.cpp)
+add_executable(${PROJECT_NAME}_sensor_manager_node src/nodes/sensor_manager.cpp)
 add_dependencies(${PROJECT_NAME}_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_sensor_manager_node
   sensor_manager_lib
