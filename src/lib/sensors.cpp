@@ -100,6 +100,7 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     part_info.yaw = yaw; 
 
     part_info.faulty = false; 
+    part_info.camera_id = m_id; 
 
     // double epsilon = 0.1; 
     // // only pump need to be flipped

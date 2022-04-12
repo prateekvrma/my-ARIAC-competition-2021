@@ -6,10 +6,9 @@
 #include <nist_gear/KittingShipment.h>
 #include <nist_gear/AssemblyShipment.h>
 
-
 FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle},
-  m_order_manager{nodehandle}
+  m_orders{nodehandle}
 {
   // Subscribers
   m_busy_subscriber = m_nh.subscribe("/worker/busy", 50, &FactoryManager::busy_callback, this); 
@@ -36,7 +35,7 @@ void FactoryManager::run_competition()
 
   while (ros::ok()) {
 
-    if (m_order_manager.get_order()) {
+    if (m_orders.get_order()) {
 
       this->plan(); 
 
@@ -96,10 +95,10 @@ void FactoryManager::plan()
   // Lock to prevent adding new orders when assigning tasks
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
-  for (auto& order_id: m_order_manager.get_new_orders_id()) {
+  for (auto& order_id: m_orders.get_new_orders_id()) {
     // Check if parts valid in order
     // auto valid = this->check_order(order_id); 
-    auto& order = m_order_manager.orders_record[order_id]->order; 
+    auto& order = m_orders.orders_record[order_id]->order; 
 
     for (auto &shipment: order->kitting_shipments) {
       this->assign_kitting_task(shipment); 
@@ -110,7 +109,7 @@ void FactoryManager::plan()
     }
   }
 
-  m_order_manager.clear_new_orders_id(); 
+  m_orders.clear_new_orders_id(); 
 }
 
 void FactoryManager::assign_kitting_task(nist_gear::KittingShipment& shipment)

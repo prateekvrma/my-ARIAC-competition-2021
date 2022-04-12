@@ -6,6 +6,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_nh{*nodehandle}
 {
   m_get_parts_service = m_nh.advertiseService("/sensor_manager/get_parts", &SensorManager::get_parts, this); 
+  m_is_faulty_service = m_nh.advertiseService("/sensor_manager/is_faulty", &SensorManager::is_faulty, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -85,4 +86,18 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
   return true; 
 }
 
+bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req, 
+                              ariac_group1::IsFaulty::Response &res) 
+{
+  for (auto& part_info_ptr: m_parts_database["model"]) {
+    Utility::print_part_pose(part_info_ptr->part); 
+    if (Utility::is_same_part(part_info_ptr->part, req.part)) {
+      res.faulty = true; 
+      return true; 
+    }
+  }
 
+  res.faulty = false; 
+
+  return true; 
+}

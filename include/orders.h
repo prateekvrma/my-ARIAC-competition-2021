@@ -1,5 +1,5 @@
-#ifndef ORDER_MANAGER_H
-#define ORDER_MANAGER_H
+#ifndef ORDERS_H
+#define ORDERS_H
 
 #include <vector>
 #include <memory>
@@ -10,13 +10,15 @@
 #include <ros/ros.h>
 
 #include <nist_gear/Order.h>
+#include <ariac_group1/GetShipmentPriority.h>
 
 enum class OrderState{New, Checked, Finish}; 
 
 class OrderInfo {
   public: 
     OrderInfo(const std::string& id,
-              const nist_gear::Order::ConstPtr& order_ptr); 
+              const nist_gear::Order::ConstPtr& order_ptr,
+              const int priority_value); 
 
     std::string order_id;  
 
@@ -33,11 +35,13 @@ class OrderInfo {
 
     // insufficient if order is invalid for a duration
     bool insufficient = false; 
+
+    int priority = 0; 
 }; 
 
-class OrderManager {
+class Orders {
   public:
-    OrderManager(ros::NodeHandle* nodehandle);  
+    Orders(ros::NodeHandle* nodehandle);  
 
     bool get_order(); 
     std::vector<std::string> get_new_orders_id(); 
@@ -52,11 +56,20 @@ class OrderManager {
     void check_insufficient_orders(); 
     bool check_order(const std::string& order_id); 
 
+    bool get_shipment_priority(ariac_group1::GetShipmentPriority::Request &req, 
+                               ariac_group1::GetShipmentPriority::Response &res); 
+
     ros::NodeHandle m_nh; 
+
+    ros::ServiceServer m_get_shipment_priority_service; 
+
     ros::Subscriber m_order_subscriber;
 
     std::vector<std::string> m_new_orders_id; 
     std::vector<std::string> m_orders_id; 
+    std::vector<std::string> m_shipments_id; 
+
+    std::map<std::string, int> m_shipments_priority; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

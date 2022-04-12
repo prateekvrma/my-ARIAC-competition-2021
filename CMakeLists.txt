@@ -69,14 +69,20 @@ find_package(Boost REQUIRED system filesystem date_time thread)
 add_message_files(
   FILES
   Busy.msg
+  PartInfo.msg
+  Database.msg
+  KittingInfo.msg
+  PartTask.msg
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  GetParts.srv
+  GetShipmentPriority.srv
+  IsFaulty.srv
+)
+
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -134,11 +140,15 @@ catkin_package(
 
 include_directories(include ${catkin_INCLUDE_DIRS})
 
-add_library(sensors_lib src/lib/sensors.cpp)
-add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp)
-add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp)
+add_library(utility_lib src/lib/utility.cpp)
+add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(arm_lib src/lib/arm.cpp src/lib/utils.cpp src/lib/agv.cpp src/lib/sensors.cpp)
-add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/sensors.cpp) 
+add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
+add_library(orders_lib src/lib/orders.cpp)
+add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/orders.cpp) 
+
 
 # Declare a C++ executable
 add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
@@ -193,6 +203,13 @@ add_executable(${PROJECT_NAME}_arm_node src/nodes/arm_node.cpp)
 add_dependencies(${PROJECT_NAME}_arm_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_arm_node
   arm_lib
+  ${catkin_LIBRARIES}
+)
+  
+add_executable(${PROJECT_NAME}_sensor_manager_node src/nodes/sensor_manager.cpp)
+add_dependencies(${PROJECT_NAME}_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_sensor_manager_node
+  sensor_manager_lib
   ${catkin_LIBRARIES}
 )
 

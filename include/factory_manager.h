@@ -10,7 +10,7 @@
 
 #include <ariac_group1/Busy.h>
 
-#include "order_manager.h"
+#include "orders.h"
 
 class FactoryManager {
   public:
@@ -43,7 +43,7 @@ class FactoryManager {
      */
     void assign_assembly_task(nist_gear::AssemblyShipment& shipment);
 
-    OrderManager m_order_manager; 
+    Orders m_orders; 
 
     /**
      * @Brief The id of all the controllable machine in ARIAC 

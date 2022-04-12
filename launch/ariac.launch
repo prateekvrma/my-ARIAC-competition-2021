@@ -28,7 +28,7 @@
           $(arg load_moveit_args)
           $(arg fill_demo_shipment_args)
           --visualize-sensor-views
-          -f $(find ariac_group1)/config/trial_config/rwa2_trial.yaml 
+          -f $(find ariac_group1)/config/trial_config/rwa3_trial.yaml 
           $(find ariac_group1)/config/user_config/rwa2_sensor.yaml
           " required="true" output="screen" />
 
