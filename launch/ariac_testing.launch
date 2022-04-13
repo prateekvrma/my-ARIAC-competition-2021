@@ -20,7 +20,7 @@
     <arg unless="$(arg visualize_sensors)" name="visualize_sensors_args" value="" />
     <arg if="$(arg visualize_sensors)" name="visualize_sensors_args" value="--visualize-sensor-views" />
 
-    <arg name="debug_mode" default="true" />
+    <arg name="debug_mode" default="false" />
     <arg unless="$(arg debug_mode)" name="debug_mode_args" value="" />
     <arg if="$(arg debug_mode)" name="debug_mode_args" value="--development-mode" />
 
@@ -36,7 +36,7 @@
           $(arg fill_demo_shipment_args)
           $(arg visualize_sensors_args)
           $(arg debug_mode_args)
-          -f $(find ariac_group1)/config/trial_config/rwa2_trial.yaml
+          -f $(find ariac_group1)/config/trial_config/rwa3_trial.yaml
           $(find ariac_group1)/config/user_config/rwa2_sensor.yaml
           " required="true" output="screen" />
 

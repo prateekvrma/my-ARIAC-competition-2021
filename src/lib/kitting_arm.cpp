@@ -4,6 +4,10 @@
 #include <moveit/planning_interface/planning_interface.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
 
+#include <nist_gear/AGVToAssemblyStation.h>
+
+using AGVToAssem = nist_gear::AGVToAssemblyStation; 
+
 KittingArm::KittingArm():
   m_nh{"/ariac/kitting"},
   m_planning_group{"/ariac/kitting/robot_description"},
@@ -542,6 +546,9 @@ void KittingArm::execute()
     // bool success = this->movePart(part_init_info, part_task); 
     // if (success) {
     //  m_shipments_total_parts[part_task.part.type]--; 
+    //  if (m_shipments_total_parts[part_task.part.type] == 0) {
+    //    this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+    //  }
     // }
     m_part_task_queue.pop_back(); 
   }
@@ -551,5 +558,32 @@ void KittingArm::execute()
     return; 
   }
 
+}
+
+void KittingArm::submit_shipment(const std::string& agv_id, 
+                                 const std::string& shipment_type,  
+                                 const std::string& station_id)
+{
+
+  auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
+  static auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
+  // check if the client exists
+  if (!client.exists()) {
+    ROS_INFO("Waiting for the competition to be ready...");
+    client.waitForExistence();
+    ROS_INFO("Competition is now ready.");
+  }
+
+  AGVToAssem srv; 
+  srv.request.assembly_station_name = station_id;  
+  srv.request.shipment_type = shipment_type; 
+  // call the service to allow AGV to submit kitting shipment
+  if (client.call(srv)) {
+    ROS_INFO("Calling service %s", service_name.c_str()); 
+    ROS_INFO("%s", srv.response.message.c_str()); 
+  }
+  else{
+    ROS_ERROR("Failed to call %s", service_name.c_str()); 
+  }
 
 }

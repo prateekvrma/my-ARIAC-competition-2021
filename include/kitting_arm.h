@@ -79,6 +79,11 @@ class KittingArm {
     void arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg);
     void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
 
+    void submit_shipment(const std::string& agv_id,
+                         const std::string& shipment_type,
+                         const std::string& station_id); 
+ 
+
     std::vector<double> m_joint_group_positions;
     ros::NodeHandle m_nh;
     std::string m_planning_group;

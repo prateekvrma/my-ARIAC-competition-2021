@@ -119,6 +119,7 @@ void AGV::plan()
       part_task.part = product;  
       part_task.total_parts = m_shipments_record[id]->shipment->products.size(); 
       part_task.agv_id = m_id; 
+      part_task.station_id = m_shipments_record[id]->shipment->shipment_type; 
 
       ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
       get_shipment_priority_srv.request.shipment_type = id; 
