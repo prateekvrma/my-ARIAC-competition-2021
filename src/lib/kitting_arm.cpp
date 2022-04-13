@@ -173,7 +173,6 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
   m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<ariac_group1::PartTask>(*msg))); 
   m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
   // this->print_shipments_total_parts(); 
-  ROS_INFO("AGV: %s", msg->agv_id.c_str()); 
   Utility::print_part_pose(msg->part); 
 }
 
@@ -491,7 +490,6 @@ bool KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     deactivateGripper();
     //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
-    goToPresetLocation("home_face_bins");
 
     return true;
     // TODO: check the part was actually placed in the correct pose in the agv
@@ -540,7 +538,9 @@ void KittingArm::plan()
 
 void KittingArm::execute()
 {
-  ROS_INFO("Task queue amount: %d", m_part_task_queue.size()); 
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  ROS_INFO("==============================================="); 
+  ROS_INFO("Task queue size: %d", (int)m_part_task_queue.size()); 
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
@@ -562,6 +562,7 @@ void KittingArm::execute()
       part_init_info = parts_info[idx]; 
       if (idx == parts_info.size()) {
         if (priority > 0) {
+          ROS_INFO("High priority gets part from agv"); 
           break; 
         }
         ROS_INFO("Non enough part for %s", part_task.part.type.c_str()); 
@@ -569,6 +570,7 @@ void KittingArm::execute()
       }
     }
 
+    ROS_INFO("Order AGV %s", part_task.agv_id.c_str()); 
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
     ROS_INFO("Part in world: "); 
     Utility::print_part_pose(part_init_info.part); 
@@ -576,7 +578,6 @@ void KittingArm::execute()
     ROS_INFO("Part in order: "); 
     Utility::print_part_pose(part_task.part); 
 
-    ROS_INFO("Order AGV %s", part_task.agv_id.c_str()); 
 
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
@@ -588,8 +589,9 @@ void KittingArm::execute()
       }
       m_part_task_queue.pop_back(); 
     }
-  }
 
+    ROS_INFO("movement false"); 
+  }
   else {
     ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 
     return; 
@@ -605,7 +607,8 @@ void KittingArm::submit_shipment(const std::string& agv_id,
   ROS_INFO("%s", station_id.c_str()); 
 
   auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
-  static auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
+  auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
+
   // check if the client exists
   if (!client.exists()) {
     ROS_INFO("Waiting for the competition to be ready...");
