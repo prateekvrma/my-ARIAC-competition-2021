@@ -172,6 +172,7 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
   // add tasks to task vector
   m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<ariac_group1::PartTask>(*msg))); 
   m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+  this->print_shipments_total_parts(); 
   // Utility::print_part_pose(msg->part); 
 }
 
@@ -489,21 +490,23 @@ bool KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     deactivateGripper();
     //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
+    goToPresetLocation("home_face_bins");
 
     return true;
     // TODO: check the part was actually placed in the correct pose in the agv
     // and that it is not faulty
 }
 
-// void KittingArm::movePart(std::string part_type, std::string camera_frame, geometry_msgs::Pose goal_in_tray_frame, std::string agv) {
-//     //convert goal_in_tray_frame into world frame
-//     auto init_pose_in_world = motioncontrol::transformToWorldFrame(camera_frame);
-//     // ROS_INFO_STREAM(init_pose_in_world.position.x << " " << init_pose_in_world.position.y);
-//     auto target_pose_in_world = motioncontrol::transformToWorldFrame(goal_in_tray_frame, agv);
-//     if (pickPart(part_type, init_pose_in_world)) {
-//         placePart(init_pose_in_world, goal_in_tray_frame, agv);
-//     }
-// }
+bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
+    auto init_pose_in_world = part_init_info.part.pose;
+    auto part_type = part_init_info.part.type; 
+
+    if (pickPart(part_type, init_pose_in_world)) {
+        placePart(init_pose_in_world, part_task.part.pose, part_task.agv_id);
+        return true; 
+    }
+    return false; 
+}
 
 bool KittingArm::get_order()
 {
@@ -527,6 +530,7 @@ void KittingArm::plan()
 
 void KittingArm::execute()
 {
+  ROS_INFO("Task queue amount: %d", m_part_task_queue.size()); 
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
@@ -556,13 +560,18 @@ void KittingArm::execute()
     }
      
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
-    // bool success = this->movePart(part_init_info, part_task); 
-    // if (success) {
-    //  m_shipments_total_parts[part_task.part.type]--; 
-    //  if (m_shipments_total_parts[part_task.part.type] == 0) {
-    //    this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
-    //  }
-    // }
+
+    ROS_INFO("part left before move: %d",m_shipments_total_parts[part_task.shipment_type]); 
+    bool success = this->movePart(part_init_info, part_task); 
+    if (success) {
+      ROS_INFO("success moving part"); 
+      ROS_INFO("%s", part_task.shipment_type.c_str()); 
+      m_shipments_total_parts[part_task.shipment_type]--; 
+      ROS_INFO("part left: %d",m_shipments_total_parts[part_task.shipment_type]); 
+      if (m_shipments_total_parts[part_task.shipment_type] == 0) {
+        this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+      }
+    }
     m_part_task_queue.pop_back(); 
   }
 
