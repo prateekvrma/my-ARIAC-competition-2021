@@ -23,6 +23,7 @@
 #include <nist_gear/VacuumGripperControl.h>
 
 #include <ariac_group1/PartTask.h>
+#include <ariac_group1/GetParts.h>
 
 // custom
 #include "utils.h"
@@ -61,6 +62,7 @@ class KittingArm {
 
     bool get_order(); 
     void plan(); 
+    void execute(); 
 
     //--preset locations;
     ArmPresetLocation home_face_belt, home_face_bins,
@@ -90,6 +92,8 @@ class KittingArm {
     ros::Subscriber m_gripper_state_subscriber;
     // service client
     ros::ServiceClient m_gripper_control_client;
+
+    ros::ServiceClient m_get_parts_client;
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
     // joint states subscribers
@@ -99,7 +103,7 @@ class KittingArm {
 
     ros::Subscriber m_part_task_subscriber;  
 
-    std::vector<std::tuple<int, std::unique_ptr<nist_gear::Product>>> m_part_task_queue; 
+    std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
 
     std::map<std::string, int> m_shipments_total_parts; 
 

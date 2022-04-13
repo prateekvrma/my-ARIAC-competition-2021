@@ -13,8 +13,11 @@ int main(int argc, char** argv) {
     while (ros::ok()) {
       auto success = kitting_arm.get_order(); 
 
-      if (success) 
+      if (success) {
         kitting_arm.plan(); 
+        kitting_arm.execute(); 
+
+      }
       else
         ros::shutdown(); 
     }
