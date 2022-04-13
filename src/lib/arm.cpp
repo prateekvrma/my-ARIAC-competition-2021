@@ -19,7 +19,7 @@ Arm::Arm(ros::NodeHandle* node) :
     node_("/ariac/kitting"),
     planning_group_("/ariac/kitting/robot_description"),
     arm_options_("kitting_arm", planning_group_, node_),
-    arm_group_(arm_options_),
+    arm_group_(arm_options_), 
     m_logical_camera_bins0(node, "logical_camera_bins0"),
     m_logical_camera_bins1(node, "logical_camera_bins1")
 {
