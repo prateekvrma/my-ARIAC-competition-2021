@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     part_goal_pose_in_frame.orientation.w = flat_orientation.getW(); 
     //
     kitting_arm.pickPart("pump", part_init_pose); 
-    kitting_arm.placePart(part_init_pose, part_goal_pose_in_frame, "agv2"); 
+    kitting_arm.placePart(part_init_pose, part_goal_pose_in_frame, "agv1"); 
 
     // ROS_INFO("Moving to agv1"); 
     // kitting_arm.goToPresetLocation("agv1"); 
