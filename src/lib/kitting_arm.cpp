@@ -413,34 +413,17 @@ bool KittingArm::pickPart(std::string part_type,
     
 }
 
-bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose, 
-                           const geometry_msgs::Pose& part_pose_in_frame, 
+bool KittingArm::placePart(geometry_msgs::Pose part_init_pose, 
+                           geometry_msgs::Pose part_pose_in_frame, 
                            std::string agv)
 {
     goToPresetLocation(agv);
-    ROS_INFO("place pose_in_frame: [%f, %f, %f], [%f, %f, %f, %f]",
-                  part_pose_in_frame.position.x,
-                  part_pose_in_frame.position.y,
-                  part_pose_in_frame.position.z,
-                  part_pose_in_frame.orientation.x,
-                  part_pose_in_frame.orientation.y,
-                  part_pose_in_frame.orientation.z,
-                  part_pose_in_frame.orientation.w
-                  ); 
+    
     // get the target pose of the part in the world frame
     auto target_pose_in_world = motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
          agv);
-
-    ROS_INFO("place pose_in_world: [%f, %f, %f], [%f, %f, %f, %f]",
-                  target_pose_in_world.position.x,
-                  target_pose_in_world.position.y,
-                  target_pose_in_world.position.z,
-                  target_pose_in_world.orientation.x,
-                  target_pose_in_world.orientation.y,
-                  target_pose_in_world.orientation.z,
-                  target_pose_in_world.orientation.w
-                  ); 
+   
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
     auto flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
@@ -470,12 +453,14 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
     m_arm_group.setPoseTarget(arm_ee_link_pose);
     m_arm_group.move();
 
+  
     // orientation of the part in the bin, in world frame
     tf2::Quaternion q_init_part(
         part_init_pose.orientation.x,
         part_init_pose.orientation.y,
         part_init_pose.orientation.z,
         part_init_pose.orientation.w);
+
     // orientation of the part in the tray, in world frame
     tf2::Quaternion q_target_part(
         target_pose_in_world.orientation.x,
@@ -485,12 +470,6 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
 
     // relative rotation between init and target
     tf2::Quaternion q_rot = q_target_part * q_init_part.inverse();
-    ROS_INFO("place q_rot: [%f, %f, %f, %f]",
-              q_rot.x(),
-              q_rot.y(),
-              q_rot.z(),
-              q_rot.w()
-              );
 
     // apply this rotation to the current gripper rotation
     tf2::Quaternion q_rslt = q_rot * q_current;
@@ -502,17 +481,6 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
     target_pose_in_world.position.z += 0.2;
-
-    ROS_INFO("place pose_in_world: [%f, %f, %f], [%f, %f, %f, %f]",
-                  target_pose_in_world.position.x,
-                  target_pose_in_world.position.y,
-                  target_pose_in_world.position.z,
-                  target_pose_in_world.orientation.x,
-                  target_pose_in_world.orientation.y,
-                  target_pose_in_world.orientation.z,
-                  target_pose_in_world.orientation.w
-                  ); 
-
 
     m_arm_group.setMaxVelocityScalingFactor(0.1);
     m_arm_group.setPoseTarget(target_pose_in_world);

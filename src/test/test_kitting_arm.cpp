@@ -14,6 +14,11 @@ int main(int argc, char** argv) {
     part_init_pose.position.x = -1.799; 
     part_init_pose.position.y = 3.48; 
     part_init_pose.position.z = 0.78; 
+    auto init_orientation = motioncontrol::quaternionFromEuler(0, 0, 0);
+    part_init_pose.orientation.x = init_orientation.getX(); 
+    part_init_pose.orientation.y = init_orientation.getY(); 
+    part_init_pose.orientation.z = init_orientation.getZ(); 
+    part_init_pose.orientation.w = init_orientation.getW(); 
 
     geometry_msgs::Pose part_goal_pose_in_frame; 
     part_goal_pose_in_frame.position.x = 0.1; 
