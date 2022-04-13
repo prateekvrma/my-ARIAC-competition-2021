@@ -496,6 +496,15 @@ bool KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     // TODO: check the part was actually placed in the correct pose in the agv
     // and that it is not faulty
 }
+void KittingArm::discard_faulty(std::string part_type, geometry_msgs::Pose part_init_pose)
+{
+      pickPart(part_type, part_init_pose);
+      goToPresetLocation("home_face_bins");
+      ros::Duration(5.0).sleep();
+      deactivateGripper();
+      
+
+}
 
 bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
     auto init_pose_in_world = part_init_info.part.pose;
