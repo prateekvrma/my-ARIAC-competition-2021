@@ -193,6 +193,12 @@ bool Arm::pickPart(std::string part_type, geometry_msgs::Pose part_init_pose) {
     if (part_type.find("sensor") != std::string::npos) {
         z_pos = 0.81;
     }
+    if (part_type.find("battery") != std::string::npos) {
+        z_pos = 0.81;
+    }
+    if (part_type.find("regulator") != std::string::npos) {
+        z_pos = 0.81;
+    }
 
     // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
     // arm_ee_link_pose = arm_group_.getCurrentPose().pose;
