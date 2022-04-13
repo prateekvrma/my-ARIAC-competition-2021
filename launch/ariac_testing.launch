@@ -28,7 +28,7 @@
     <arg unless="$(arg load_moveit)" name="load_moveit_args" value="" />
     <arg if="$(arg load_moveit)" name="load_moveit_args" value="--load-moveit" />
 
-  <node name="ariac_sim" pkg="nist_gear" type="gear.py" args="
+    <node name="ariac_sim" pkg="nist_gear" type="gear.py" args="
           $(arg verbose_args)
           $(arg state_logging_args)
           $(arg gui_args)
@@ -46,10 +46,10 @@
         </include>
     </group> -->
 
-  <!-- <group ns='ariac/kitting'>
-    <include file="$(find kitting_moveit_config)/launch/moveit_rviz.launch">
-      <arg name="rviz_config" value="$(find motion_control)/rviz/arm_moveit.rviz" />
-    </include>
-  </group> -->
-
+  <!-- <group ns='ariac/kitting'> -->
+  <!--   <include file="$(find kitting_moveit_config)/launch/moveit_rviz.launch"> -->
+  <!--     <arg name="rviz_config" value="$(find motion_control)/rviz/arm_moveit.rviz" /> -->
+  <!--   </include> -->
+  <!-- </group>  -->
+  <!--  -->
 </launch>
