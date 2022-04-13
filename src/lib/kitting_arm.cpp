@@ -505,7 +505,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         placePart(init_pose_in_world, part_task.part.pose, part_task.agv_id);
         return true; 
     }
-    return false; 
+    return true; 
 }
 
 bool KittingArm::get_order()
@@ -560,7 +560,10 @@ void KittingArm::execute()
     }
      
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
+    Utility::print_part_pose(part_task.part); 
 
+    this->print_shipments_total_parts(); 
+    ROS_INFO("part task agv %s", part_task.agv_id.c_str()); 
     ROS_INFO("part left before move: %d",m_shipments_total_parts[part_task.shipment_type]); 
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
@@ -571,8 +574,8 @@ void KittingArm::execute()
       if (m_shipments_total_parts[part_task.shipment_type] == 0) {
         this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
       }
+      m_part_task_queue.pop_back(); 
     }
-    m_part_task_queue.pop_back(); 
   }
 
   else {
@@ -586,6 +589,8 @@ void KittingArm::submit_shipment(const std::string& agv_id,
                                  const std::string& shipment_type,  
                                  const std::string& station_id)
 {
+  ROS_INFO("%s", shipment_type.c_str()); 
+  ROS_INFO("%s", station_id.c_str()); 
 
   auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
   static auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
