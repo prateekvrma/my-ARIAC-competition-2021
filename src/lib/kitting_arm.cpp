@@ -92,6 +92,16 @@ KittingArm::KittingArm():
   location_agv4.joints_position.at(0) = -4.33; 
   location_agv4.name = "agv4"; 
 
+  location_bins0.joints_position = home_face_bins.joints_position; 
+  // linear actuator at y axis 
+  location_bins0.joints_position.at(0) = 3; 
+  location_bins0.name = "bins0"; 
+
+  location_bins1.joints_position = home_face_bins.joints_position; 
+  // linear actuator at y axis 
+  location_bins1.joints_position.at(0) = -3; 
+  location_bins1.name = "bins1"; 
+
   // initialize home position
   this->goToPresetLocation("home_face_belt"); 
   this->goToPresetLocation("home_face_bins"); 
@@ -258,4 +268,199 @@ void KittingArm::turnToBelt()
   this->move_arm_group(); 
 }
 
+bool KittingArm::pickPart(std::string part_type, 
+                          const geometry_msgs::Pose& part_init_pose) 
+{
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
 
+
+    moveBaseTo(part_init_pose.position.y);
+
+    // // move the arm above the part to grasp
+    // // gripper stays at the current z
+    // // only modify its x and y based on the part to grasp
+    // // In this case we do not need to use preset locations
+    // // everything is done dynamically
+    // arm_ee_link_pose.position.x = part_init_pose.position.x;
+    // arm_ee_link_pose.position.y = part_init_pose.position.y;
+    // arm_ee_link_pose.position.z = arm_ee_link_pose.position.z;
+    // // move the arm
+    // arm_group_.setPoseTarget(arm_ee_link_pose);
+    // arm_group_.move();
+
+    // Make sure the wrist is facing down
+    // otherwise it will have a hard time attaching a part
+    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    auto flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    arm_ee_link_pose.orientation.w = flat_orientation.getW();
+    
+    // post-grasp pose 3
+    // store the pose of the arm before it goes down to pick the part
+    // we will bring the arm back to this pose after picking up the part
+    auto postgrasp_pose3 = part_init_pose;
+    postgrasp_pose3.orientation = arm_ee_link_pose.orientation;
+    postgrasp_pose3.position.z = arm_ee_link_pose.position.z;
+
+    // preset z depending on the part type
+    // some parts are bigger than others
+    // TODO: Add new z_pos values for the regulator and the battery
+    double z_pos{};
+    if (part_type.find("pump") != std::string::npos) {
+        z_pos = 0.859;
+    }
+    if (part_type.find("sensor") != std::string::npos) {
+        z_pos = 0.81;
+    }
+
+    // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    // arm_ee_link_pose = arm_group_.getCurrentPose().pose;
+    // arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    // arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    // arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    // arm_ee_link_pose.orientation.w = flat_orientation.getW();
+
+    
+    // set of waypoints the arm will go through
+    std::vector<geometry_msgs::Pose> waypoints;
+    // pre-grasp pose: somewhere above the part
+    auto pregrasp_pose = part_init_pose;
+    pregrasp_pose.orientation = arm_ee_link_pose.orientation;
+    pregrasp_pose.position.z = z_pos + 0.06;
+
+    // grasp pose: right above the part
+    auto grasp_pose = part_init_pose;
+    grasp_pose.orientation = arm_ee_link_pose.orientation;
+    grasp_pose.position.z = z_pos + 0.03;
+
+    waypoints.push_back(pregrasp_pose);
+    waypoints.push_back(grasp_pose);
+
+    // activate gripper
+    // sometimes it does not activate right away
+    // so we are doing this in a loop
+    while (!m_gripper_state.enabled) {
+        activateGripper();
+    }
+
+    // move the arm to the pregrasp pose
+    m_arm_group.setPoseTarget(pregrasp_pose);
+    m_arm_group.move();
+
+    
+    /* Cartesian motions are frequently needed to be slower for actions such as approach
+    and retreat grasp motions. Here we demonstrate how to reduce the speed and the acceleration
+    of the robot arm via a scaling factor of the maxiumum speed of each joint.
+    */
+    m_arm_group.setMaxVelocityScalingFactor(0.05);
+    m_arm_group.setMaxAccelerationScalingFactor(0.05);
+    // plan the cartesian motion and execute it
+    moveit_msgs::RobotTrajectory trajectory;
+    const double jump_threshold = 0.0;
+    const double eef_step = 0.01;
+    double fraction = m_arm_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    moveit::planning_interface::MoveGroupInterface::Plan plan;
+    plan.trajectory_ = trajectory;
+    m_arm_group.execute(plan);
+
+    ros::Duration(sleep(2.0));
+
+    // move the arm 1 mm down until the part is attached
+    while (!m_gripper_state.attached) {
+        grasp_pose.position.z -= 0.001;
+        m_arm_group.setPoseTarget(grasp_pose);
+        m_arm_group.move();
+        ros::Duration(sleep(0.5));
+    }
+    
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_arm_group.setMaxAccelerationScalingFactor(1.0);
+    ROS_INFO_STREAM("[Gripper] = object attached");
+    ros::Duration(sleep(2.0));
+    m_arm_group.setPoseTarget(postgrasp_pose3);
+    m_arm_group.move();
+
+    return true;
+    
+}
+
+bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose, 
+                           const geometry_msgs::Pose& part_order_pose_in_frame, 
+                           std::string agv)
+{
+    goToPresetLocation(agv);
+    // get the target pose of the part in the world frame
+    auto target_pose_in_world = motioncontrol::transformToWorldFrame(
+        part_order_pose_in_frame,
+        agv);
+
+
+    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    auto flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    arm_ee_link_pose.orientation.w = flat_orientation.getW();
+
+    // store the current orientation of the end effector now
+    // so we can reuse it later
+    tf2::Quaternion q_current(
+        arm_ee_link_pose.orientation.x,
+        arm_ee_link_pose.orientation.y,
+        arm_ee_link_pose.orientation.z,
+        arm_ee_link_pose.orientation.w);
+    
+    // move the arm above the agv
+    // gripper stays at the current z
+    // only modify its x and y based on the part to grasp
+    // In this case we do not need to use preset locations
+    // everything is done dynamically
+    arm_ee_link_pose.position.x = target_pose_in_world.position.x;
+    arm_ee_link_pose.position.y = target_pose_in_world.position.y;
+    // move the arm
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_arm_group.setPoseTarget(arm_ee_link_pose);
+    m_arm_group.move();
+
+    
+    // orientation of the part in the bin, in world frame
+    tf2::Quaternion q_init_part(
+        part_init_pose.orientation.x,
+        part_init_pose.orientation.y,
+        part_init_pose.orientation.z,
+        part_init_pose.orientation.w);
+    // orientation of the part in the tray, in world frame
+    tf2::Quaternion q_target_part(
+        target_pose_in_world.orientation.x,
+        target_pose_in_world.orientation.y,
+        target_pose_in_world.orientation.z,
+        target_pose_in_world.orientation.w);
+
+    // relative rotation between init and target
+    tf2::Quaternion q_rot = q_target_part * q_init_part.inverse();
+    // apply this rotation to the current gripper rotation
+    tf2::Quaternion q_rslt = q_rot * q_current;
+    q_rslt.normalize();
+
+    // orientation of the gripper when placing the part in the tray
+    target_pose_in_world.orientation.x = q_rslt.x();
+    target_pose_in_world.orientation.y = q_rslt.y();
+    target_pose_in_world.orientation.z = q_rslt.z();
+    target_pose_in_world.orientation.w = q_rslt.w();
+    target_pose_in_world.position.z += 0.2;
+
+    m_arm_group.setMaxVelocityScalingFactor(0.1);
+    m_arm_group.setPoseTarget(target_pose_in_world);
+    m_arm_group.move();
+    ros::Duration(2.0).sleep();
+    deactivateGripper();
+
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
+
+    return true;
+    // TODO: check the part was actually placed in the correct pose in the agv
+    // and that it is not faulty
+}

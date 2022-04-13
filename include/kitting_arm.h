@@ -35,8 +35,8 @@ class KittingArm {
   public: 
     KittingArm();
 
-    // bool pickPart(std::string part_type, geometry_msgs::Pose part_pose);
-    // bool placePart(geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
+    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose);
+    bool placePart(const geometry_msgs::Pose& part_init_pose, const geometry_msgs::Pose& part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
     // void movePart(std::string part_type, std::string camera_frame, geometry_msgs::Pose goal_in_tray_frame, std::string agv);
     void activateGripper();
@@ -58,7 +58,8 @@ class KittingArm {
 
     //--preset locations;
     ArmPresetLocation home_face_belt, home_face_bins,
-                      location_agv1, location_agv2, location_agv3, location_agv4;
+                      location_agv1, location_agv2, location_agv3, location_agv4,
+                      location_bins0, location_bins1; 
 
   private:
     // update joint positions
