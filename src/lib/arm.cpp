@@ -24,6 +24,7 @@ Arm::Arm(ros::NodeHandle* node) :
     m_logical_camera_bins1(node, "logical_camera_bins1")
 {
     ROS_INFO_STREAM("[Arm] constructor called... ");
+    m_part_task_subscriber = node_.subscribe("/part_task", 10, &Arm::part_task_callback, this); 
 
 }
 
@@ -95,6 +96,14 @@ void Arm::init()
     moveit::core::RobotStatePtr current_state = arm_group_.getCurrentState();
     // next get the current set of joint values for the group.
     current_state->copyJointGroupPositions(joint_model_group, joint_group_positions_);
+}
+
+void Arm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
+{
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  // add tasks to task vector
+  m_part_task_queue.emplace_back(std::make_unique<nist_gear::Product>(msg->part)); 
+  Utility::print_part_pose(msg->part); 
 }
 
 //////////////////////////////////////////////////////

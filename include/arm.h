@@ -13,12 +13,18 @@
 #include <vector>
 #include <array>
 #include <cstdarg>
+#include <memory>
+#include <mutex>
 
 // nist
 #include <nist_gear/VacuumGripperState.h>
 #include <nist_gear/VacuumGripperControl.h>
+
+#include <ariac_group1/PartTask.h>
+
 // custom
 #include "utils.h"
+#include "utility.h"
 #include "sensors.h"
 /**
  * @brief class for the Gantry robot
@@ -90,6 +96,8 @@ class Arm {
         // controller state subscribers
         ros::Subscriber arm_controller_state_subscriber_;
 
+        ros::Subscriber m_part_task_subscriber;  
+
         /**
          * @brief the object of logical camera
          * 
@@ -101,6 +109,11 @@ class Arm {
         void gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg);
         void arm_joint_states_callback_(const sensor_msgs::JointState::ConstPtr& joint_state_msg);
         void arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg);
+        void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
+
+        std::vector<std::unique_ptr<nist_gear::Product>> m_part_task_queue; 
+
+        std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 };
 
 #endif

@@ -215,6 +215,13 @@ target_link_libraries(${PROJECT_NAME}_sensor_manager_node
 #   ${catkin_LIBRARIES}
 # )
 
+add_executable(${PROJECT_NAME}_arm_test_node2 src/test/test_arm2.cpp)
+add_dependencies(${PROJECT_NAME}_arm_test_node2 ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_arm_test_node2
+  arm_lib
+  ${catkin_LIBRARIES}
+)
+
 add_executable(${PROJECT_NAME}_arm_test_node src/test/test_arm.cpp)
 add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_arm_test_node

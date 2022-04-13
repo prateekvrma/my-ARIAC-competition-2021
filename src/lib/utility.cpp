@@ -45,6 +45,22 @@ namespace Utility
 
   }
 
+  void print_part_pose(const nist_gear::Product& part)
+  {
+    double roll, pitch, yaw;
+    std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part.pose.orientation); 
+
+    ROS_INFO("%s in /world frame: [%f,%f,%f], [%f,%f,%f]",
+              part.type.c_str(), 
+              part.pose.position.x,
+              part.pose.position.y,
+              part.pose.position.z,
+              roll,
+              pitch,
+              yaw); 
+
+  }
+
   std::tuple<double, double, double> quat_to_rpy(const geometry_msgs::Quaternion& quat)
   {
       // Transform msgs quaternion to tf2 quaternion 
