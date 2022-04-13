@@ -467,7 +467,7 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-    target_pose_in_world.position.z += 0.2;
+    target_pose_in_world.position.z = 0.9;
 
     m_arm_group.setMaxVelocityScalingFactor(0.1);
     m_arm_group.setPoseTarget(target_pose_in_world);
