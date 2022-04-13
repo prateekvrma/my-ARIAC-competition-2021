@@ -172,8 +172,9 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
   // add tasks to task vector
   m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<ariac_group1::PartTask>(*msg))); 
   m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
-  this->print_shipments_total_parts(); 
-  // Utility::print_part_pose(msg->part); 
+  // this->print_shipments_total_parts(); 
+  ROS_INFO("AGV: %s", msg->agv_id.c_str()); 
+  Utility::print_part_pose(msg->part); 
 }
 
 void KittingArm::print_shipments_total_parts() {
@@ -536,7 +537,6 @@ void KittingArm::execute()
   auto& part_task = *std::get<1>(part_task_info); 
   // ros::Duration(30.0).sleep();
   //
-  ROS_INFO("%s", part_task.part.type.c_str()); 
   ariac_group1::GetParts get_parts_srv; 
   get_parts_srv.request.type = part_task.part.type; 
 
@@ -556,19 +556,22 @@ void KittingArm::execute()
           break; 
         }
         ROS_INFO("Non enough part for %s", part_task.part.type.c_str()); 
+        return; 
       }
     }
-     
+
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
+    ROS_INFO("Part in world: "); 
+    Utility::print_part_pose(part_init_info.part); 
+     
+    ROS_INFO("Part in order: "); 
     Utility::print_part_pose(part_task.part); 
 
-    this->print_shipments_total_parts(); 
-    ROS_INFO("part task agv %s", part_task.agv_id.c_str()); 
-    ROS_INFO("part left before move: %d",m_shipments_total_parts[part_task.shipment_type]); 
+    ROS_INFO("Order AGV %s", part_task.agv_id.c_str()); 
+
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
       ROS_INFO("success moving part"); 
-      ROS_INFO("%s", part_task.shipment_type.c_str()); 
       m_shipments_total_parts[part_task.shipment_type]--; 
       ROS_INFO("part left: %d",m_shipments_total_parts[part_task.shipment_type]); 
       if (m_shipments_total_parts[part_task.shipment_type] == 0) {
