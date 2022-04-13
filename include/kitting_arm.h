@@ -27,7 +27,7 @@
 #include "utility.h"
 
 struct ArmPresetLocation {
-      std::vector<double> joints_pos;  //9 joints
+      std::vector<double> joints_position;  //9 joints
       std::string name;
 };
 
@@ -39,10 +39,8 @@ class KittingArm {
     // bool placePart(geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
     // void movePart(std::string part_type, std::string camera_frame, geometry_msgs::Pose goal_in_tray_frame, std::string agv);
-    // void activateGripper();
-    // void deactivateGripper();
-
-    void moveBaseTo(double linear_arm_actuator_joint_position);
+    void activateGripper();
+    void deactivateGripper();
     nist_gear::VacuumGripperState getGripperState();
 
     
@@ -51,6 +49,11 @@ class KittingArm {
     bool sendJointPosition(trajectory_msgs::JointTrajectory command_msg);
     void goToPresetLocation(std::string location_name);
 
+    bool move_arm_group(); 
+    void moveBaseTo(double linear_arm_actuator_joint_position);
+    void turnToBins(); 
+    void turnToBelt(); 
+
     void print_joints_position();  
 
     //--preset locations;
@@ -58,6 +61,9 @@ class KittingArm {
                       location_agv1, location_agv2, location_agv3, location_agv4;
 
   private:
+    // update joint positions
+    void copyCurrentJointsPosition(); 
+
     // callbacks
     void gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg);
     void arm_joint_states_callback(const sensor_msgs::JointState::ConstPtr& joint_state_msg);
@@ -65,7 +71,6 @@ class KittingArm {
     void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
 
     std::vector<double> m_joint_group_positions;
-    std::vector<double> m_joint_arm_positions;
     ros::NodeHandle m_nh;
     std::string m_planning_group;
     moveit::planning_interface::MoveGroupInterface::Options m_arm_options;

@@ -9,14 +9,34 @@ int main(int argc, char** argv) {
 
     KittingArm kitting_arm = KittingArm();
     kitting_arm.print_joints_position(); 
-    // arm.init();
-    // ROS_INFO("Moving to home1"); 
-    // arm.goToPresetLocation("home1"); 
-    // ROS_INFO("Moving to home2"); 
-    // arm.goToPresetLocation("home2"); 
-    // ROS_INFO("Moving to home1"); 
-    // arm.goToPresetLocation("home1"); 
-    // ros::waitForShutdown();
+
+    ROS_INFO("Moving to agv1"); 
+    kitting_arm.goToPresetLocation("agv1"); 
+    kitting_arm.print_joints_position(); 
+
+    ROS_INFO("Moving to agv2"); 
+    kitting_arm.goToPresetLocation("agv2"); 
+    kitting_arm.print_joints_position(); 
+
+    ROS_INFO("Moving to agv3"); 
+    kitting_arm.goToPresetLocation("agv3"); 
+    kitting_arm.print_joints_position(); 
+
+    ROS_INFO("Moving to agv4"); 
+    kitting_arm.goToPresetLocation("agv4"); 
+    kitting_arm.print_joints_position(); 
+
+    ROS_INFO("Turn to belt"); 
+    kitting_arm.turnToBelt(); 
+    kitting_arm.print_joints_position(); 
+    ROS_INFO("Turn to bins"); 
+    kitting_arm.turnToBins(); 
+    kitting_arm.print_joints_position(); 
+    ROS_INFO("Move to 3"); 
+    kitting_arm.moveBaseTo(3); 
+    kitting_arm.print_joints_position(); 
+
+    ros::waitForShutdown();
 }
 
 

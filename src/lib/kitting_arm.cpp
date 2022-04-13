@@ -64,35 +64,41 @@ KittingArm::KittingArm():
                                      wrist_2_joint,
                                      wrist_3_joint}; 
   //home position
-  home_face_belt.joints_pos = default_pos;
+  home_face_belt.joints_position = default_pos;
   home_face_belt.name = "home_face_belt";
 
-  home_face_bins.joints_pos = default_pos;
+  home_face_bins.joints_position = default_pos;
   // shoulder_pan_joint
-  home_face_bins.joints_pos.at(1) = -M_PI;
+  home_face_bins.joints_position.at(1) = -M_PI;
   home_face_bins.name = "home_face_bins";
 
-  location_agv1.joints_pos = home_face_bins.joints_pos; 
+  location_agv1.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_agv1.joints_pos.at(0) = 3.83; 
+  location_agv1.joints_position.at(0) = 3.83; 
   location_agv1.name = "agv1"; 
 
-  location_agv2.joints_pos = home_face_bins.joints_pos; 
+  location_agv2.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_agv2.joints_pos.at(0) = 0.83; 
+  location_agv2.joints_position.at(0) = 0.83; 
   location_agv2.name = "agv2"; 
 
-  location_agv3.joints_pos = home_face_bins.joints_pos; 
+  location_agv3.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_agv3.joints_pos.at(0) = -1.83; 
+  location_agv3.joints_position.at(0) = -1.83; 
   location_agv3.name = "agv3"; 
 
-  location_agv4.joints_pos = home_face_bins.joints_pos; 
+  location_agv4.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_agv4.joints_pos.at(0) = -4.33; 
+  location_agv4.joints_position.at(0) = -4.33; 
   location_agv4.name = "agv4"; 
 
+  // initialize home position
+  this->goToPresetLocation("home_face_belt"); 
+  this->goToPresetLocation("home_face_bins"); 
+}
 
+void KittingArm::copyCurrentJointsPosition()
+{
   // raw pointers are frequently used to refer to the planning group for improved performance.
   // to start, we will create a pointer that references the current robot’s state.
   moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
@@ -104,6 +110,9 @@ KittingArm::KittingArm():
 }
 
 void KittingArm::print_joints_position() {
+
+  this->copyCurrentJointsPosition(); 
+  
   for (auto& joint: m_joint_group_positions) {
     ROS_INFO("%f", joint); 
   }
@@ -134,6 +143,119 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
   // add tasks to task vector
   m_part_task_queue.emplace_back(std::make_unique<nist_gear::Product>(msg->part)); 
   Utility::print_part_pose(msg->part); 
+}
+
+nist_gear::VacuumGripperState KittingArm::getGripperState()
+{
+    return m_gripper_state;
+}
+
+void KittingArm::activateGripper()
+{
+    nist_gear::VacuumGripperControl srv;
+    srv.request.enable = true;
+    m_gripper_control_client.call(srv);
+
+    ROS_INFO_STREAM("[Arm][activateGripper] DEBUG: srv.response =" << srv.response);
+}
+
+void KittingArm::deactivateGripper()
+{
+    nist_gear::VacuumGripperControl srv;
+    srv.request.enable = false;
+    m_gripper_control_client.call(srv);
+
+    ROS_INFO_STREAM("[Arm][deactivateGripper] DEBUG: srv.response =" << srv.response);
+}
+
+void KittingArm::goToPresetLocation(std::string location_name)
+{
+
+    this->copyCurrentJointsPosition(); 
+
+    ArmPresetLocation location;
+    if (location_name.compare("home_face_belt") == 0) {
+        location = home_face_belt;
+    }
+    else if (location_name.compare("home_face_bins") == 0) {
+        location = home_face_bins;
+    }
+    else if (location_name.compare("agv1") == 0) {
+        location = location_agv1;
+    }
+    else if (location_name.compare("agv2") == 0) {
+        location = location_agv2;
+    }
+    else if (location_name.compare("agv3") == 0) {
+        location = location_agv3;
+    }
+    else if (location_name.compare("agv4") == 0) {
+        location = location_agv4;
+    }
+
+    m_joint_group_positions.at(0) = location.joints_position.at(0);
+    m_joint_group_positions.at(1) = location.joints_position.at(1);
+    m_joint_group_positions.at(2) = location.joints_position.at(2);
+    m_joint_group_positions.at(3) = location.joints_position.at(3);
+    m_joint_group_positions.at(4) = location.joints_position.at(4);
+    m_joint_group_positions.at(5) = location.joints_position.at(5);
+    m_joint_group_positions.at(6) = location.joints_position.at(6);
+
+    m_arm_group.setJointValueTarget(m_joint_group_positions);
+    this->move_arm_group(); 
+}
+
+bool KittingArm::move_arm_group()
+{
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+    // check a plan is found first then execute the action
+    bool success = (m_arm_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success)
+        m_arm_group.move();
+
+    return success; 
+}
+
+void KittingArm::moveBaseTo(double linear_arm_actuator_joint_position) {
+
+    this->copyCurrentJointsPosition(); 
+    
+    // next, assign a value to only the linear_arm_actuator_joint
+    m_joint_group_positions.at(0) = linear_arm_actuator_joint_position;
+
+    // move the arm
+    m_arm_group.setJointValueTarget(m_joint_group_positions);
+    this->move_arm_group(); 
+}
+
+void KittingArm::turnToBins()
+{
+
+  this->copyCurrentJointsPosition(); 
+
+  double epsilon = 0.01; 
+  if (abs(m_joint_group_positions.at(1) - (-M_PI)) < epsilon) {
+    return; 
+  }
+
+  m_joint_group_positions.at(1) = -M_PI; 
+  m_arm_group.setJointValueTarget(m_joint_group_positions);
+  this->move_arm_group(); 
+}
+
+void KittingArm::turnToBelt()
+{
+
+  this->copyCurrentJointsPosition(); 
+
+  double epsilon = 0.01; 
+  if (abs(m_joint_group_positions.at(1)) < epsilon) {
+    return; 
+  }
+
+  m_joint_group_positions.at(1) = 0; 
+  m_arm_group.setJointValueTarget(m_joint_group_positions);
+  this->move_arm_group(); 
 }
 
 
