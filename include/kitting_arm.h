@@ -47,6 +47,7 @@ class KittingArm {
     void activateGripper();
     void deactivateGripper();
     nist_gear::VacuumGripperState getGripperState();
+    void discard_faulty(std::string part_type, geometry_msgs::Pose part_init_pose);
 
     
 
