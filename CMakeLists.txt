@@ -146,6 +146,7 @@ add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(arm_lib src/lib/arm.cpp src/lib/utils.cpp src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
+add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utils.cpp src/lib/utility.cpp)
 add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
 add_library(orders_lib src/lib/orders.cpp)
 add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/orders.cpp) 
@@ -215,10 +216,10 @@ target_link_libraries(${PROJECT_NAME}_sensor_manager_node
 #   ${catkin_LIBRARIES}
 # )
 
-add_executable(${PROJECT_NAME}_arm_test_node2 src/test/test_arm2.cpp)
-add_dependencies(${PROJECT_NAME}_arm_test_node2 ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_arm_test_node2
-  arm_lib
+add_executable(${PROJECT_NAME}_kitting_arm_test_node src/test/test_kitting_arm.cpp)
+add_dependencies(${PROJECT_NAME}_kitting_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_kitting_arm_test_node
+  kitting_arm_lib
   ${catkin_LIBRARIES}
 )
 
