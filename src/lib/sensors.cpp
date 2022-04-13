@@ -138,17 +138,17 @@ int LogicalCamera::find_parts(const std::string& product_type)
   for (auto &part: m_parts_world_frame){
     if (part->type == product_type) {
       double roll, pitch, yaw;
-      std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
-
-      ROS_INFO("%s in /world frame: [%f,%f,%f] [%f,%f,%f]",
-        part->type.c_str(), 
-        part->pose.position.x,
-        part->pose.position.y,
-        part->pose.position.z,
-        roll,
-        pitch,
-        yaw);
-
+      // std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
+      //
+      // ROS_INFO("%s in /world frame: [%f,%f,%f] [%f,%f,%f]",
+      //   part->type.c_str(), 
+      //   part->pose.position.x,
+      //   part->pose.position.y,
+      //   part->pose.position.z,
+      //   roll,
+      //   pitch,
+      //   yaw);
+      //
       count++; 
     }
   }

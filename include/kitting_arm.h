@@ -15,6 +15,8 @@
 #include <cstdarg>
 #include <memory>
 #include <mutex>
+#include <queue>
+#include <tuple>
 
 // nist
 #include <nist_gear/VacuumGripperState.h>
@@ -55,6 +57,10 @@ class KittingArm {
     void turnToBelt(); 
 
     void print_joints_position();  
+    void print_shipments_total_parts();  
+
+    bool get_order(); 
+    void plan(); 
 
     //--preset locations;
     ArmPresetLocation home_face_belt, home_face_bins,
@@ -93,7 +99,9 @@ class KittingArm {
 
     ros::Subscriber m_part_task_subscriber;  
 
-    std::vector<std::unique_ptr<nist_gear::Product>> m_part_task_queue; 
+    std::vector<std::tuple<int, std::unique_ptr<nist_gear::Product>>> m_part_task_queue; 
+
+    std::map<std::string, int> m_shipments_total_parts; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

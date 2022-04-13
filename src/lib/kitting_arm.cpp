@@ -151,8 +151,16 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
-  m_part_task_queue.emplace_back(std::make_unique<nist_gear::Product>(msg->part)); 
-  Utility::print_part_pose(msg->part); 
+  m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<nist_gear::Product>(msg->part))); 
+  m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+  // Utility::print_part_pose(msg->part); 
+}
+
+void KittingArm::print_shipments_total_parts() {
+  for (auto& part_count: m_shipments_total_parts) {
+    ROS_INFO("%s: %d", part_count.first.c_str(), part_count.second); 
+  }
+
 }
 
 nist_gear::VacuumGripperState KittingArm::getGripperState()
@@ -393,8 +401,8 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
     goToPresetLocation(agv);
     // get the target pose of the part in the world frame
     auto target_pose_in_world = motioncontrol::transformToWorldFrame(
-        part_order_pose_in_frame,
-        agv);
+         part_order_pose_in_frame,
+         agv);
 
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
@@ -457,10 +465,40 @@ bool KittingArm::placePart(const geometry_msgs::Pose& part_init_pose,
     m_arm_group.move();
     ros::Duration(2.0).sleep();
     deactivateGripper();
-
+    //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
     return true;
     // TODO: check the part was actually placed in the correct pose in the agv
     // and that it is not faulty
 }
+
+bool KittingArm::get_order()
+{
+  ros::Rate wait_rate(20); 
+  // check if there are tasks and make sure ROS is running 
+  while (m_part_task_queue.empty() && ros::ok()) {
+    ROS_INFO_THROTTLE(3, "Waiting for part task.");
+    
+    wait_rate.sleep(); 
+  }
+
+  ROS_INFO("Received part task"); 
+  return true; 
+}
+
+void KittingArm::plan()
+{
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  std::sort(m_part_task_queue.begin(), m_part_task_queue.end()); 
+
+  auto& part_task = m_part_task_queue.back(); 
+  // Utility::print_part_pose(*std::get<1>(part_task)); 
+  m_part_task_queue.pop_back(); 
+  // ros::Duration(30.0).sleep();
+}
+
+// void KittingArm::execute()
+// {
+//
+// }

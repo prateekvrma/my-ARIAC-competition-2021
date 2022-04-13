@@ -12,6 +12,7 @@
 #include <ariac_group1/PartInfo.h>
 #include <ariac_group1/GetParts.h>
 #include <ariac_group1/IsFaulty.h>
+#include <ariac_group1/IsShipmentReady.h>
 
 #include "sensors.h"
 #include "utility.h"
@@ -31,8 +32,12 @@ class SensorManager {
     bool is_faulty(ariac_group1::IsFaulty::Request &req, 
                    ariac_group1::IsFaulty::Response &res); 
 
+    bool is_shipment_ready(ariac_group1::IsShipmentReady::Request &req, 
+                           ariac_group1::IsShipmentReady::Response &res);  
+
     ros::ServiceServer m_get_parts_service; 
     ros::ServiceServer m_is_faulty_service;
+    ros::ServiceServer m_is_shipment_ready_service;
 
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      "as1_1", "as2_1", "as1_2", "as2_2",

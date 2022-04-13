@@ -10,6 +10,13 @@
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
+ShipmentInfo::ShipmentInfo(const std::string& id,
+                           const nist_gear::KittingShipment::ConstPtr& shipment_ptr):
+  shipment_id{id},
+  shipment{std::make_unique<nist_gear::KittingShipment>(*shipment_ptr)}
+{
+}
+
 AGV::AGV(ros::NodeHandle* nodehandle, const std::string &id):
   m_nh{*nodehandle}, 
   m_id{id}, 
@@ -48,7 +55,9 @@ void AGV::task_callback(const nist_gear::KittingShipment::ConstPtr& msg)
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
   if (msg->agv_id == m_id) {
-    m_shipments.emplace_back(std::make_unique<nist_gear::KittingShipment>(*msg)); 
+    m_new_shipments_id.push_back(msg->shipment_type); 
+    m_shipments_id.push_back(msg->shipment_type); 
+    m_shipments_record[msg->shipment_type] = std::make_unique<ShipmentInfo>(msg->shipment_type, msg); 
   }
 }
 
@@ -57,7 +66,13 @@ void AGV::publish_busy_state()
   // setup parameters to state that AGV is busy
   ariac_group1::Busy msg; 
   msg.id = m_id; 
-  msg.state = not m_shipments.empty(); 
+  msg.state = false; 
+  for (auto& id: m_shipments_id) {
+    if (m_shipments_record[id]->state != ShipmentState::Finish) {
+      msg.state = true; 
+      break; 
+    }
+  }
   m_busy_publisher.publish(msg); 
 }
 
@@ -65,7 +80,7 @@ bool AGV::get_order()
 {
   ros::Rate wait_rate(1); 
   // check if there are tasks and make sure ROS is running 
-  while (m_shipments.empty() && ros::ok()) {
+  while (m_new_shipments_id.empty() && ros::ok()) {
     ROS_INFO_THROTTLE(3, "Waiting for kitting task.");
 
     this->publish_busy_state(); 
@@ -97,14 +112,15 @@ void AGV::plan()
    
 
 
-  for (auto& shipment_ptr: m_shipments) {
-    for (auto& product: shipment_ptr->products) {
+  for (auto& id: m_new_shipments_id) {
+    for (auto& product: m_shipments_record[id]->shipment->products) {
       ariac_group1::PartTask part_task; 
-      part_task.shipment_type = shipment_ptr->shipment_type; 
+      part_task.shipment_type = id; 
       part_task.part = product;  
+      part_task.total_parts = m_shipments_record[id]->shipment->products.size(); 
 
       ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
-      get_shipment_priority_srv.request.shipment_type = shipment_ptr->shipment_type; 
+      get_shipment_priority_srv.request.shipment_type = id; 
 
       if (client.call(get_shipment_priority_srv)) {
         part_task.priority = get_shipment_priority_srv.response.priority; 
@@ -117,8 +133,22 @@ void AGV::plan()
     // this->execute_tasks(task_ptr.get()); 
   }
 
-  m_shipments.clear(); 
+  m_new_shipments_id.clear(); 
 }
+
+// void AGV::check_shipments()
+// {
+//   for (auto& id: m_shipments_id) {
+//     if (m_shipments_record[id]->state != ShipmentState::Finish) {
+//       if () {
+//         ROS_INFO("Shipment %s is ready", id.c_str()); 
+//         m_shipments_record[id]->state = ShipmentState::Ready; 
+//         this->execute_tasks(m_shipments_record[id]->shipment.get()); 
+//       }
+//     }
+//   }
+//
+// }
 
 void AGV::execute_tasks(const nist_gear::KittingShipment* task_ptr)
 {

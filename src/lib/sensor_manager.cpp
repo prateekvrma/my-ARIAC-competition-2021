@@ -7,6 +7,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
 {
   m_get_parts_service = m_nh.advertiseService("/sensor_manager/get_parts", &SensorManager::get_parts, this); 
   m_is_faulty_service = m_nh.advertiseService("/sensor_manager/is_faulty", &SensorManager::is_faulty, this); 
+  m_is_shipment_ready_service = m_nh.advertiseService("/sensor_manager/is_shipment_ready", &SensorManager::is_shipment_ready, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -99,5 +100,45 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
 
   res.faulty = false; 
 
+  return true; 
+}
+
+bool SensorManager::is_shipment_ready(ariac_group1::IsShipmentReady::Request &req, 
+                                      ariac_group1::IsShipmentReady::Response &res) 
+{
+  auto agv_id = req.shipment.agv_id; 
+  std::string camera_id; 
+  if (agv_id == "agv1") {
+    camera_id = "ks1"; 
+  }
+  if (agv_id == "agv2") {
+    camera_id = "ks2"; 
+  }
+  if (agv_id == "agv3") {
+    camera_id = "ks3"; 
+  }
+  if (agv_id == "agv4") {
+    camera_id = "ks4"; 
+  }
+
+  bool ready = true; 
+  for (auto& product: req.shipment.products) {
+    nist_gear::Model order_part; 
+    order_part.type = product.type; 
+    order_part.pose = product.pose; 
+
+    bool same_part = false; 
+    for (auto& part_info_ptr: m_parts_database[product.type]) {
+      if (Utility::is_same_part(order_part, part_info_ptr->part)) {
+        same_part = true; 
+        break; 
+      }
+    }
+    if (not same_part) {
+      ready = false; 
+      break; 
+    }
+  }
+  res.ready = ready; 
   return true; 
 }

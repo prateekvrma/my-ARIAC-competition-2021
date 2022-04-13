@@ -13,6 +13,18 @@
 
 #include "sensors.h"
 
+enum class ShipmentState{New, Ready, Finish}; 
+
+class ShipmentInfo {
+  public: 
+    ShipmentInfo(const std::string& id,
+              const nist_gear::KittingShipment::ConstPtr& shipment_ptr); 
+
+    std::string shipment_id;  
+    std::unique_ptr<nist_gear::KittingShipment> shipment; 
+    ShipmentState state = ShipmentState::New; 
+}; 
+
 /**
  * @brief AGV class to handle the assigned tasks to the agv
  * 
@@ -160,8 +172,10 @@ class AGV {
      * @brief the vector which stores the sequence of task
      * 
      */
-    std::vector<std::unique_ptr<nist_gear::KittingShipment>> m_shipments; 
+    std::vector<std::string> m_new_shipments_id; 
 
+    std::vector<std::string> m_shipments_id; 
+    std::map<std::string, std::unique_ptr<ShipmentInfo>> m_shipments_record; 
     /**
      * @brief the prefix id of quality control sensor
      * 

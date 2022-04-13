@@ -81,6 +81,7 @@ add_service_files(
   GetParts.srv
   GetShipmentPriority.srv
   IsFaulty.srv
+  IsShipmentReady.srv
 )
 
 
@@ -151,24 +152,34 @@ add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp sr
 add_library(orders_lib src/lib/orders.cpp)
 add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/orders.cpp) 
 
+add_dependencies(utility_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(sensors_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(station_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(agv_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(arm_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(kitting_arm_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(sensor_manager_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(orders_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(factory_manager_lib ${catkin_EXPORTED_TARGETS})
+
 
 # Declare a C++ executable
 add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
-add_dependencies(${PROJECT_NAME}_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_agv_node
   agv_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_sensors_node src/nodes/sensors_node.cpp)
-add_dependencies(${PROJECT_NAME}_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_sensors_node
-  sensors_lib
-  ${catkin_LIBRARIES}
-)
+# add_executable(${PROJECT_NAME}_sensors_node src/nodes/sensors_node.cpp)
+# add_dependencies(${PROJECT_NAME}_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_sensors_node
+#   sensors_lib
+#   ${catkin_LIBRARIES}
+# )
 
 add_executable(${PROJECT_NAME}_station_node src/nodes/station_node.cpp)
-add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_station_node
   station_lib
   ${catkin_LIBRARIES}
@@ -183,26 +194,14 @@ target_link_libraries(${PROJECT_NAME}_station_node
 
 
 add_executable(${PROJECT_NAME}_rwa2_node src/nodes/rwa2.cpp)
-add_dependencies(${PROJECT_NAME}_rwa2_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_rwa2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_rwa2_node
   factory_manager_lib
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_blackout_node src/nodes/blackout.cpp)
-add_dependencies(${PROJECT_NAME}_blackout_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_blackout_node
-  ${catkin_LIBRARIES}
-)
-
-add_executable(${PROJECT_NAME}_quality_node src/nodes/quality_checks.cpp)
-add_dependencies(${PROJECT_NAME}_quality_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_quality_node
-  ${catkin_LIBRARIES}
-)
-
 add_executable(${PROJECT_NAME}_sensor_manager_node src/nodes/sensor_manager.cpp)
-add_dependencies(${PROJECT_NAME}_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_sensor_manager_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_sensor_manager_node
   sensor_manager_lib
   ${catkin_LIBRARIES}
@@ -223,10 +222,10 @@ target_link_libraries(${PROJECT_NAME}_kitting_arm_test_node
   ${catkin_LIBRARIES}
 )
 
-add_executable(${PROJECT_NAME}_arm_test_node src/test/test_arm.cpp)
-add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_arm_test_node
-  factory_manager_lib
-  arm_lib
-  ${catkin_LIBRARIES}
-)
+# add_executable(${PROJECT_NAME}_arm_test_node src/test/test_arm.cpp)
+# add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# target_link_libraries(${PROJECT_NAME}_arm_test_node
+#   factory_manager_lib
+#   arm_lib
+#   ${catkin_LIBRARIES}
+# )
