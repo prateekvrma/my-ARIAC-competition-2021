@@ -215,8 +215,15 @@ target_link_libraries(${PROJECT_NAME}_sensor_manager_node
 #   ${catkin_LIBRARIES}
 # )
 
+add_executable(${PROJECT_NAME}_kitting_arm_node src/nodes/kitting_arm.cpp)
+add_dependencies(${PROJECT_NAME}_kitting_arm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_kitting_arm_node
+  kitting_arm_lib
+  ${catkin_LIBRARIES}
+)
+
 add_executable(${PROJECT_NAME}_kitting_arm_test_node src/test/test_kitting_arm.cpp)
-add_dependencies(${PROJECT_NAME}_kitting_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
+add_dependencies(${PROJECT_NAME}_kitting_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_kitting_arm_test_node
   kitting_arm_lib
   ${catkin_LIBRARIES}

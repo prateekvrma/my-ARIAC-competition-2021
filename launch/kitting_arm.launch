@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<launch>
+
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}] [${node}]: ${message}"/>
+
+  <node pkg="ariac_group1" 
+        type="ariac_group1_kitting_arm_node" 
+        name="kitting_arm" output="screen"></node>
+
+</launch>
