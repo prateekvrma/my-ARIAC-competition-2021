@@ -8,9 +8,9 @@
 
 namespace Utility
 {
-  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2)
+  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance = 0.05)
   {
-    double epsilon = 0.05; 
+    // double epsilon = 0.1; 
 
     auto x1 = part1.pose.position.x; 
     auto y1 = part1.pose.position.y; 
@@ -23,7 +23,7 @@ namespace Utility
     // auto dist = sqrt(pow((x2-x1), 2) + pow((y2-y1), 2) + pow((z2-z1), 2)); 
     // ROS_INFO("distance: %f", dist); 
 
-    if (sqrt(pow((x2-x1), 2) + pow((y2-y1), 2) + pow((z2-z1), 2)) < epsilon)
+    if (sqrt(pow((x2-x1), 2) + pow((y2-y1), 2)) < tolerance)
       return true; 
     else
       return false; 
@@ -63,7 +63,7 @@ namespace Utility
 
   void print_pose(const geometry_msgs::Pose& pose)
   {
-    ROS_INFO("Pose in /world frame: [%f,%f,%f], [%f,%f,%f]",
+    ROS_INFO("Pose in /world frame: [%f,%f,%f], [%f,%f,%f,%f]",
               pose.position.x,
               pose.position.y,
               pose.position.z,

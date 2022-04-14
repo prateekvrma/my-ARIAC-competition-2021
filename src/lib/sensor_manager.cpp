@@ -92,13 +92,13 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
 {
   for (auto& part_info_ptr: m_parts_database["model"]) {
     Utility::print_part_pose(part_info_ptr->part); 
-    if (Utility::is_same_part(part_info_ptr->part, req.part)) {
+    if (Utility::is_same_part(part_info_ptr->part, req.part, 0.2)) {
       res.faulty = true; 
       return true; 
     }
   }
 
-  res.faulty = false; 
+  res.faulty = true; 
 
   return true; 
 }
@@ -129,7 +129,7 @@ bool SensorManager::is_shipment_ready(ariac_group1::IsShipmentReady::Request &re
 
     bool same_part = false; 
     for (auto& part_info_ptr: m_parts_database[product.type]) {
-      if (Utility::is_same_part(order_part, part_info_ptr->part)) {
+      if (Utility::is_same_part(order_part, part_info_ptr->part, 0.2)) {
         same_part = true; 
         break; 
       }

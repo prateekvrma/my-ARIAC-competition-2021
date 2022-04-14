@@ -113,7 +113,7 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     if (parts_database.count(part->type)) {
       bool in_database = false; 
       for (auto& db_part_ptr: parts_database[part->type]) {
-        if (Utility::is_same_part(part_info.part, db_part_ptr->part)) {
+        if (Utility::is_same_part(part_info.part, db_part_ptr->part, 0.05)) {
           in_database = true; 
           break; 
         }

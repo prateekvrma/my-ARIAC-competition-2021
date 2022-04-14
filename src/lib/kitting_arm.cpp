@@ -221,22 +221,41 @@ void KittingArm::goToPresetLocation(std::string location_name)
 
     ArmPresetLocation location;
     if (location_name.compare("home_face_belt") == 0) {
+        ROS_INFO("Moving to home_face_belt"); 
         location = home_face_belt;
     }
     else if (location_name.compare("home_face_bins") == 0) {
+        ROS_INFO("Moving to home_face_bins"); 
         location = home_face_bins;
     }
-    else if (location_name.compare("agv1") == 0) {
+    else if (location_name.compare("agv1") == 0 or
+             location_name.find("ks1") != std::string::npos) {
+        ROS_INFO("Moving to agv1"); 
         location = location_agv1;
     }
-    else if (location_name.compare("agv2") == 0) {
+    else if (location_name.compare("agv2") == 0 or 
+             location_name.find("ks2") != std::string::npos) {
+        ROS_INFO("Moving to agv2"); 
         location = location_agv2;
     }
-    else if (location_name.compare("agv3") == 0) {
+    else if (location_name.compare("agv3") == 0 or
+             location_name.find("ks3") != std::string::npos) {
+        ROS_INFO("Moving to agv3"); 
         location = location_agv3;
     }
-    else if (location_name.compare("agv4") == 0) {
+    else if (location_name.compare("agv4") == 0 or 
+             location_name.find("ks4") != std::string::npos) {
+        ROS_INFO("Moving to agv4"); 
         location = location_agv4;
+    }
+    else if (location_name.find("bins0") != std::string::npos) {
+        ROS_INFO("Moving to bins0"); 
+        location = location_bins0;
+    }
+    else if (location_name.find("bins1") != std::string::npos) {
+        ROS_INFO("Moving to bins1"); 
+        location = location_bins1;
+
     }
 
     m_joint_group_positions.at(0) = location.joints_position.at(0);
@@ -308,9 +327,6 @@ bool KittingArm::pickPart(std::string part_type,
                           const geometry_msgs::Pose& part_init_pose) 
 {
     m_arm_group.setMaxVelocityScalingFactor(1.0);
-
-
-    moveBaseTo(part_init_pose.position.y);
 
     // // move the arm above the part to grasp
     // // gripper stays at the current z
@@ -407,7 +423,7 @@ bool KittingArm::pickPart(std::string part_type,
     plan.trajectory_ = trajectory;
     m_arm_group.execute(plan);
 
-    ros::Duration(sleep(2.0));
+    ros::Duration(sleep(3.0));
 
     // move the arm 1 mm down until the part is attached
     while (!m_gripper_state.attached) {
@@ -505,40 +521,54 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     m_arm_group.setMaxVelocityScalingFactor(0.1);
     m_arm_group.setPoseTarget(target_pose_in_world);
     m_arm_group.move();
-    ros::Duration(5.0).sleep();
+    ros::Duration(3.0).sleep();
     deactivateGripper();
+
+
     //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
     return target_pose_in_world;
 }
-void KittingArm::discard_faulty(std::string part_type, geometry_msgs::Pose part_init_pose)
+void KittingArm::discard_faulty(const nist_gear::Model& faulty_part)
 {
-      pickPart(part_type, part_init_pose);
+      pickPart(faulty_part.type, faulty_part.pose);
       goToPresetLocation("home_face_bins");
       ros::Duration(5.0).sleep();
       deactivateGripper();
 }
 
+bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
+{
+  ROS_INFO("Check faulty"); 
+  ariac_group1::IsFaulty srv; 
+  
+  srv.request.part = faulty_part; 
+  m_is_faulty_client.call(srv); 
+
+  return srv.response.faulty; 
+}
+
 bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
-    auto init_pose_in_world = part_init_info.part.pose;
+    auto part_init_pose_in_world = part_init_info.part.pose;
+    auto part_location = part_init_info.camera_id; 
     auto part_type = part_init_info.part.type; 
+    auto target_pose_in_frame = part_task.part.pose; 
+    auto target_agv = part_task.agv_id; 
 
-    if (pickPart(part_type, init_pose_in_world)) {
-        auto target_pose = placePart(init_pose_in_world, part_task.part.pose, part_task.agv_id);
+    goToPresetLocation(part_location);
+    moveBaseTo(part_init_pose_in_world.position.y);
+    if (pickPart(part_type, part_init_pose_in_world)) {
+        auto target_pose_in_world = placePart(part_init_pose_in_world, target_pose_in_frame, target_agv);
 
-        ariac_group1::IsFaulty srv; 
         nist_gear::Model faulty_part; 
         faulty_part.type = part_type; 
-        faulty_part.pose = target_pose; 
-        srv.request.part = faulty_part; 
-        if (m_is_faulty_client.call(srv)) {
-          ROS_INFO("Check faulty"); 
+        faulty_part.pose = target_pose_in_world; 
+
+        if (this->check_faulty(faulty_part)) {
+          ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
-          if (srv.response.faulty) {
-            ROS_INFO("=====================Faulty========================="); 
-            return false; 
-          }
+          this->discard_faulty(faulty_part); 
         }
 
     }
