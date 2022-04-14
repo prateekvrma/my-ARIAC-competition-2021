@@ -15,6 +15,7 @@
 #include <math.h>
 
 #include <nist_gear/AGVToAssemblyStation.h>
+#include <ariac_group1/IsFaulty.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -50,6 +51,11 @@ KittingArm::KittingArm():
   m_get_parts_client = 
       m_nh.serviceClient<ariac_group1::GetParts>("/sensor_manager/get_parts"); 
   m_get_parts_client.waitForExistence();
+
+  m_is_faulty_client = 
+      m_nh.serviceClient<ariac_group1::IsFaulty>("/sensor_manager/is_faulty"); 
+  m_get_parts_client.waitForExistence();
+
 
   // part task subscriber
   m_part_task_subscriber =
@@ -108,7 +114,7 @@ KittingArm::KittingArm():
 
   location_agv4.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_agv4.joints_position.at(0) = -4.33; 
+  location_agv4.joints_position.at(0) = -4.1; 
   location_agv4.name = "agv4"; 
 
   location_bins0.joints_position = home_face_bins.joints_position; 
@@ -171,8 +177,10 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
   m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<ariac_group1::PartTask>(*msg))); 
-  m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
-  // this->print_shipments_total_parts(); 
+  if (not m_shipments_total_parts.count(msg->shipment_type)) {
+    m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+  }
+  this->print_shipments_total_parts(); 
   Utility::print_part_pose(msg->part); 
 }
 
@@ -342,6 +350,12 @@ bool KittingArm::pickPart(std::string part_type,
     if (part_type.find("sensor") != std::string::npos) {
         z_pos = 0.81;
     }
+    if (part_type.find("battery") != std::string::npos) {
+        z_pos = 0.81;
+    }
+    if (part_type.find("regulator") != std::string::npos) {
+        z_pos = 0.81;
+    }
 
     // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
     // arm_ee_link_pose = arm_group_.getCurrentPose().pose;
@@ -407,6 +421,7 @@ bool KittingArm::pickPart(std::string part_type,
     m_arm_group.setMaxAccelerationScalingFactor(1.0);
     ROS_INFO_STREAM("[Gripper] = object attached");
     ros::Duration(sleep(2.0));
+    m_arm_group.setPoseTarget(pregrasp_pose);
     m_arm_group.setPoseTarget(postgrasp_pose3);
     m_arm_group.move();
 
@@ -414,9 +429,9 @@ bool KittingArm::pickPart(std::string part_type,
     
 }
 
-bool KittingArm::placePart(geometry_msgs::Pose part_init_pose, 
-                           geometry_msgs::Pose part_pose_in_frame, 
-                           std::string agv)
+geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose, 
+                                          geometry_msgs::Pose part_pose_in_frame, 
+                                          std::string agv)
 {
     goToPresetLocation(agv);
     
@@ -424,6 +439,10 @@ bool KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     auto target_pose_in_world = motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
          agv);
+
+    ROS_INFO("Part goal:"); 
+    Utility::print_pose(target_pose_in_world); 
+
    
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
@@ -491,9 +510,7 @@ bool KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
-    return true;
-    // TODO: check the part was actually placed in the correct pose in the agv
-    // and that it is not faulty
+    return target_pose_in_world;
 }
 void KittingArm::discard_faulty(std::string part_type, geometry_msgs::Pose part_init_pose)
 {
@@ -501,8 +518,6 @@ void KittingArm::discard_faulty(std::string part_type, geometry_msgs::Pose part_
       goToPresetLocation("home_face_bins");
       ros::Duration(5.0).sleep();
       deactivateGripper();
-      
-
 }
 
 bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
@@ -510,8 +525,22 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto part_type = part_init_info.part.type; 
 
     if (pickPart(part_type, init_pose_in_world)) {
-        placePart(init_pose_in_world, part_task.part.pose, part_task.agv_id);
-        return true; 
+        auto target_pose = placePart(init_pose_in_world, part_task.part.pose, part_task.agv_id);
+
+        ariac_group1::IsFaulty srv; 
+        nist_gear::Model faulty_part; 
+        faulty_part.type = part_type; 
+        faulty_part.pose = target_pose; 
+        srv.request.part = faulty_part; 
+        if (m_is_faulty_client.call(srv)) {
+          ROS_INFO("Check faulty"); 
+          Utility::print_part_pose(faulty_part); 
+          if (srv.response.faulty) {
+            ROS_INFO("=====================Faulty========================="); 
+            return false; 
+          }
+        }
+
     }
     return true; 
 }
@@ -544,12 +573,18 @@ void KittingArm::execute()
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
+
+  ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
+  ROS_INFO("AGV: %s", part_task.agv_id.c_str()); 
+  ROS_INFO("Station id: %s", part_task.station_id.c_str()); 
+  ROS_INFO("Part type: %s", part_task.part.type.c_str()); 
   // ros::Duration(30.0).sleep();
   //
   ariac_group1::GetParts get_parts_srv; 
   get_parts_srv.request.type = part_task.part.type; 
 
   m_get_parts_client.call(get_parts_srv); 
+
   auto& parts_info = get_parts_srv.response.parts_info; 
 
   if (not parts_info.empty()) {
@@ -565,32 +600,28 @@ void KittingArm::execute()
           ROS_INFO("High priority gets part from agv"); 
           break; 
         }
-        ROS_INFO("Non enough part for %s", part_task.part.type.c_str()); 
+        ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
         return; 
       }
     }
 
-    ROS_INFO("Order AGV %s", part_task.agv_id.c_str()); 
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
-    ROS_INFO("Part in world: "); 
+    ROS_INFO("Part location: "); 
     Utility::print_part_pose(part_init_info.part); 
      
-    ROS_INFO("Part in order: "); 
-    Utility::print_part_pose(part_task.part); 
-
-
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
-      ROS_INFO("success moving part"); 
+      ROS_INFO("Success moving part"); 
       m_shipments_total_parts[part_task.shipment_type]--; 
-      ROS_INFO("part left: %d",m_shipments_total_parts[part_task.shipment_type]); 
+      ROS_INFO("Part left: %d",m_shipments_total_parts[part_task.shipment_type]); 
       if (m_shipments_total_parts[part_task.shipment_type] == 0) {
         this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
       }
       m_part_task_queue.pop_back(); 
+      return; 
     }
-
     ROS_INFO("movement false"); 
+
   }
   else {
     ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 

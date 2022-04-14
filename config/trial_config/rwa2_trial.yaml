@@ -101,6 +101,10 @@ sensor_blackout:
 
 faulty_products:
   - assembly_battery_blue_5
+  - assembly_battery_blue_4
+  - assembly_battery_blue_3
+  - assembly_battery_blue_2
+  - assembly_battery_blue_1
   - assembly_pump_red_1
   - assembly_pump_red_2
   - assembly_pump_red_3

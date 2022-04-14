@@ -61,6 +61,19 @@ namespace Utility
 
   }
 
+  void print_pose(const geometry_msgs::Pose& pose)
+  {
+    ROS_INFO("Pose in /world frame: [%f,%f,%f], [%f,%f,%f]",
+              pose.position.x,
+              pose.position.y,
+              pose.position.z,
+              pose.orientation.x,
+              pose.orientation.y,
+              pose.orientation.z,
+              pose.orientation.w); 
+  }
+
+
   std::tuple<double, double, double> quat_to_rpy(const geometry_msgs::Quaternion& quat)
   {
       // Transform msgs quaternion to tf2 quaternion 
