@@ -59,6 +59,7 @@ class LogicalCamera: public Sensors {
      */
     int find_parts(const std::string& product_type); 
     void update_parts(PartsDB& parts_database); 
+    int parts_in_camera(); 
 
   private:
 

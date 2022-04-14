@@ -82,6 +82,7 @@ add_service_files(
   GetShipmentPriority.srv
   IsFaulty.srv
   IsShipmentReady.srv
+  PartsInCamera.srv
 )
 
 

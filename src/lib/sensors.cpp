@@ -155,6 +155,11 @@ int LogicalCamera::find_parts(const std::string& product_type)
   return count; 
 }
 
+int LogicalCamera::parts_in_camera() 
+{
+  return m_parts_world_frame.size(); 
+}
+
 DepthCamera::DepthCamera(ros::NodeHandle* nodehandle, const std::string& id):
   Sensors(nodehandle, id)
 {
