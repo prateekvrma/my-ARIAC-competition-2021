@@ -40,14 +40,14 @@ class KittingArm {
     KittingArm();
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
-    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose);
+    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
     geometry_msgs::Pose placePart(geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
     // void movePart(std::string part_type, std::string camera_frame, geometry_msgs::Pose goal_in_tray_frame, std::string agv);
     void activateGripper();
     void deactivateGripper();
     nist_gear::VacuumGripperState getGripperState();
-    void discard_faulty(const nist_gear::Model& faulty_part); 
+    void discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id); 
     bool check_faulty(const nist_gear::Model& faulty_part); 
 
     
@@ -105,6 +105,10 @@ class KittingArm {
     ros::ServiceClient m_get_parts_client;
 
     ros::ServiceClient m_is_faulty_client;
+
+    ros::ServiceClient m_parts_in_camera_client;
+    ros::ServiceClient m_is_part_picked_client;
+
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
     // joint states subscribers

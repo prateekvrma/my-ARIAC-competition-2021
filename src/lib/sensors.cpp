@@ -68,7 +68,8 @@ void LogicalCamera::camera_to_world()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
-  m_parts_world_frame.clear(); 
+  double part_height = 0; 
+  parts_world_frame.clear(); 
   for (auto &model: m_parts_camera_frame) {
     geometry_msgs::Pose model_pose = model->pose; 
     geometry_msgs::Pose transformed_model_pose; 
@@ -79,8 +80,13 @@ void LogicalCamera::camera_to_world()
     nist_gear::Model transformed_model; 
     transformed_model.type = model->type; 
     transformed_model.pose = transformed_model_pose; 
-    m_parts_world_frame.emplace_back(std::make_unique<nist_gear::Model>(transformed_model)); 
+    parts_world_frame.emplace_back(std::make_unique<nist_gear::Model>(transformed_model)); 
+    part_height = transformed_model.pose.position.z; 
+    if (m_platform_height == -1) {
+      m_platform_height = part_height; 
+    }
   }
+  
 }
 
 
@@ -88,7 +94,7 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
 {
   // ROS_INFO("Sensor: %s", m_id.c_str()); 
   this->camera_to_world(); 
-  for (auto &part: m_parts_world_frame){
+  for (auto &part: parts_world_frame){
     // m_parts_publisher.publish(*part); 
     ariac_group1::PartInfo part_info;  
     part_info.part = *part; 
@@ -109,7 +115,7 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
     //   ROS_INFO("flipped"); 
     //   part_info.flip = true; 
     // }
-
+  
     if (parts_database.count(part->type)) {
       bool in_database = false; 
       for (auto& db_part_ptr: parts_database[part->type]) {
@@ -135,7 +141,7 @@ int LogicalCamera::find_parts(const std::string& product_type)
   this->camera_to_world(); 
 
   int count = 0; 
-  for (auto &part: m_parts_world_frame){
+  for (auto &part: parts_world_frame){
     if (part->type == product_type) {
       double roll, pitch, yaw;
       // std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
@@ -153,11 +159,6 @@ int LogicalCamera::find_parts(const std::string& product_type)
     }
   }
   return count; 
-}
-
-int LogicalCamera::parts_in_camera() 
-{
-  return m_parts_world_frame.size(); 
 }
 
 DepthCamera::DepthCamera(ros::NodeHandle* nodehandle, const std::string& id):

@@ -59,7 +59,8 @@ class LogicalCamera: public Sensors {
      */
     int find_parts(const std::string& product_type); 
     void update_parts(PartsDB& parts_database); 
-    int parts_in_camera(); 
+
+    std::vector<std::unique_ptr<nist_gear::Model>> parts_world_frame; 
 
   private:
 
@@ -90,7 +91,7 @@ class LogicalCamera: public Sensors {
     /**
      * @Brief Parts pose with respect to the world frame  
      */
-    std::vector<std::unique_ptr<nist_gear::Model>> m_parts_world_frame; 
+    double m_platform_height = -1; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

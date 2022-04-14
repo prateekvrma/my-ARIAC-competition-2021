@@ -83,6 +83,7 @@ add_service_files(
   IsFaulty.srv
   IsShipmentReady.srv
   PartsInCamera.srv
+  IsPartPicked.srv
 )
 
 

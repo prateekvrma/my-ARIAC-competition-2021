@@ -1,0 +1,5 @@
+string part_type
+string camera_id
+---
+bool picked
+

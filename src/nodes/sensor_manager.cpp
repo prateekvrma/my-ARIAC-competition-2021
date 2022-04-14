@@ -10,7 +10,7 @@ int main(int argc, char **argv){
 
   SensorManager sensor_manager(&nh); 
 
-  ros::Rate rate(20); 
+  ros::Rate rate(100); 
 
   while (ros::ok()){
     sensor_manager.update_parts(); 
