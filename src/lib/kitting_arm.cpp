@@ -555,29 +555,6 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
-    std::string target_agv_camera_id; 
-    if (agv.compare("agv1") == 0) {
-      target_agv_camera_id = "quality_control_sensor_1"; 
-    }
-    else if (agv.compare("agv2") == 0) {
-      target_agv_camera_id = "quality_control_sensor_2"; 
-    }
-    else if (agv.compare("agv3") == 0) {
-      target_agv_camera_id = "quality_control_sensor_3"; 
-    }
-    else if (agv.compare("agv4") == 0) {
-      target_agv_camera_id = "quality_control_sensor_4"; 
-    }
-
-    // ariac_group1::PartsInCamera srv; 
-    // srv.request.camera_id = target_agv_camera_id; 
-    // if (m_parts_in_camera_client.call(srv)) {
-    //   ROS_INFO("Parts in %s: %d (After Place)", camera_id.c_str(), srv_after_pick.response.parts_amount); 
-    // } 
-    // else {
-    //   ROS_INFO("No such camera: %s", camera_id.c_str()); 
-    // }
-
     return target_pose_in_world;
 }
 void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id)
