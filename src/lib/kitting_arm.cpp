@@ -370,7 +370,7 @@ bool KittingArm::pickPart(std::string part_type,
     // we will bring the arm back to this pose after picking up the part
     auto postgrasp_pose3 = part_init_pose;
     postgrasp_pose3.orientation = arm_ee_link_pose.orientation;
-    postgrasp_pose3.position.z = arm_ee_link_pose.position.z;
+    postgrasp_pose3.position.z = part_init_pose.position.z + 0.1;
 
     ROS_INFO("postgrasp: %f", postgrasp_pose3.position.z); 
 
@@ -382,7 +382,7 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.859;
     }
     if (part_type.find("sensor") != std::string::npos) {
-        z_pos = 0.81;
+        z_pos = 0.79;
     }
     if (part_type.find("battery") != std::string::npos) {
         z_pos = 0.79;
@@ -430,7 +430,18 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start moving to pregrasp"); 
 
     // move the arm to the pregrasp pose
+    this->copyCurrentJointsPosition(); 
+    auto before_ik = m_joint_group_positions; 
+
     m_arm_group.setPoseTarget(grasp_pose);
+
+    this->copyCurrentJointsPosition(); 
+    auto after_ik = m_joint_group_positions; 
+
+    for (int i=0; i<7; i++) {
+      ROS_INFO("Joint %d changes %f", i, abs(before_ik.at(i) - after_ik.at(i))); 
+    }
+
     m_arm_group.move();
     ros::Duration(0.5).sleep();
 
@@ -453,14 +464,14 @@ bool KittingArm::pickPart(std::string part_type,
 
     ROS_INFO("Start grasping"); 
     // move the arm 1 mm down until the part is attached
-    double step = 0.002;
+    double step = 0.001;
     while (!m_gripper_state.attached) {
         grasp_pose.position.z -= step;
         m_arm_group.setPoseTarget(grasp_pose);
         m_arm_group.move();
         ros::Duration(0.2).sleep();
-        if (step > 0.001) {
-          step -= 0.0005; 
+        if (step > 0.0008) {
+          step -= 0.0001; 
         }
     }
     
