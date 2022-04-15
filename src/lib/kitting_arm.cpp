@@ -191,7 +191,8 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
-  m_part_task_queue.emplace_back(std::make_tuple(msg->priority * 100, std::make_unique<ariac_group1::PartTask>(*msg))); 
+  m_part_task_queue.emplace_back(std::make_tuple(msg->priority * PriorityWeight::Ratio::HIGH_PRIORITY,
+                                                 std::make_unique<ariac_group1::PartTask>(*msg))); 
   if (not m_shipments_total_parts.count(msg->shipment_type)) {
     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
   }
@@ -730,11 +731,12 @@ void KittingArm::execute()
       idx++; 
       part_init_info = parts_info[idx]; 
       if (idx == parts_info.size()) {
-        if (priority > 50) {
+        if (priority >= PriorityWeight::Level::HIGH) {
           ROS_INFO("High priority gets part from agv"); 
           break; 
         }
         ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
+        priority -= PriorityWeight::Penalty::NO_PART;  
         return; 
       }
     }
@@ -756,12 +758,13 @@ void KittingArm::execute()
     }
     else {
       ROS_INFO("Move part fails"); 
-      priority--; 
+      priority -= PriorityWeight::Penalty::MOVE_FAILS; 
+      return; 
     }
   }
   else {
     ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 
-    priority--; 
+    priority -= PriorityWeight::Penalty::NO_PART;  
     return; 
   }
 

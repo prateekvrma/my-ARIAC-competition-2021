@@ -35,6 +35,23 @@ struct ArmPresetLocation {
       std::string name;
 };
 
+namespace PriorityWeight {
+  namespace Ratio {
+    int HIGH_PRIORITY = 10; 
+  }
+
+  namespace Penalty {
+    int NO_PART = -3;   
+    int MOVE_FAILS = -1; 
+  }
+
+  namespace Level {
+    int EMERGENCY = 10; 
+    int HIGH = 5; 
+    int LOW = 2; 
+  }
+}
+
 class KittingArm {
   public: 
     KittingArm();
