@@ -84,6 +84,7 @@ add_service_files(
   IsShipmentReady.srv
   PartsInCamera.srv
   IsPartPicked.srv
+  GetPartPosition.srv
 )
 
 

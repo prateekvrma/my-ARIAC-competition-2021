@@ -10,6 +10,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_is_shipment_ready_service = m_nh.advertiseService("/sensor_manager/is_shipment_ready", &SensorManager::is_shipment_ready, this); 
   m_parts_in_camera_service = m_nh.advertiseService("/sensor_manager/parts_in_camera", &SensorManager::parts_in_camera, this); 
   m_is_part_picked_service = m_nh.advertiseService("/sensor_manager/is_part_picked", &SensorManager::is_part_picked, this); 
+  m_get_part_position_service = m_nh.advertiseService("/sensor_manager/get_part_position", &SensorManager::get_part_position, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -213,6 +214,7 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       }
       double picked_margin = 0.03; 
       if ((part->pose.position.z - platform_height) > picked_margin) {
+        ROS_info("====================================================="); 
         res.picked = true; 
       }
     }
@@ -222,4 +224,19 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
   return false; 
 }
 
+bool SensorManager::get_part_position(ariac_group1::GetPartPosition::Request &req,
+                                      ariac_group1::GetPartPosition::Response &res)
+{
+  std::string id = this->convert_id_to_internal(req.camera_id); 
+  for (auto &part_ptr: m_logical_cameras_dict[id]->parts_world_frame) {
+    if (Utility::is_same_part(*part_ptr, req.part, 0.1)) {
+      ROS_INFO("Part position correction"); 
+      res.pose = part_ptr->pose; 
+      Utility::print_part_pose(*part_ptr); 
+      return true; 
+    }
+  }
+
+  return false; 
+}
 

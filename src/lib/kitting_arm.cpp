@@ -18,6 +18,7 @@
 #include <ariac_group1/IsFaulty.h>
 #include <ariac_group1/PartsInCamera.h>
 #include <ariac_group1/IsPartPicked.h>
+#include <ariac_group1/GetPartPosition.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -65,6 +66,10 @@ KittingArm::KittingArm():
   m_is_part_picked_client = 
       m_nh.serviceClient<ariac_group1::IsPartPicked>("/sensor_manager/is_part_picked"); 
   m_is_part_picked_client.waitForExistence();
+
+  m_get_part_position_client = 
+      m_nh.serviceClient<ariac_group1::GetPartPosition>("/sensor_manager/get_part_position"); 
+  m_get_part_position_client.waitForExistence();
 
 
   // part task subscriber
@@ -384,6 +389,10 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.81;
     }
 
+    if (camera_id.find("ks") != std::string::npos) {
+      z_pos += 0.015; 
+    }
+
     // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
     // arm_ee_link_pose = arm_group_.getCurrentPose().pose;
     // arm_ee_link_pose.orientation.x = flat_orientation.getX();
@@ -568,11 +577,20 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
 }
 void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id)
 {
+      ariac_group1::GetPartPosition srv; 
+      srv.request.camera_id = camera_id; 
+      srv.request.part = faulty_part; 
+      geometry_msgs::Pose faulty_part_pose; 
+      if (m_get_part_position_client.call(srv)) {
+        faulty_part_pose = srv.response.pose; 
+      } else {
+        ROS_INFO("No rectified pose"); 
+      }
       this->copyCurrentJointsPosition(); 
       auto joints_position_before_discard = m_joint_group_positions; 
       bool success = false; 
       while (not success) {
-        success = pickPart(faulty_part.type, faulty_part.pose, camera_id);
+        success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
         m_arm_group.setJointValueTarget(joints_position_before_discard);
         this->move_arm_group(); 
       }

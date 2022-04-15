@@ -108,6 +108,7 @@ class KittingArm {
 
     ros::ServiceClient m_parts_in_camera_client;
     ros::ServiceClient m_is_part_picked_client;
+    ros::ServiceClient m_get_part_position_client;  
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
