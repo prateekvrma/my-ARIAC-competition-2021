@@ -191,7 +191,7 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   // add tasks to task vector
-  m_part_task_queue.emplace_back(std::make_tuple(msg->priority, std::make_unique<ariac_group1::PartTask>(*msg))); 
+  m_part_task_queue.emplace_back(std::make_tuple(msg->priority * 100, std::make_unique<ariac_group1::PartTask>(*msg))); 
   if (not m_shipments_total_parts.count(msg->shipment_type)) {
     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
   }
@@ -338,6 +338,14 @@ void KittingArm::turnToBelt()
   this->move_arm_group(); 
 }
 
+void KittingArm::lift()
+{
+  this->copyCurrentJointsPosition(); 
+  m_joint_group_positions.at(2) = 0.1; 
+  m_joint_group_positions.at(3) = 0.1; 
+  this->move_arm_group(); 
+}
+
 bool KittingArm::pickPart(std::string part_type, 
                           const geometry_msgs::Pose& part_init_pose,
                           std::string camera_id) 
@@ -430,18 +438,7 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start moving to pregrasp"); 
 
     // move the arm to the pregrasp pose
-    this->copyCurrentJointsPosition(); 
-    auto before_ik = m_joint_group_positions; 
-
     m_arm_group.setPoseTarget(grasp_pose);
-
-    this->copyCurrentJointsPosition(); 
-    auto after_ik = m_joint_group_positions; 
-
-    for (int i=0; i<7; i++) {
-      ROS_INFO("Joint %d changes %f", i, abs(before_ik.at(i) - after_ik.at(i))); 
-    }
-
     m_arm_group.move();
     ros::Duration(0.5).sleep();
 
@@ -483,6 +480,8 @@ bool KittingArm::pickPart(std::string part_type,
     m_arm_group.setPoseTarget(postgrasp_pose3);
     ros::Duration(0.5).sleep();
     m_arm_group.move();
+
+    this->lift(); 
 
     ariac_group1::IsPartPicked srv; 
     srv.request.camera_id = camera_id; 
@@ -619,6 +618,7 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
         this->move_arm_group(); 
         trial_count++; 
         if (trial_count > 2) {
+          ROS_INFO("trial %d", trial_count); 
           goToPresetLocation(camera_id);
         }
       }
@@ -730,7 +730,7 @@ void KittingArm::execute()
       idx++; 
       part_init_info = parts_info[idx]; 
       if (idx == parts_info.size()) {
-        if (priority > 0) {
+        if (priority > 50) {
           ROS_INFO("High priority gets part from agv"); 
           break; 
         }
@@ -754,10 +754,14 @@ void KittingArm::execute()
       m_part_task_queue.pop_back(); 
       return; 
     }
-    ROS_INFO("Move part fails"); 
+    else {
+      ROS_INFO("Move part fails"); 
+      priority--; 
+    }
   }
   else {
     ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 
+    priority--; 
     return; 
   }
 

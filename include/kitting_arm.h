@@ -60,6 +60,7 @@ class KittingArm {
     void moveBaseTo(double linear_arm_actuator_joint_position);
     void turnToBins(); 
     void turnToBelt(); 
+    void lift(); 
 
     void print_joints_position();  
     void print_shipments_total_parts();  
