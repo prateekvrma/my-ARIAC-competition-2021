@@ -214,7 +214,7 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       }
       double picked_margin = 0.03; 
       if ((part->pose.position.z - platform_height) > picked_margin) {
-        ROS_info("====================================================="); 
+        ROS_INFO("====================================================="); 
         res.picked = true; 
       }
     }

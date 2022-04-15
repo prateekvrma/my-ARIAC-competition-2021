@@ -372,6 +372,8 @@ bool KittingArm::pickPart(std::string part_type,
     postgrasp_pose3.orientation = arm_ee_link_pose.orientation;
     postgrasp_pose3.position.z = arm_ee_link_pose.position.z;
 
+    ROS_INFO("postgrasp: %f", postgrasp_pose3.position.z); 
+
     // preset z depending on the part type
     // some parts are bigger than others
     // TODO: Add new z_pos values for the regulator and the battery
@@ -383,14 +385,14 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.81;
     }
     if (part_type.find("battery") != std::string::npos) {
-        z_pos = 0.81;
+        z_pos = 0.79;
     }
     if (part_type.find("regulator") != std::string::npos) {
         z_pos = 0.81;
     }
 
     if (camera_id.find("ks") != std::string::npos) {
-      z_pos += 0.015; 
+      z_pos += 0.02; 
     }
 
     // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
@@ -407,15 +409,17 @@ bool KittingArm::pickPart(std::string part_type,
     auto pregrasp_pose = part_init_pose;
     pregrasp_pose.orientation = arm_ee_link_pose.orientation;
     pregrasp_pose.position.z = z_pos + 0.06;
+    ROS_INFO("pregrasp: %f", pregrasp_pose.position.z); 
 
     // grasp pose: right above the part
     auto grasp_pose = part_init_pose;
     grasp_pose.orientation = arm_ee_link_pose.orientation;
-    grasp_pose.position.z = z_pos + 0.03;
+    grasp_pose.position.z = z_pos + 0.02;
+    ROS_INFO("grasp_pose: %f", grasp_pose.position.z); 
 
-    waypoints.push_back(pregrasp_pose);
-    waypoints.push_back(grasp_pose);
-
+    // waypoints.push_back(pregrasp_pose);
+    // waypoints.push_back(grasp_pose);
+    //
     // activate gripper
     // sometimes it does not activate right away
     // so we are doing this in a loop
@@ -423,43 +427,50 @@ bool KittingArm::pickPart(std::string part_type,
         activateGripper();
     }
 
+    ROS_INFO("Start moving to pregrasp"); 
+
     // move the arm to the pregrasp pose
-    m_arm_group.setPoseTarget(pregrasp_pose);
+    m_arm_group.setPoseTarget(grasp_pose);
     m_arm_group.move();
-    ros::Duration(sleep(1));
+    ros::Duration(0.5).sleep();
 
     
-    /* Cartesian motions are frequently needed to be slower for actions such as approach
-    and retreat grasp motions. Here we demonstrate how to reduce the speed and the acceleration
-    of the robot arm via a scaling factor of the maxiumum speed of each joint.
-    */
-    m_arm_group.setMaxVelocityScalingFactor(0.05);
-    m_arm_group.setMaxAccelerationScalingFactor(0.05);
-    // plan the cartesian motion and execute it
-    moveit_msgs::RobotTrajectory trajectory;
-    const double jump_threshold = 0.0;
-    const double eef_step = 0.01;
-    double fraction = m_arm_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    moveit::planning_interface::MoveGroupInterface::Plan plan;
-    plan.trajectory_ = trajectory;
-    m_arm_group.execute(plan);
+    // ROS_INFO("Start moving straight down"); 
+    // /* Cartesian motions are frequently needed to be slower for actions such as approach
+    // and retreat grasp motions. Here we demonstrate how to reduce the speed and the acceleration
+    // of the robot arm via a scaling factor of the maxiumum speed of each joint.
+    // */
+    // m_arm_group.setMaxVelocityScalingFactor(0.05);
+    // m_arm_group.setMaxAccelerationScalingFactor(0.05);
+    // // plan the cartesian motion and execute it
+    // moveit_msgs::RobotTrajectory trajectory;
+    // const double jump_threshold = 0.0;
+    // const double eef_step = 0.01;
+    // double fraction = m_arm_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
+    // moveit::planning_interface::MoveGroupInterface::Plan plan;
+    // plan.trajectory_ = trajectory;
+    // m_arm_group.execute(plan);
 
+    ROS_INFO("Start grasping"); 
     // move the arm 1 mm down until the part is attached
-    double step = 0.001;
+    double step = 0.002;
     while (!m_gripper_state.attached) {
         grasp_pose.position.z -= step;
         m_arm_group.setPoseTarget(grasp_pose);
         m_arm_group.move();
-        ros::Duration(sleep(0.5));
+        ros::Duration(0.2).sleep();
+        if (step > 0.001) {
+          step -= 0.0005; 
+        }
     }
     
     m_arm_group.setMaxVelocityScalingFactor(1.0);
     m_arm_group.setMaxAccelerationScalingFactor(1.0);
     ROS_INFO_STREAM("[Gripper] = object attached");
-    ros::Duration(sleep(2.0));
+    ros::Duration(0.5).sleep();
     m_arm_group.setPoseTarget(pregrasp_pose);
     m_arm_group.setPoseTarget(postgrasp_pose3);
-    ros::Duration(sleep(1.0));
+    ros::Duration(0.5).sleep();
     m_arm_group.move();
 
     ariac_group1::IsPartPicked srv; 
@@ -568,7 +579,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     m_arm_group.move();
 
     
-    ros::Duration(5.0).sleep();
+    ros::Duration(1.0).sleep();
     deactivateGripper();
 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
@@ -577,6 +588,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
 }
 void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id)
 {
+      ROS_INFO("Start discard part"); 
       ariac_group1::GetPartPosition srv; 
       srv.request.camera_id = camera_id; 
       srv.request.part = faulty_part; 
@@ -589,14 +601,20 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
       this->copyCurrentJointsPosition(); 
       auto joints_position_before_discard = m_joint_group_positions; 
       bool success = false; 
+      int trial_count = 0; 
       while (not success) {
         success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
         m_arm_group.setJointValueTarget(joints_position_before_discard);
         this->move_arm_group(); 
+        trial_count++; 
+        if (trial_count > 2) {
+          goToPresetLocation(camera_id);
+        }
       }
       goToPresetLocation("home_face_bins");
-      ros::Duration(2.0).sleep();
+      ros::Duration(0.5).sleep();
       deactivateGripper();
+      ROS_INFO("End discard part"); 
 }
 
 bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
@@ -631,7 +649,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     } 
 
     goToPresetLocation(camera_id);
-    moveBaseTo(part_init_pose_in_world.position.y);
+    moveBaseTo(part_init_pose_in_world.position.y + 0.05);
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
         auto target_pose_in_world = placePart(part_init_pose_in_world, target_pose_in_frame, target_agv);
 
@@ -643,6 +661,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
           ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
           this->discard_faulty(faulty_part, target_agv_camera_id); 
+          return false; 
         }
     }
     return true; 
@@ -650,6 +669,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
 
 bool KittingArm::get_order()
 {
+  ros::Duration(1.0).sleep();
   ros::Rate wait_rate(20); 
   // check if there are tasks and make sure ROS is running 
   while (m_part_task_queue.empty() && ros::ok()) {
