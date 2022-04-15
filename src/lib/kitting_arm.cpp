@@ -286,6 +286,8 @@ void KittingArm::goToPresetLocation(std::string location_name)
     m_joint_group_positions.at(5) = location.joints_position.at(5);
     m_joint_group_positions.at(6) = location.joints_position.at(6);
 
+
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
     m_arm_group.setJointValueTarget(m_joint_group_positions);
     this->move_arm_group(); 
 }
@@ -357,7 +359,7 @@ bool KittingArm::pickPart(std::string part_type,
                           std::string camera_id) 
 {
     ROS_INFO("Start pick part"); 
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_arm_group.setMaxVelocityScalingFactor(0.6);
 
     // // move the arm above the part to grasp
     // // gripper stays at the current z
@@ -559,7 +561,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     arm_ee_link_pose.position.x = target_pose_in_world.position.x;
     arm_ee_link_pose.position.y = target_pose_in_world.position.y;
     // move the arm
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_arm_group.setMaxVelocityScalingFactor(0.8);
     m_arm_group.setPoseTarget(arm_ee_link_pose);
     m_arm_group.move();
 
@@ -680,11 +682,12 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto target_agv = part_task.agv_id; 
     
 
-    goToPresetLocation(camera_id);
+    // goToPresetLocation(camera_id);
     // this->copyCurrentJointsPosition(); 
     // if (camera_id.find("bins") != std::string::npos) {
     //   moveBaseTo(m_joint_group_positions.at(0) - 1);
     // }
+    moveBaseTo(part_init_pose_in_world.position.y - 0.3);
 
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
         auto target_pose_in_world = placePart(part_init_pose_in_world, target_pose_in_frame, target_agv);
@@ -734,16 +737,6 @@ void KittingArm::execute()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
-  
-  // if total part shipment type == 0
-  //// if sensorblackout
-        // ROS_INFO("Sensor blackout postpone shipment"); 
-        // return
-        // else
-        // check if there are faulty parts
-        // if yes replace
-        // if no 
-        //
   ROS_INFO("==============================================="); 
   ROS_INFO("Task queue size: %d", (int)m_part_task_queue.size()); 
   auto& part_task_info = m_part_task_queue.back(); 
@@ -754,39 +747,6 @@ void KittingArm::execute()
   // this->process_shipment_state(shipment_state, part_task, priority); 
   // if (shipment_state != ShipmentState::NOT_READY) {
   //   return; 
-  // }
-
-  // Check if shipment is ready to submit
-  // if (m_shipments_total_parts[part_task.shipment_type] == 0) {
-  //   ariac_group1::CheckQualitySensor srv; 
-  //   srv.request.agv_id = part_task.agv_id; 
-  //   if (m_check_quality_sensor_client.call(srv)) {
-  //
-  //     if (srv.response.faulty_parts.empty()) {
-  //       ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
-  //       ros::Duration(0.5).sleep(); 
-  //       this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
-  //       m_part_task_queue.pop_back(); 
-  //       return; 
-  //     }
-  //     else { 
-  //       // discard first faulty
-  //       goToPresetLocation(srv.response.camera_id);
-  //       this->discard_faulty(srv.response.faulty_parts[0], srv.response.camera_id); 
-  //       m_shipments_total_parts[part_task.shipment_type]++;  
-  //       //push in new task
-  //       part_task.part.type = srv.response.faulty_parts[0].type;  
-  //       part_task.part.pose = srv.response.faulty_parts[0].pose;  
-  //       return; 
-  //     }
-  //   } 
-  //   else {
-  //     // sensor blackout, check faulty next time
-  //     ROS_INFO("Sensor blackout, postpone shipment %s", part_task.shipment_type.c_str()); 
-  //     priority -= PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
-  //     // Don't pop the last part task
-  //     return; 
-  //   }
   // }
 
   ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
@@ -832,6 +792,13 @@ void KittingArm::execute()
       m_shipments_total_parts[part_task.shipment_type]--; 
       ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
 
+      // auto shipment_state = this->check_shipment_state(part_task); 
+      // this->process_shipment_state(shipment_state, part_task, priority); 
+      // if (shipment_state == ShipmentState::NOT_READY) {
+      //   m_part_task_queue.pop_back();
+      // }
+      // return; 
+      //
       if (m_shipments_total_parts[part_task.shipment_type] == 0) {
         ros::Duration(1).sleep();
         this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id);

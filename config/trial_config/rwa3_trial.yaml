@@ -98,13 +98,10 @@ models_over_bins:
         num_models_x: 2
         num_models_y: 2
 
-# sensor_blackout:
-#   product_count: 1
-#   duration: 30
+sensor_blackout:
+  product_count: 1
+  duration: 10
 
 faulty_products:
-  - assembly_battery_blue_1
   - assembly_battery_blue_2
-  - assembly_battery_blue_4
-  - assembly_battery_blue_5
   - assembly_sensor_red_3
