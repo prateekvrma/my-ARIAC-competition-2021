@@ -198,10 +198,10 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
   std::string id = this->convert_id_to_internal(req.camera_id); 
   double platform_height = -1; 
   if (id.find("ks") != std::string::npos) {
-    platform_height = 0.78;  
+    platform_height = 0.76;  
   }
   else if (id.find("bins") != std::string::npos) {
-    platform_height = 0.75;  
+    platform_height = 0.76;  
   }
   
   ros::spinOnce(); 
@@ -211,7 +211,7 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       if (part->type != req.part_type) {
         continue; 
       }
-      double picked_margin = 0.05; 
+      double picked_margin = 0.03; 
       if ((part->pose.position.z - platform_height) > picked_margin) {
         res.picked = true; 
       }

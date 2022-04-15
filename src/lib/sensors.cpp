@@ -10,6 +10,7 @@
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h> //--needed for tf2::Matrix3x3
 
 #include <nist_gear/Model.h>
+#include <utils.h>
 
 Sensors::Sensors(ros::NodeHandle* nodehandle, const std::string &id): 
   m_nh{*nodehandle}, 
@@ -101,9 +102,22 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
 
     double roll, pitch, yaw;
     std::tie(roll, pitch, yaw) = Utility::quat_to_rpy(part->pose.orientation); 
+    std::vector<double> rpy {roll, pitch, yaw}; 
+    for (auto& angle: rpy) {
+      if (angle < 0.02) {
+        angle = 0; 
+      }
+    }
     part_info.roll = roll; 
     part_info.pitch = pitch; 
     part_info.yaw = yaw; 
+
+    auto rectified_orientation = motioncontrol::quaternionFromEuler(roll, pitch, yaw);
+    part_info.part.pose.orientation.x = rectified_orientation.getX();
+    part_info.part.pose.orientation.y = rectified_orientation.getY();
+    part_info.part.pose.orientation.z = rectified_orientation.getZ();
+    part_info.part.pose.orientation.w = rectified_orientation.getW();
+    
 
     part_info.faulty = false; 
     part_info.camera_id = m_id; 

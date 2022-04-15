@@ -417,6 +417,7 @@ bool KittingArm::pickPart(std::string part_type,
     // move the arm to the pregrasp pose
     m_arm_group.setPoseTarget(pregrasp_pose);
     m_arm_group.move();
+    ros::Duration(sleep(1));
 
     
     /* Cartesian motions are frequently needed to be slower for actions such as approach
@@ -434,11 +435,10 @@ bool KittingArm::pickPart(std::string part_type,
     plan.trajectory_ = trajectory;
     m_arm_group.execute(plan);
 
-    ros::Duration(sleep(3.0));
-
     // move the arm 1 mm down until the part is attached
+    double step = 0.001;
     while (!m_gripper_state.attached) {
-        grasp_pose.position.z -= 0.001;
+        grasp_pose.position.z -= step;
         m_arm_group.setPoseTarget(grasp_pose);
         m_arm_group.move();
         ros::Duration(sleep(0.5));
@@ -450,6 +450,7 @@ bool KittingArm::pickPart(std::string part_type,
     ros::Duration(sleep(2.0));
     m_arm_group.setPoseTarget(pregrasp_pose);
     m_arm_group.setPoseTarget(postgrasp_pose3);
+    ros::Duration(sleep(1.0));
     m_arm_group.move();
 
     ariac_group1::IsPartPicked srv; 
@@ -477,7 +478,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
                                           std::string agv)
 {
     goToPresetLocation(agv);
-    
+
     // get the target pose of the part in the world frame
     auto target_pose_in_world = motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
@@ -543,28 +544,40 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-    target_pose_in_world.position.z += 0.2;
+    target_pose_in_world.position.z += 0.15;
+
+    auto target_rpy = motioncontrol::eulerFromQuaternion(target_pose_in_world);
+    auto q_target_pose_flat = motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
+
+    target_pose_in_world.orientation.x = q_target_pose_flat.x();
+    target_pose_in_world.orientation.y = q_target_pose_flat.y();
+    target_pose_in_world.orientation.z = q_target_pose_flat.z();
+    target_pose_in_world.orientation.w = q_target_pose_flat.w();
 
     m_arm_group.setMaxVelocityScalingFactor(0.1);
     m_arm_group.setPoseTarget(target_pose_in_world);
     m_arm_group.move();
-    ros::Duration(3.0).sleep();
+
+    
+    ros::Duration(5.0).sleep();
     deactivateGripper();
 
-
-    //
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
     return target_pose_in_world;
 }
 void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id)
 {
+      this->copyCurrentJointsPosition(); 
+      auto joints_position_before_discard = m_joint_group_positions; 
       bool success = false; 
       while (not success) {
         success = pickPart(faulty_part.type, faulty_part.pose, camera_id);
+        m_arm_group.setJointValueTarget(joints_position_before_discard);
+        this->move_arm_group(); 
       }
       goToPresetLocation("home_face_bins");
-      ros::Duration(5.0).sleep();
+      ros::Duration(2.0).sleep();
       deactivateGripper();
 }
 
