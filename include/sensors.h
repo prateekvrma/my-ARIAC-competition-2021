@@ -31,7 +31,7 @@ class Sensors {
   public:
     Sensors(ros::NodeHandle* nodehandle, const std::string& id); 
     virtual ~Sensors()=0; 
-    void test_blackout(); 
+    void reset_blackout(); 
     bool is_blackout(); 
 
   protected: 

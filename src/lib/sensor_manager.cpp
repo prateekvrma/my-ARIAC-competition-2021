@@ -57,9 +57,10 @@ void SensorManager::check_blackout()
 
   for (auto& camera_id: m_logical_cameras) {
     if (not m_logical_cameras_dict[camera_id]->is_blackout()) {
-      // If one of the sensors report false, then no blackout
+      // If one of the sensors report no blackout, then no blackout
       // set test_blackout for next time
-      m_logical_cameras_dict[camera_id]->test_blackout(); 
+      m_logical_cameras_dict[camera_id]->reset_blackout(); 
+      m_sensors_blackout = false; 
       test_count = 0; 
       return; 
     }
@@ -73,8 +74,8 @@ void SensorManager::check_blackout()
   else {
 
     ROS_INFO("Sensors blackout"); 
+    m_sensors_blackout = true; 
     test_count = 0; 
-
   }
 
 }
@@ -93,6 +94,12 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
 bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req, 
                               ariac_group1::IsFaulty::Response &res) 
 {
+  if (m_sensors_blackout) {
+    ROS_INFO("Sensor blackout: Assume part not faulty"); 
+    res.faulty = false; 
+    return true;  
+  }
+
   for (auto& part_info_ptr: m_parts_database["model"]) {
     Utility::print_part_pose(part_info_ptr->part); 
     if (Utility::is_same_part(part_info_ptr->part, req.part, 0.2)) {
@@ -101,7 +108,7 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
     }
   }
 
-  res.faulty = true; 
+  res.faulty = false; 
 
   return true; 
 }
@@ -196,6 +203,12 @@ std::string SensorManager::convert_id_to_internal(std::string global_id)
 bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
                                    ariac_group1::IsPartPicked::Response &res) 
 {
+  if (m_sensors_blackout) {
+    ROS_INFO("Sensor blackout, assuming pick success"); 
+    res.picked = true; 
+    return true;  
+  }
+
   std::string id = this->convert_id_to_internal(req.camera_id); 
   double platform_height = -1; 
   if (id.find("ks") != std::string::npos) {
@@ -239,4 +252,7 @@ bool SensorManager::get_part_position(ariac_group1::GetPartPosition::Request &re
 
   return false; 
 }
+
+
+
 

@@ -615,6 +615,7 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
       int trial_count = 0; 
       while (not success) {
         success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
+        ROS_INFO("Resume position after picking for dicard"); 
         m_arm_group.setJointValueTarget(joints_position_before_discard);
         this->move_arm_group(); 
         trial_count++; 

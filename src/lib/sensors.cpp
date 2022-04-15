@@ -18,7 +18,7 @@ Sensors::Sensors(ros::NodeHandle* nodehandle, const std::string &id):
 
 Sensors::~Sensors() {}
 
-void Sensors::test_blackout()
+void Sensors::reset_blackout()
 {
   m_blackout = true; 
 }

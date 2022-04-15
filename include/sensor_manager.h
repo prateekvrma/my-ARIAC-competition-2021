@@ -82,6 +82,8 @@ class SensorManager {
 
     ros::NodeHandle m_nh; 
 
+    bool m_sensors_blackout = false; 
+
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 
 }; 
