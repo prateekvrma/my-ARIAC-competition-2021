@@ -342,8 +342,9 @@ void KittingArm::turnToBelt()
 void KittingArm::lift()
 {
   this->copyCurrentJointsPosition(); 
-  m_joint_group_positions.at(2) = 0.1; 
-  m_joint_group_positions.at(3) = 0.1; 
+  m_joint_group_positions.at(2) -= 0.1; 
+  m_joint_group_positions.at(3) -= 0.1; 
+  m_arm_group.setJointValueTarget(m_joint_group_positions);
   this->move_arm_group(); 
 }
 
@@ -351,6 +352,7 @@ bool KittingArm::pickPart(std::string part_type,
                           const geometry_msgs::Pose& part_init_pose,
                           std::string camera_id) 
 {
+    ROS_INFO("Start pick part"); 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
     // // move the arm above the part to grasp
@@ -394,7 +396,7 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.79;
     }
     if (part_type.find("battery") != std::string::npos) {
-        z_pos = 0.79;
+        z_pos = 0.78;
     }
     if (part_type.find("regulator") != std::string::npos) {
         z_pos = 0.81;
@@ -418,7 +420,7 @@ bool KittingArm::pickPart(std::string part_type,
     auto pregrasp_pose = part_init_pose;
     pregrasp_pose.orientation = arm_ee_link_pose.orientation;
     pregrasp_pose.position.z = z_pos + 0.06;
-    ROS_INFO("pregrasp: %f", pregrasp_pose.position.z); 
+    // ROS_INFO("pregrasp: %f", pregrasp_pose.position.z); 
 
     // grasp pose: right above the part
     auto grasp_pose = part_init_pose;
@@ -436,7 +438,7 @@ bool KittingArm::pickPart(std::string part_type,
         activateGripper();
     }
 
-    ROS_INFO("Start moving to pregrasp"); 
+    ROS_INFO("Start moving to grasp pose"); 
 
     // move the arm to the pregrasp pose
     m_arm_group.setPoseTarget(grasp_pose);
@@ -471,6 +473,11 @@ bool KittingArm::pickPart(std::string part_type,
         if (step > 0.0008) {
           step -= 0.0001; 
         }
+        geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+        if (arm_ee_link_pose.position.z < 0.78) {
+          ROS_INFO("Arm moving lower then part, abort"); 
+          return false; 
+        }
     }
     
     m_arm_group.setMaxVelocityScalingFactor(1.0);
@@ -483,6 +490,7 @@ bool KittingArm::pickPart(std::string part_type,
     m_arm_group.move();
 
     this->lift(); 
+    ROS_INFO("End pick part"); 
 
     ariac_group1::IsPartPicked srv; 
     srv.request.camera_id = camera_id; 
@@ -510,12 +518,13 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
 {
     goToPresetLocation(agv);
 
+
     // get the target pose of the part in the world frame
     auto target_pose_in_world = motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
          agv);
 
-    ROS_INFO("Part goal:"); 
+    ROS_INFO("Start place part"); 
     Utility::print_pose(target_pose_in_world); 
 
    
@@ -594,6 +603,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     deactivateGripper();
 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
+    ROS_INFO("End place part"); 
 
     return target_pose_in_world;
 }
@@ -676,8 +686,12 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
           this->discard_faulty(faulty_part, target_agv_camera_id); 
           return false; 
         }
+        ROS_INFO("Part not faulty"); 
+        return true; 
     }
-    return true; 
+    else {
+      return false; 
+    }
 }
 
 bool KittingArm::get_order()
@@ -748,10 +762,11 @@ void KittingArm::execute()
      
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
-      ROS_INFO("Success moving part"); 
+      ROS_INFO("Moving part success"); 
       m_shipments_total_parts[part_task.shipment_type]--; 
-      ROS_INFO("Part left: %d",m_shipments_total_parts[part_task.shipment_type]); 
+      ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
       if (m_shipments_total_parts[part_task.shipment_type] == 0) {
+        ros::Duration(1).sleep(); 
         this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
       }
       m_part_task_queue.pop_back(); 
@@ -766,6 +781,7 @@ void KittingArm::execute()
   else {
     ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 
     priority -= PriorityWeight::Penalty::NO_PART;  
+    ROS_INFO("Priority decrease to %d", priority); 
     return; 
   }
 

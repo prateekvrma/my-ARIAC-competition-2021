@@ -48,7 +48,6 @@ void SensorManager::show_database()
       Utility::print_part_pose(part_info_ptr->part); 
     }
   }
-  ROS_INFO("============="); 
 }
 
 void SensorManager::check_blackout() 
@@ -83,6 +82,7 @@ void SensorManager::check_blackout()
 bool SensorManager::get_parts(ariac_group1::GetParts::Request &req, 
                               ariac_group1::GetParts::Response &res) 
 {
+  ros::spinOnce(); 
   for (auto& part_info_ptr: m_parts_database[req.type]) {
     res.parts_info.push_back(*part_info_ptr); 
     Utility::print_part_pose(part_info_ptr->part); 
@@ -102,7 +102,7 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
 
   for (auto& part_info_ptr: m_parts_database["model"]) {
     Utility::print_part_pose(part_info_ptr->part); 
-    if (Utility::is_same_part(part_info_ptr->part, req.part, 0.2)) {
+    if (Utility::is_same_part(part_info_ptr->part, req.part, 0.05)) {
       res.faulty = true; 
       return true; 
     }
@@ -227,7 +227,6 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       }
       double picked_margin = 0.03; 
       if ((part->pose.position.z - platform_height) > picked_margin) {
-        ROS_INFO("====================================================="); 
         res.picked = true; 
       }
     }

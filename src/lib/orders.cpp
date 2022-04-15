@@ -105,13 +105,13 @@ bool Orders::get_order()
     this->check_insufficient_orders(); 
 
     if (wait_counter < 0) {
-      ROS_INFO("No order.");
+      // ROS_INFO("No order.");
       return false; 
     }
 
     // check insufficient order
 
-    ROS_INFO("Waiting orders for %ds...", wait_counter);
+    // ROS_INFO("Waiting orders for %ds...", wait_counter);
     wait_counter--; 
     
     wait_rate.sleep(); 
