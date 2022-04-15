@@ -1,0 +1,4 @@
+string agv_id
+---
+nist_gear/Model[] faulty_parts
+string camera_id

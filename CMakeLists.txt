@@ -85,6 +85,7 @@ add_service_files(
   PartsInCamera.srv
   IsPartPicked.srv
   GetPartPosition.srv
+  CheckQualitySensor.srv
 )
 
 

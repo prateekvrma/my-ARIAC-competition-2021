@@ -30,6 +30,8 @@
 #include "utils.h"
 #include "utility.h"
 
+enum class ShipmentState{NOT_READY, READY, HAS_FAULTY, POSTPONE}; 
+
 struct ArmPresetLocation {
       std::vector<double> joints_position;  //9 joints
       std::string name;
@@ -43,6 +45,11 @@ namespace PriorityWeight {
   namespace Penalty {
     int NO_PART = -3;   
     int MOVE_FAILS = -1; 
+    int SHIPMENT_POSTPONE = -1; 
+  }
+
+  namespace Reward {
+    int SHIPMENT_READY = 1; 
   }
 
   namespace Level {
@@ -64,7 +71,7 @@ class KittingArm {
     void activateGripper();
     void deactivateGripper();
     nist_gear::VacuumGripperState getGripperState();
-    void discard_faulty(const nist_gear::Model& faulty_part, std::string camera_id); 
+    void discard_faulty(const nist_gear::Model& faulty_part, std::string agv_id); 
     bool check_faulty(const nist_gear::Model& faulty_part); 
 
     
@@ -101,6 +108,9 @@ class KittingArm {
     void arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg);
     void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
 
+    ShipmentState check_shipment_state(ariac_group1::PartTask& part_task); 
+    void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 
+
     void submit_shipment(const std::string& agv_id,
                          const std::string& shipment_type,
                          const std::string& station_id); 
@@ -127,6 +137,7 @@ class KittingArm {
     ros::ServiceClient m_parts_in_camera_client;
     ros::ServiceClient m_is_part_picked_client;
     ros::ServiceClient m_get_part_position_client;  
+    ros::ServiceClient m_check_quality_sensor_client;  
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;

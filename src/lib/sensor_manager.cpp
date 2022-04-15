@@ -11,6 +11,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_parts_in_camera_service = m_nh.advertiseService("/sensor_manager/parts_in_camera", &SensorManager::parts_in_camera, this); 
   m_is_part_picked_service = m_nh.advertiseService("/sensor_manager/is_part_picked", &SensorManager::is_part_picked, this); 
   m_get_part_position_service = m_nh.advertiseService("/sensor_manager/get_part_position", &SensorManager::get_part_position, this); 
+  m_check_quality_sensor_service = m_nh.advertiseService("/sensor_manager/check_quality_sensor", &SensorManager::check_quality_sensor, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -102,7 +103,7 @@ bool SensorManager::is_faulty(ariac_group1::IsFaulty::Request &req,
 
   for (auto& part_info_ptr: m_parts_database["model"]) {
     Utility::print_part_pose(part_info_ptr->part); 
-    if (Utility::is_same_part(part_info_ptr->part, req.part, 0.05)) {
+    if (Utility::is_same_part(part_info_ptr->part, req.part, 0.1)) {
       res.faulty = true; 
       return true; 
     }
@@ -252,6 +253,54 @@ bool SensorManager::get_part_position(ariac_group1::GetPartPosition::Request &re
   return false; 
 }
 
+bool SensorManager::check_quality_sensor(ariac_group1::CheckQualitySensor::Request &req,
+                                         ariac_group1::CheckQualitySensor::Response &res)
+{
+  if (m_sensors_blackout) {
+    ROS_INFO("Sensor blackout: Cannot check quality sensor"); 
+    return false;  
+  }
+
+  std::string global_quality_sensor_id; 
+  std::string global_logical_camera_id; 
+
+  if (req.agv_id.find("agv1") != std::string::npos) {
+    global_quality_sensor_id = "quality_control_sensor_1";
+    global_logical_camera_id = "logical_camera_ks1"; 
+  }
+  else if (req.agv_id.find("agv2") != std::string::npos) {
+    global_quality_sensor_id = "quality_control_sensor_2";
+    global_logical_camera_id = "logical_camera_ks2"; 
+  }
+  else if (req.agv_id.find("agv3") != std::string::npos) {
+    global_quality_sensor_id = "quality_control_sensor_3";
+    global_logical_camera_id = "logical_camera_ks3"; 
+  }
+  else if (req.agv_id.find("agv4") != std::string::npos) {
+    global_quality_sensor_id = "quality_control_sensor_4";
+    global_logical_camera_id = "logical_camera_ks4"; 
+  }
+
+  res.camera_id = global_logical_camera_id; 
+  std::string quality_sensor_id = this->convert_id_to_internal(global_quality_sensor_id); 
+  std::string logical_camera_id = this->convert_id_to_internal(global_logical_camera_id); 
 
 
+  for (auto &logical_part_ptr: m_logical_cameras_dict[logical_camera_id]->parts_world_frame) {
 
+    for (auto &quality_part_ptr: m_quality_sensors_dict[quality_sensor_id]->parts_world_frame) {
+
+      if (Utility::is_same_part(*logical_part_ptr, *quality_part_ptr, 0.05)) {
+
+        nist_gear::Model faulty_part; 
+        faulty_part.type = logical_part_ptr->type; 
+        faulty_part.pose = logical_part_ptr->pose; 
+        res.faulty_parts.push_back(faulty_part); 
+
+      }
+
+    }
+
+  }
+  return true; 
+}
