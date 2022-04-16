@@ -29,28 +29,27 @@ KittingArm::KittingArm():
   m_arm_options{"kitting_arm", m_planning_group, m_nh},
   m_arm_group{m_arm_options} 
 {
-  // make sure the planning group operates in the world frame
-  // check the name of the end effector
-  // ROS_INFO_NAMED("init", "End effector link: %s", arm_group_.getEndEffectorLink().c_str());
-
-
   // publishers to directly control the joints without moveit
   m_arm_joint_trajectory_publisher =
       m_nh.advertise<trajectory_msgs::JointTrajectory>("/ariac/kitting/kitting_arm_controller/command", 10);
-  // joint state subscribers
+
+  // subscribers
   m_arm_joint_states_subscriber =
       m_nh.subscribe("/ariac/kitting/joint_states", 10, &KittingArm::arm_joint_states_callback, this);
-  // controller state subscribers
+  
   m_arm_controller_state_subscriber =
       m_nh.subscribe("/ariac/kitting/kitting_arm_controller/state", 10, &KittingArm::arm_controller_state_callback, this);
-  // gripper state subscriber
+
   m_gripper_state_subscriber = 
       m_nh.subscribe("/ariac/kitting/arm/gripper/state", 10, &KittingArm::gripper_state_callback, this);
-  // controller state subscribers
+
+  m_part_task_subscriber =
+      m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
+
+  // clients
   m_gripper_control_client =
       m_nh.serviceClient<nist_gear::VacuumGripperControl>("/ariac/kitting/arm/gripper/control");
   m_gripper_control_client.waitForExistence();
-
 
   m_get_parts_client = 
       m_nh.serviceClient<ariac_group1::GetParts>("/sensor_manager/get_parts"); 
@@ -76,11 +75,7 @@ KittingArm::KittingArm():
       m_nh.serviceClient<ariac_group1::CheckQualitySensor>("/sensor_manager/check_quality_sensor"); 
   m_check_quality_sensor_client.waitForExistence();
 
-  // part task subscriber
-  m_part_task_subscriber =
-      m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
-
-
+  
   // Preset locations
   // ^^^^^^^^^^^^^^^^
   // Joints for the arm are in this order:
@@ -153,8 +148,6 @@ KittingArm::KittingArm():
 
 void KittingArm::copyCurrentJointsPosition()
 {
-  // raw pointers are frequently used to refer to the planning group for improved performance.
-  // to start, we will create a pointer that references the current robot’s state.
   moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
   const moveit::core::JointModelGroup* joint_model_group =
           current_state->getJointModelGroup("kitting_arm");
@@ -361,39 +354,24 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start pick part"); 
     m_arm_group.setMaxVelocityScalingFactor(0.6);
 
-    // // move the arm above the part to grasp
-    // // gripper stays at the current z
-    // // only modify its x and y based on the part to grasp
-    // // In this case we do not need to use preset locations
-    // // everything is done dynamically
-    // arm_ee_link_pose.position.x = part_init_pose.position.x;
-    // arm_ee_link_pose.position.y = part_init_pose.position.y;
-    // arm_ee_link_pose.position.z = arm_ee_link_pose.position.z;
-    // // move the arm
-    // arm_group_.setPoseTarget(arm_ee_link_pose);
-    // arm_group_.move();
-
-    // Make sure the wrist is facing down
-    // otherwise it will have a hard time attaching a part
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-    auto flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
     arm_ee_link_pose.orientation.z = flat_orientation.getZ();
     arm_ee_link_pose.orientation.w = flat_orientation.getW();
     
-    // post-grasp pose 3
+    // post-grasp pose 
     // store the pose of the arm before it goes down to pick the part
     // we will bring the arm back to this pose after picking up the part
-    auto postgrasp_pose3 = part_init_pose;
-    postgrasp_pose3.orientation = arm_ee_link_pose.orientation;
-    postgrasp_pose3.position.z = part_init_pose.position.z + 0.1;
+    auto postgrasp_pose = part_init_pose;
+    postgrasp_pose.orientation = arm_ee_link_pose.orientation;
+    postgrasp_pose.position.z = part_init_pose.position.z + 0.1;
 
-    ROS_INFO("postgrasp: %f", postgrasp_pose3.position.z); 
+    m_arm_group.setPoseTarget(postgrasp_pose);
+    m_arm_group.move();
 
     // preset z depending on the part type
-    // some parts are bigger than others
-    // TODO: Add new z_pos values for the regulator and the battery
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
         z_pos = 0.859;
@@ -412,31 +390,15 @@ bool KittingArm::pickPart(std::string part_type,
       z_pos += 0.02; 
     }
 
-    // flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
-    // arm_ee_link_pose = arm_group_.getCurrentPose().pose;
-    // arm_ee_link_pose.orientation.x = flat_orientation.getX();
-    // arm_ee_link_pose.orientation.y = flat_orientation.getY();
-    // arm_ee_link_pose.orientation.z = flat_orientation.getZ();
-    // arm_ee_link_pose.orientation.w = flat_orientation.getW();
-
     
     // set of waypoints the arm will go through
     std::vector<geometry_msgs::Pose> waypoints;
-    // pre-grasp pose: somewhere above the part
-    auto pregrasp_pose = part_init_pose;
-    pregrasp_pose.orientation = arm_ee_link_pose.orientation;
-    pregrasp_pose.position.z = z_pos + 0.06;
-    // ROS_INFO("pregrasp: %f", pregrasp_pose.position.z); 
 
-    // grasp pose: right above the part
+    // pregrasp pose: right above the part
     auto grasp_pose = part_init_pose;
     grasp_pose.orientation = arm_ee_link_pose.orientation;
     grasp_pose.position.z = z_pos + 0.02;
-    ROS_INFO("grasp_pose: %f", grasp_pose.position.z); 
 
-    // waypoints.push_back(pregrasp_pose);
-    // waypoints.push_back(grasp_pose);
-    //
     // activate gripper
     // sometimes it does not activate right away
     // so we are doing this in a loop
@@ -447,29 +409,10 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start moving to grasp pose"); 
 
     // move the arm to the pregrasp pose
-    m_arm_group.setPoseTarget(postgrasp_pose3);
-    m_arm_group.move();
     m_arm_group.setPoseTarget(grasp_pose);
     m_arm_group.move();
     ros::Duration(0.5).sleep();
-
     
-    // ROS_INFO("Start moving straight down"); 
-    // /* Cartesian motions are frequently needed to be slower for actions such as approach
-    // and retreat grasp motions. Here we demonstrate how to reduce the speed and the acceleration
-    // of the robot arm via a scaling factor of the maxiumum speed of each joint.
-    // */
-    // m_arm_group.setMaxVelocityScalingFactor(0.05);
-    // m_arm_group.setMaxAccelerationScalingFactor(0.05);
-    // // plan the cartesian motion and execute it
-    // moveit_msgs::RobotTrajectory trajectory;
-    // const double jump_threshold = 0.0;
-    // const double eef_step = 0.01;
-    // double fraction = m_arm_group.computeCartesianPath(waypoints, eef_step, jump_threshold, trajectory);
-    // moveit::planning_interface::MoveGroupInterface::Plan plan;
-    // plan.trajectory_ = trajectory;
-    // m_arm_group.execute(plan);
-
     ROS_INFO("Start grasping"); 
     // move the arm 1 mm down until the part is attached
     double step = 0.001;
@@ -493,9 +436,8 @@ bool KittingArm::pickPart(std::string part_type,
     m_arm_group.setMaxAccelerationScalingFactor(1.0);
     ROS_INFO_STREAM("[Gripper] = object attached");
     ros::Duration(0.5).sleep();
-    m_arm_group.setPoseTarget(pregrasp_pose);
-    m_arm_group.move();
-    m_arm_group.setPoseTarget(postgrasp_pose3);
+
+    m_arm_group.setPoseTarget(postgrasp_pose);
     m_arm_group.move();
     ros::Duration(0.5).sleep();
 
@@ -530,7 +472,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
 
 
     // get the target pose of the part in the world frame
-    auto target_pose_in_world = motioncontrol::transformToWorldFrame(
+    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
          agv);
 
@@ -540,7 +482,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
    
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-    auto flat_orientation = motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
     arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
@@ -596,8 +538,8 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     target_pose_in_world.orientation.w = q_rslt.w();
     target_pose_in_world.position.z += 0.15;
 
-    auto target_rpy = motioncontrol::eulerFromQuaternion(target_pose_in_world);
-    auto q_target_pose_flat = motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
+    auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
+    auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
 
     target_pose_in_world.orientation.x = q_target_pose_flat.x();
     target_pose_in_world.orientation.y = q_target_pose_flat.y();
@@ -683,12 +625,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto target_pose_in_frame = part_task.part.pose; 
     auto target_agv = part_task.agv_id; 
     
-
-    // goToPresetLocation(camera_id);
-    // this->copyCurrentJointsPosition(); 
-    // if (camera_id.find("bins") != std::string::npos) {
-    //   moveBaseTo(m_joint_group_positions.at(0) - 1);
-    // }
+    // use -0.3 to reduce awkward pick trajectory
     moveBaseTo(part_init_pose_in_world.position.y - 0.3);
 
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
@@ -800,13 +737,6 @@ void KittingArm::execute()
         m_part_task_queue.pop_back();
       }
       return; 
-      //
-      // if (m_shipments_total_parts[part_task.shipment_type] == 0) {
-      //   ros::Duration(1).sleep();
-      //   this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id);
-      // }
-      // m_part_task_queue.pop_back();
-      // return;
 
     }
     else {
@@ -870,7 +800,7 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
     faulty_part.type = part_task.part.type; 
     faulty_part.pose = part_task.part.pose; 
     this->discard_faulty(faulty_part, part_task.agv_id); 
-    auto pose_in_tray_frame = motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
+    auto pose_in_tray_frame = Utility::motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
     part_task.part.pose = pose_in_tray_frame; 
     m_shipments_total_parts[part_task.shipment_type]++; 
 

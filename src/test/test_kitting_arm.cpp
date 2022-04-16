@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
     part_init_pose.position.x = -1.799; 
     part_init_pose.position.y = 3.48; 
     part_init_pose.position.z = 0.78; 
-    auto init_orientation = motioncontrol::quaternionFromEuler(0, 0, 0);
+    auto init_orientation = Utility::motioncontrol::quaternionFromEuler(0, 0, 0);
     part_init_pose.orientation.x = init_orientation.getX(); 
     part_init_pose.orientation.y = init_orientation.getY(); 
     part_init_pose.orientation.z = init_orientation.getZ(); 
@@ -25,7 +25,7 @@ int main(int argc, char** argv) {
     part_goal_pose_in_frame.position.y = 0.1; 
     part_goal_pose_in_frame.position.z = 0; 
 
-    auto flat_orientation = motioncontrol::quaternionFromEuler(0, 0, M_PI/4);
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 0, M_PI/4);
     part_goal_pose_in_frame.orientation.x = flat_orientation.getX(); 
     part_goal_pose_in_frame.orientation.y = flat_orientation.getY(); 
     part_goal_pose_in_frame.orientation.z = flat_orientation.getZ(); 

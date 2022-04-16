@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utility.h"
 #include <ros/ros.h>
 
 int main(int argc, char **argv) {
@@ -14,7 +14,7 @@ int main(int argc, char **argv) {
   pose.orientation.y = 0; 
   pose.orientation.z = 0; 
   pose.orientation.w = 1; 
-  auto t_pose = motioncontrol::transformToTrayFrame(pose, "agv1"); 
-  motioncontrol::print(t_pose); 
+  auto t_pose = Utility::motioncontrol::transformToTrayFrame(pose, "agv1"); 
+  Utility::motioncontrol::print(t_pose); 
   return 0; 
 }

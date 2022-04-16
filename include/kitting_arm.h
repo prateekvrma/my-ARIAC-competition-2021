@@ -27,7 +27,6 @@
 #include <ariac_group1/GetParts.h>
 
 // custom
-#include "utils.h"
 #include "utility.h"
 
 enum class ShipmentState{NOT_READY, READY, HAS_FAULTY, POSTPONE}; 
@@ -67,7 +66,7 @@ class KittingArm {
     bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
     geometry_msgs::Pose placePart(geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
-    // void movePart(std::string part_type, std::string camera_frame, geometry_msgs::Pose goal_in_tray_frame, std::string agv);
+
     void activateGripper();
     void deactivateGripper();
     nist_gear::VacuumGripperState getGripperState();
