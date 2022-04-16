@@ -147,6 +147,7 @@ catkin_package(
 include_directories(include ${catkin_INCLUDE_DIRS})
 
 add_library(utility_lib src/lib/utility.cpp)
+add_library(utils_lib src/lib/utils.cpp)
 add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp src/lib/utils.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp src/lib/utils.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp src/lib/utils.cpp)
@@ -156,6 +157,8 @@ add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp sr
 add_library(orders_lib src/lib/orders.cpp)
 add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/orders.cpp) 
 
+
+add_dependencies(utils_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(utility_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(sensors_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(station_lib ${catkin_EXPORTED_TARGETS})
@@ -233,6 +236,13 @@ target_link_libraries(${PROJECT_NAME}_kitting_arm_test_node
   ${catkin_LIBRARIES}
 )
 
+add_executable(${PROJECT_NAME}_test_utils_node src/test/test_utils.cpp)
+add_dependencies(${PROJECT_NAME}_test_utils_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_test_utils_node
+  utils_lib
+  ${catkin_LIBRARIES}
+)
+ 
 # add_executable(${PROJECT_NAME}_arm_test_node src/test/test_arm.cpp)
 # add_dependencies(${PROJECT_NAME}_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 # target_link_libraries(${PROJECT_NAME}_arm_test_node

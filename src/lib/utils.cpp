@@ -205,4 +205,68 @@ namespace motioncontrol {
 
         return world_pose;
     }
+
+    geometry_msgs::Pose transformToTrayFrame(
+        const geometry_msgs::Pose& target,
+        std::string agv) {
+        static tf2_ros::StaticTransformBroadcaster br;
+        geometry_msgs::TransformStamped transformStamped;
+
+        std::string kit_tray;
+        if (agv.compare("agv1") == 0)
+            kit_tray = "kit_tray_1";
+        else if (agv.compare("agv2") == 0)
+            kit_tray = "kit_tray_2";
+        else if (agv.compare("agv3") == 0)
+            kit_tray = "kit_tray_3";
+        else if (agv.compare("agv4") == 0)
+            kit_tray = "kit_tray_4";
+
+        transformStamped.header.stamp = ros::Time::now();
+        transformStamped.header.frame_id = "world";
+        transformStamped.child_frame_id = "target_frame";
+        transformStamped.transform.translation.x = target.position.x;
+        transformStamped.transform.translation.y = target.position.y;
+        transformStamped.transform.translation.z = target.position.z;
+        transformStamped.transform.rotation.x = target.orientation.x;
+        transformStamped.transform.rotation.y = target.orientation.y;
+        transformStamped.transform.rotation.z = target.orientation.z;
+        transformStamped.transform.rotation.w = target.orientation.w;
+
+
+        for (int i{ 0 }; i < 15; ++i)
+            br.sendTransform(transformStamped);
+
+        tf2_ros::Buffer tfBuffer;
+        tf2_ros::TransformListener tfListener(tfBuffer);
+        ros::Rate rate(10);
+        ros::Duration timeout(1.0);
+
+
+        geometry_msgs::TransformStamped tray_pose_tf;
+
+
+        for (int i = 0; i < 10; i++) {
+            try {
+                tray_pose_tf = tfBuffer.lookupTransform(kit_tray, "target_frame",
+                    ros::Time(0), timeout);
+            }
+            catch (tf2::TransformException& ex) {
+                ROS_WARN("%s", ex.what());
+                ros::Duration(1.0).sleep();
+                continue;
+            }
+        }
+
+        geometry_msgs::Pose tray_pose{};
+        tray_pose.position.x = tray_pose_tf.transform.translation.x;
+        tray_pose.position.y = tray_pose_tf.transform.translation.y;
+        tray_pose.position.z = tray_pose_tf.transform.translation.z;
+        tray_pose.orientation.x = tray_pose_tf.transform.rotation.x;
+        tray_pose.orientation.y = tray_pose_tf.transform.rotation.y;
+        tray_pose.orientation.z = tray_pose_tf.transform.rotation.z;
+        tray_pose.orientation.w = tray_pose_tf.transform.rotation.w;
+
+        return tray_pose; 
+    }
 }

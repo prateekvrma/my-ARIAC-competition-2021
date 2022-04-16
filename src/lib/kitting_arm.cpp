@@ -448,6 +448,7 @@ bool KittingArm::pickPart(std::string part_type,
 
     // move the arm to the pregrasp pose
     m_arm_group.setPoseTarget(postgrasp_pose3);
+    m_arm_group.move();
     m_arm_group.setPoseTarget(grasp_pose);
     m_arm_group.move();
     ros::Duration(0.5).sleep();
@@ -493,9 +494,10 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO_STREAM("[Gripper] = object attached");
     ros::Duration(0.5).sleep();
     m_arm_group.setPoseTarget(pregrasp_pose);
-    m_arm_group.setPoseTarget(postgrasp_pose3);
-    ros::Duration(0.5).sleep();
     m_arm_group.move();
+    m_arm_group.setPoseTarget(postgrasp_pose3);
+    m_arm_group.move();
+    ros::Duration(0.5).sleep();
 
     this->lift(); 
     ROS_INFO("End pick part"); 
@@ -743,11 +745,11 @@ void KittingArm::execute()
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
 
-  // auto shipment_state = this->check_shipment_state(part_task); 
-  // this->process_shipment_state(shipment_state, part_task, priority); 
-  // if (shipment_state != ShipmentState::NOT_READY) {
-  //   return; 
-  // }
+  auto shipment_state = this->check_shipment_state(part_task); 
+  this->process_shipment_state(shipment_state, part_task, priority); 
+  if (shipment_state != ShipmentState::NOT_READY) {
+    return; 
+  }
 
   ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
   ROS_INFO("Priority: %d", priority); 
@@ -792,19 +794,19 @@ void KittingArm::execute()
       m_shipments_total_parts[part_task.shipment_type]--; 
       ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
 
-      // auto shipment_state = this->check_shipment_state(part_task); 
-      // this->process_shipment_state(shipment_state, part_task, priority); 
-      // if (shipment_state == ShipmentState::NOT_READY) {
-      //   m_part_task_queue.pop_back();
-      // }
-      // return; 
-      //
-      if (m_shipments_total_parts[part_task.shipment_type] == 0) {
-        ros::Duration(1).sleep();
-        this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id);
+      auto shipment_state = this->check_shipment_state(part_task); 
+      this->process_shipment_state(shipment_state, part_task, priority); 
+      if (shipment_state == ShipmentState::NOT_READY) {
+        m_part_task_queue.pop_back();
       }
-      m_part_task_queue.pop_back();
-      return;
+      return; 
+      //
+      // if (m_shipments_total_parts[part_task.shipment_type] == 0) {
+      //   ros::Duration(1).sleep();
+      //   this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id);
+      // }
+      // m_part_task_queue.pop_back();
+      // return;
 
     }
     else {
@@ -837,8 +839,9 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
       else { 
         ROS_INFO("Has faulty in shipment %s", part_task.shipment_type.c_str()); 
         //push faulty task back to queue
-        part_task.part.type = srv.response.faulty_parts[0].type;  
-        part_task.part.pose = srv.response.faulty_parts[0].pose;  
+        nist_gear::Model faulty_part = srv.response.faulty_parts[0]; 
+        part_task.part.type = faulty_part.type;  
+        part_task.part.pose = faulty_part.pose;  
         return ShipmentState::HAS_FAULTY; 
       }
     } 
@@ -867,6 +870,8 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
     faulty_part.type = part_task.part.type; 
     faulty_part.pose = part_task.part.pose; 
     this->discard_faulty(faulty_part, part_task.agv_id); 
+    auto pose_in_tray_frame = motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
+    part_task.part.pose = pose_in_tray_frame; 
     m_shipments_total_parts[part_task.shipment_type]++; 
 
   }
