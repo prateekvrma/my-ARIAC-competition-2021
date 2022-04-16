@@ -536,7 +536,7 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-    target_pose_in_world.position.z += 0.15;
+    target_pose_in_world.position.z += 0.1;
 
     auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
     auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
@@ -590,15 +590,17 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
       bool success = false; 
       int trial_count = 0; 
       while (not success) {
-        success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
-        ROS_INFO("Resume position after picking for dicard"); 
         m_arm_group.setJointValueTarget(joints_position_before_discard);
         this->move_arm_group(); 
+        success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
+        ROS_INFO("Resume position after picking for dicard"); 
         trial_count++; 
         if (trial_count > 2) {
           ROS_INFO("trial %d", trial_count); 
           goToPresetLocation(camera_id);
         }
+        // if trial > 5 return; 
+
       }
       goToPresetLocation("home_face_bins");
       ros::Duration(0.5).sleep();
