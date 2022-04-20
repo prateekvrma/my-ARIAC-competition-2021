@@ -84,6 +84,7 @@ class KittingArm {
     void turnToBins(); 
     void turnToBelt(); 
     void lift(); 
+    bool moveTargetPose(const geometry_msgs::Pose& pose); 
 
     void print_joints_position();  
     void print_shipments_total_parts();  

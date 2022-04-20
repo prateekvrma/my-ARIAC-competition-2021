@@ -347,6 +347,49 @@ void KittingArm::lift()
   this->move_arm_group(); 
 }
 
+bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
+{
+  unsigned int max_attempts = 3; 
+  int attempts = 0; 
+
+  while(attempts < max_attempts) {
+      ROS_INFO("Set pose attempts: %d", attempts); 
+      moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
+      const moveit::core::JointModelGroup* joint_model_group =
+              current_state->getJointModelGroup("kitting_arm");
+
+      double timeout = 0.1; 
+      bool found_ik = current_state->setFromIK(joint_model_group, pose, timeout); 
+
+      if (found_ik) {
+        std::vector<double> target_joint_group_positions; 
+        current_state->copyJointGroupPositions(joint_model_group, target_joint_group_positions);
+        for (auto& joint: target_joint_group_positions) {
+          ROS_INFO("%f ", joint); 
+        }
+        if (target_joint_group_positions.at(2) > -0.17 or 
+            target_joint_group_positions.at(2) < -1.74) {
+          ROS_INFO("Target joint 2 infisible"); 
+          continue; 
+        }
+        if (target_joint_group_positions.at(3) > 2.45 or 
+            target_joint_group_positions.at(3) < 0.08) {
+          ROS_INFO("Target joint 3 infisible"); 
+          continue; 
+        }
+        this->copyCurrentJointsPosition(); 
+        m_arm_group.setJointValueTarget(m_joint_group_positions);
+        this->move_arm_group(); 
+        return true; 
+      }
+
+      attempts++; 
+  }
+
+  return false; 
+
+}
+
 bool KittingArm::pickPart(std::string part_type, 
                           const geometry_msgs::Pose& part_init_pose,
                           std::string camera_id) 
@@ -368,13 +411,18 @@ bool KittingArm::pickPart(std::string part_type,
     postgrasp_pose.orientation = arm_ee_link_pose.orientation;
     postgrasp_pose.position.z = part_init_pose.position.z + 0.1;
 
-    m_arm_group.setPoseTarget(postgrasp_pose);
-    m_arm_group.move();
+    // m_arm_group.setPoseTarget(postgrasp_pose);
+    // m_arm_group.move();
+    ROS_INFO("Start moving to postgrasp pose"); 
+    if (not this->moveTargetPose(postgrasp_pose)) {
+      ROS_INFO("IK not found for postgrasp"); 
+    }
+     
 
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.83;
+        z_pos = 0.84;
     }
     if (part_type.find("sensor") != std::string::npos) {
         z_pos = 0.79;
@@ -409,8 +457,14 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start moving to grasp pose"); 
 
     // move the arm to the pregrasp pose
-    m_arm_group.setPoseTarget(grasp_pose);
-    m_arm_group.move();
+    // m_arm_group.setPoseTarget(grasp_pose);
+    // m_arm_group.move();
+    //
+    if (not this->moveTargetPose(grasp_pose)) {
+      ROS_INFO("IK not found for grasp"); 
+      return false; 
+    }
+
     ros::Duration(0.5).sleep();
     
     ROS_INFO("Start grasping"); 
