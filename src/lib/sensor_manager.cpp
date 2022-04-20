@@ -223,15 +223,20 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
   res.picked = false; 
   if (m_logical_cameras_dict.count(id)) {
     for (auto &part: m_logical_cameras_dict[id]->parts_world_frame) {
+      if (part == nullptr) {
+        continue; 
+      }
       if (part->type != req.part_type) {
         continue; 
       }
       double picked_margin = 0.03; 
+      ROS_INFO("Is part picked height: %f", part->pose.position.z); 
       if ((part->pose.position.z - platform_height) > picked_margin) {
         res.picked = true; 
+        part.reset(nullptr); 
+        return true; 
       }
     }
-    return true; 
   }
 
   return false; 
@@ -242,6 +247,9 @@ bool SensorManager::get_part_position(ariac_group1::GetPartPosition::Request &re
 {
   std::string id = this->convert_id_to_internal(req.camera_id); 
   for (auto &part_ptr: m_logical_cameras_dict[id]->parts_world_frame) {
+    if (part_ptr == nullptr) {
+        continue; 
+    }
     if (Utility::is_same_part(*part_ptr, req.part, 0.1)) {
       ROS_INFO("Part position correction"); 
       res.pose = part_ptr->pose; 
@@ -287,6 +295,9 @@ bool SensorManager::check_quality_sensor(ariac_group1::CheckQualitySensor::Reque
 
 
   for (auto &logical_part_ptr: m_logical_cameras_dict[logical_camera_id]->parts_world_frame) {
+    if (logical_part_ptr == nullptr) {
+        continue; 
+    }
 
     for (auto &quality_part_ptr: m_quality_sensors_dict[quality_sensor_id]->parts_world_frame) {
 
