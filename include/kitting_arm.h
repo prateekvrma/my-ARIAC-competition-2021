@@ -64,7 +64,7 @@ class KittingArm {
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
     bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
-    geometry_msgs::Pose placePart(geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
+    geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
 
     void activateGripper();

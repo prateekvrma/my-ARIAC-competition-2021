@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     //
     std::string camera_id = "logical_camera_bins0"; 
     kitting_arm.pickPart("pump", part_init_pose, camera_id); 
-    kitting_arm.placePart(part_init_pose, part_goal_pose_in_frame, "agv1"); 
+    kitting_arm.placePart("pump", part_init_pose, part_goal_pose_in_frame, "agv1"); 
 
     // ROS_INFO("Moving to agv1"); 
     // kitting_arm.goToPresetLocation("agv1"); 

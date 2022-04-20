@@ -374,7 +374,7 @@ bool KittingArm::pickPart(std::string part_type,
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.859;
+        z_pos = 0.83;
     }
     if (part_type.find("sensor") != std::string::npos) {
         z_pos = 0.79;
@@ -383,7 +383,7 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.78;
     }
     if (part_type.find("regulator") != std::string::npos) {
-        z_pos = 0.81;
+        z_pos = 0.79;
     }
 
     if (camera_id.find("ks") != std::string::npos) {
@@ -464,7 +464,8 @@ bool KittingArm::pickPart(std::string part_type,
     }
 }
 
-geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose, 
+geometry_msgs::Pose KittingArm::placePart(std::string part_type, 
+                                          geometry_msgs::Pose part_init_pose, 
                                           geometry_msgs::Pose part_pose_in_frame, 
                                           std::string agv)
 {
@@ -531,12 +532,19 @@ geometry_msgs::Pose KittingArm::placePart(geometry_msgs::Pose part_init_pose,
     tf2::Quaternion q_rslt = q_rot * q_current;
     q_rslt.normalize();
 
+    double z_margin{};
+    if (part_type.find("pump") != std::string::npos) {
+        z_margin = 0.15;
+    }
+    else {
+      z_margin = 0.1; 
+    }
     // orientation of the gripper when placing the part in the tray
     target_pose_in_world.orientation.x = q_rslt.x();
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-    target_pose_in_world.position.z += 0.1;
+    target_pose_in_world.position.z += z_margin;
 
     auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
     auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
@@ -631,7 +639,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     moveBaseTo(part_init_pose_in_world.position.y - 0.3);
 
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
-        auto target_pose_in_world = placePart(part_init_pose_in_world, target_pose_in_frame, target_agv);
+        auto target_pose_in_world = placePart(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
         ros::Duration(1).sleep(); 
 
         nist_gear::Model faulty_part; 
