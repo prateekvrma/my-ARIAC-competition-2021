@@ -42,27 +42,17 @@ rwa3.launch shows messages about sensor blackout and order informations.
 
 ### trial configuration
 1.  
-  Parts: sensor, battery
-  Challenges: 
-    High-Priority Order
-    Sensor Blackout
-    Faulty Parts
-      ```
-      bin5         bin 6   bin2           bin1
-      blue faulty          faulty faulty  faulty blue
-      blue blue            red    red     blue   blue
-      ```
+  Parts: sensor, battery  
+  Challenges:   
+    High-Priority Order  
+    Sensor Blackout  
+    Faulty Parts  
       
 2.  
-  Parts: pump, regulator 
-  Challenges:
-    High-Priority Order
-    Sensor Blackout
+  Parts: pump, regulator   
+  Challenges:  
+    High-Priority Order  
+    Sensor Blackout  
     Faulty Parts
-      ```
-      bin5         bin 6   bin2           bin1
-      blue faulty          faulty faulty  faulty blue
-      blue blue            red    red     blue   blue
-      ```
      
 
