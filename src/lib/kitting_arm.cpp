@@ -1,5 +1,7 @@
 #include "kitting_arm.h"
 
+#include <random>
+
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_listener.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -629,7 +631,7 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
 
     return target_pose_in_world;
 }
-void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string target_agv)
+bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string target_agv)
 {
       std::string camera_id; 
       if (target_agv.compare("agv1") == 0) {
@@ -656,26 +658,37 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
         ROS_INFO("No rectified pose"); 
       }
       this->copyCurrentJointsPosition(); 
-      auto joints_position_before_discard = m_joint_group_positions; 
+      auto retry_joint_group_positions = m_joint_group_positions; 
+      std::random_device rd; 
+      std::mt19937 gen(rd()); 
+      std::uniform_real_distribution<double> real_dist(-0.3, 0.3); 
+
       bool success = false; 
       int trial_count = 0; 
       while (not success) {
-        m_arm_group.setJointValueTarget(joints_position_before_discard);
+        auto random_dist = real_dist(gen); 
+        if (retry_joint_group_positions.at(0) > 4 or 
+            retry_joint_group_positions.at(0) < -4 ) {
+          return false; 
+        }
+        retry_joint_group_positions.at(0) += random_dist; 
+        m_arm_group.setJointValueTarget(retry_joint_group_positions);
         this->move_arm_group(); 
         success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
-        ROS_INFO("Resume position after picking for dicard"); 
+        ROS_INFO("Discard picking fails, try new joint config for discarding"); 
         trial_count++; 
-        if (trial_count > 2) {
+        if (trial_count > 3) {
           ROS_INFO("trial %d", trial_count); 
           goToPresetLocation(camera_id);
         }
-        if (trial_count > 5) return; 
+        if (trial_count > 5) return false; 
 
       }
       goToPresetLocation("home_face_bins");
       ros::Duration(0.5).sleep();
       deactivateGripper();
       ROS_INFO("End discard part"); 
+      return true; 
 }
 
 bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
@@ -712,8 +725,16 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         if (this->check_faulty(faulty_part)) {
           ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
-          this->discard_faulty(faulty_part, target_agv); 
-          return false; 
+          bool discard_success = this->discard_faulty(faulty_part, target_agv); 
+          if (discard_success) {
+            // if discard success, move part fails
+            return false; 
+          }
+          else {
+            // if discard fails, assume move part success
+            // discard later
+            return true; 
+          }
         }
         ROS_INFO("Part not faulty"); 
         this->lift(); 
@@ -872,11 +893,13 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
     nist_gear::Model faulty_part; 
     faulty_part.type = part_task.part.type; 
     faulty_part.pose = part_task.part.pose; 
-    this->discard_faulty(faulty_part, part_task.agv_id); 
+    bool discard_success = this->discard_faulty(faulty_part, part_task.agv_id); 
     auto pose_in_tray_frame = Utility::motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
     part_task.part.pose = pose_in_tray_frame; 
-    m_shipments_total_parts[part_task.shipment_type]++; 
-
+    if (discard_success) {
+      // ready to replace the discard part
+      m_shipments_total_parts[part_task.shipment_type]++; 
+    }
   }
   else if (shipment_state == ShipmentState::POSTPONE) {
 
