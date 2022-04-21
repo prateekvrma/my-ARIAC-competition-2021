@@ -50,7 +50,13 @@ It will discard all the miss placed faulty part before final shipping.
     High-Priority Order  
     Sensor Blackout  
     Faulty Parts  
-      
+
+1_no_sensor_blackout.  
+  Parts: sensor, battery  
+  Challenges:   
+    High-Priority Order  
+    Faulty Parts  
+
 2.  
   Parts: pump, regulator   
   Challenges:  

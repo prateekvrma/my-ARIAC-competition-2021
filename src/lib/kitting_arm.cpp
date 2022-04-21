@@ -377,8 +377,8 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
           ROS_INFO("Target joint 2 infisible"); 
           continue; 
         }
-        if (target_joint_group_positions.at(3) > 2.62 or 
-            target_joint_group_positions.at(3) < 0.08) {
+        if (target_joint_group_positions.at(3) > 2.5 or 
+            target_joint_group_positions.at(3) < 0.05) {
           ROS_INFO("Target joint 3 infisible"); 
           continue; 
         }
@@ -658,32 +658,42 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
         ROS_INFO("No rectified pose"); 
       }
       this->copyCurrentJointsPosition(); 
-      auto retry_joint_group_positions = m_joint_group_positions; 
       std::random_device rd; 
       std::mt19937 gen(rd()); 
-      std::uniform_real_distribution<double> real_dist(-0.3, 0.3); 
 
-      bool success = false; 
-      int trial_count = 0; 
-      while (not success) {
-        auto random_dist = real_dist(gen); 
-        if (retry_joint_group_positions.at(0) > 4 or 
-            retry_joint_group_positions.at(0) < -4 ) {
-          return false; 
-        }
-        retry_joint_group_positions.at(0) += random_dist; 
-        m_arm_group.setJointValueTarget(retry_joint_group_positions);
-        this->move_arm_group(); 
-        success = pickPart(faulty_part.type, faulty_part_pose, camera_id);
+      int trial_count = 1; 
+      ROS_INFO("trial %d", trial_count); 
+      while (not pickPart(faulty_part.type, faulty_part_pose, camera_id)) {
+        
         ROS_INFO("Discard picking fails, try new joint config for discarding"); 
         trial_count++; 
-        if (trial_count > 3) {
-          ROS_INFO("trial %d", trial_count); 
-          goToPresetLocation(camera_id);
-        }
-        if (trial_count > 5) return false; 
+        ROS_INFO("trial %d", trial_count); 
 
+        if (m_joint_group_positions.at(0) > 4 or 
+            m_joint_group_positions.at(0) < -4 ) {
+          return false; 
+        }
+
+        if (trial_count == 1) {
+          std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
+          auto random_dist = gauss_dist(gen); 
+          m_joint_group_positions.at(0) += random_dist; 
+          m_arm_group.setJointValueTarget(m_joint_group_positions);
+          this->move_arm_group(); 
+        }
+
+        if (trial_count > 1) {
+          goToPresetLocation(camera_id);
+          std::normal_distribution<double> gauss_dist(-0.3, 0.3); 
+          auto random_dist = gauss_dist(gen); 
+          moveBaseTo(m_joint_group_positions.at(0) + random_dist);
+        }
+
+        this->copyCurrentJointsPosition(); 
+        
+        if (trial_count > 5) return false; 
       }
+
       goToPresetLocation("home_face_bins");
       ros::Duration(0.5).sleep();
       deactivateGripper();
