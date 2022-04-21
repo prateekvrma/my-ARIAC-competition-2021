@@ -353,6 +353,7 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
   int attempts = 0; 
 
   while(attempts < max_attempts) {
+      attempts++; 
       ROS_INFO("Set pose attempts: %d", attempts); 
       moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
       const moveit::core::JointModelGroup* joint_model_group =
@@ -378,12 +379,11 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
           continue; 
         }
         this->copyCurrentJointsPosition(); 
+        moveBaseTo(m_joint_group_positions.at(0));
         m_arm_group.setJointValueTarget(m_joint_group_positions);
         this->move_arm_group(); 
         return true; 
       }
-
-      attempts++; 
   }
 
   return false; 
@@ -416,6 +416,7 @@ bool KittingArm::pickPart(std::string part_type,
     ROS_INFO("Start moving to postgrasp pose"); 
     if (not this->moveTargetPose(postgrasp_pose)) {
       ROS_INFO("IK not found for postgrasp"); 
+      return false; 
     }
      
 
@@ -428,7 +429,7 @@ bool KittingArm::pickPart(std::string part_type,
         z_pos = 0.79;
     }
     if (part_type.find("battery") != std::string::npos) {
-        z_pos = 0.78;
+        z_pos = 0.79;
     }
     if (part_type.find("regulator") != std::string::npos) {
         z_pos = 0.79;
@@ -601,7 +602,7 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     target_pose_in_world.position.z += z_margin;
 
     auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
-    auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(0, target_rpy.at(1), 0);
+    auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(target_rpy.at(0), target_rpy.at(1), target_rpy.at(2));
 
     target_pose_in_world.orientation.x = q_target_pose_flat.x();
     target_pose_in_world.orientation.y = q_target_pose_flat.y();
@@ -661,7 +662,7 @@ void KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
           ROS_INFO("trial %d", trial_count); 
           goToPresetLocation(camera_id);
         }
-        // if trial > 5 return; 
+        if (trial_count > 5) return; 
 
       }
       goToPresetLocation("home_face_bins");
