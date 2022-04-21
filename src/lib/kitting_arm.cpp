@@ -133,7 +133,7 @@ KittingArm::KittingArm():
 
   location_bins0.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
-  location_bins0.joints_position.at(0) = 1.8; 
+  location_bins0.joints_position.at(0) = 3; 
   location_bins0.name = "bins0"; 
 
   location_bins1.joints_position = home_face_bins.joints_position; 
@@ -351,15 +351,17 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
 {
   unsigned int max_attempts = 3; 
   int attempts = 0; 
+  std::vector<double> current_joint_group_positions = m_joint_group_positions; 
 
   while(attempts < max_attempts) {
       attempts++; 
       ROS_INFO("Set pose attempts: %d", attempts); 
+      m_joint_group_positions = current_joint_group_positions; 
       moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
       const moveit::core::JointModelGroup* joint_model_group =
               current_state->getJointModelGroup("kitting_arm");
 
-      double timeout = 0.1; 
+      double timeout = 0.3; 
       bool found_ik = current_state->setFromIK(joint_model_group, pose, timeout); 
 
       if (found_ik) {
@@ -378,8 +380,13 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
           ROS_INFO("Target joint 3 infisible"); 
           continue; 
         }
-        this->copyCurrentJointsPosition(); 
-        moveBaseTo(m_joint_group_positions.at(0));
+        current_joint_group_positions.at(0) = target_joint_group_positions.at(0); 
+        current_joint_group_positions.at(1) = target_joint_group_positions.at(1); 
+        m_joint_group_positions = current_joint_group_positions; 
+        m_arm_group.setJointValueTarget(m_joint_group_positions);
+        this->move_arm_group(); 
+
+        m_joint_group_positions = target_joint_group_positions; 
         m_arm_group.setJointValueTarget(m_joint_group_positions);
         this->move_arm_group(); 
         return true; 
@@ -691,8 +698,8 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto target_agv = part_task.agv_id; 
     
     // use -0.3 to reduce awkward pick trajectory
-    // moveBaseTo(part_init_pose_in_world.position.y - 0.3);
-    goToPresetLocation(camera_id);
+    // goToPresetLocation(camera_id);
+    moveBaseTo(part_init_pose_in_world.position.y - 0.3);
 
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
         auto target_pose_in_world = placePart(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
