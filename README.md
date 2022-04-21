@@ -40,6 +40,9 @@ pass in the trial_config argument, default is 1.
 kitting_arm.launch shows messages about kitting arm state and it's current task.
 rwa3.launch shows messages about sensor blackout and order informations.
 
+Kitting robot assumes every part is not faulty when sensor blackout happens.
+It will discard all the miss placed faulty part before final shipping. 
+
 ### trial configuration
 1.  
   Parts: sensor, battery  

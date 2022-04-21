@@ -691,7 +691,8 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto target_agv = part_task.agv_id; 
     
     // use -0.3 to reduce awkward pick trajectory
-    moveBaseTo(part_init_pose_in_world.position.y - 0.3);
+    // moveBaseTo(part_init_pose_in_world.position.y - 0.3);
+    goToPresetLocation(camera_id);
 
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
         auto target_pose_in_world = placePart(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
