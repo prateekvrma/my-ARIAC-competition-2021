@@ -361,7 +361,7 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
       const moveit::core::JointModelGroup* joint_model_group =
               current_state->getJointModelGroup("kitting_arm");
 
-      double timeout = 0.3; 
+      double timeout = 0.5; 
       bool found_ik = current_state->setFromIK(joint_model_group, pose, timeout); 
 
       if (found_ik) {
@@ -375,7 +375,7 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
           ROS_INFO("Target joint 2 infisible"); 
           continue; 
         }
-        if (target_joint_group_positions.at(3) > 2.45 or 
+        if (target_joint_group_positions.at(3) > 2.62 or 
             target_joint_group_positions.at(3) < 0.08) {
           ROS_INFO("Target joint 3 infisible"); 
           continue; 
