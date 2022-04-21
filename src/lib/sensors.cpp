@@ -95,6 +95,11 @@ void LogicalCamera::update_parts(PartsDB& parts_database)
   // ROS_INFO("Sensor: %s", m_id.c_str()); 
   this->camera_to_world(); 
   for (auto &part: parts_world_frame){
+    // erase null pointer in database
+    parts_database[part->type].erase(std::remove(parts_database[part->type].begin(),
+                                                 parts_database[part->type].end(),
+                                                 nullptr)); 
+
     // m_parts_publisher.publish(*part); 
     ariac_group1::PartInfo part_info;  
     part_info.part = *part; 
