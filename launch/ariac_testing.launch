@@ -28,6 +28,8 @@
     <arg unless="$(arg load_moveit)" name="load_moveit_args" value="" />
     <arg if="$(arg load_moveit)" name="load_moveit_args" value="--load-moveit" />
 
+    <arg name="trial_config" default="1" />
+
     <node name="ariac_sim" pkg="nist_gear" type="gear.py" args="
           $(arg verbose_args)
           $(arg state_logging_args)
@@ -36,7 +38,7 @@
           $(arg fill_demo_shipment_args)
           $(arg visualize_sensors_args)
           $(arg debug_mode_args)
-          -f $(find ariac_group1)/config/trial_config/rwa3/rwa3_pump_regulator.yaml
+          -f $(find ariac_group1)/config/trial_config/rwa3_trial_$(arg trial_config).yaml
           $(find ariac_group1)/config/user_config/rwa2_sensor.yaml
           " required="true" output="screen" />
 

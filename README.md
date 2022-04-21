@@ -32,9 +32,26 @@ catkin_make or cakin build
 
 ## RWA3
 ```
-roslaunch ariac_group1 ariac_testing.launch
+roslaunch ariac_group1 ariac_testing.launch trial_config:=1
 roslaunch ariac_group1 kitting_arm.launch
 roslaunch ariac_group1 rwa3.launch
 ```
+pass in the trial_config argument, default is 1.    
+kitting_arm.launch shows messages about kitting arm state and it's current task.
+rwa3.launch shows messages about sensor blackout and order informations.
+
+### trial configuration
+1.  
+  Parts: sensor, battery
+  Challenges: 
+    High-Priority Order
+    Sensor Blackout
+    Faulty Parts
+2.  
+  Parts: pump, regulator 
+  Challenges:
+    High-Priority Order
+    Sensor Blackout
+    Faulty Parts
 
 
