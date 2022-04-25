@@ -143,9 +143,7 @@ KittingArm::KittingArm():
   location_bins1.joints_position.at(0) = -4; 
   location_bins1.name = "bins1"; 
 
-
-  
-
+  m_arm_group.setPlanningTime(10.0); 
 
 
   // initialize home position
@@ -229,7 +227,7 @@ void KittingArm::deactivateGripper()
     srv.request.enable = false;
     m_gripper_control_client.call(srv);
 
-    ROS_INFO_STREAM("Deactivate gripper" << srv.response);
+    ROS_INFO_STREAM("Deactivate gripper " << srv.response);
 }
 
 void KittingArm::goToPresetLocation(std::string location_name)
@@ -389,9 +387,20 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
   unsigned int max_attempts = 3; 
   int attempts = 0; 
   std::vector<double> current_joint_group_positions = m_joint_group_positions; 
+  std::random_device rd; 
+  std::mt19937 gen(rd()); 
 
   while(attempts < max_attempts) {
       attempts++; 
+
+      if (attempts > 1) {
+      // add random motion to try again
+          std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
+          auto random_dist = gauss_dist(gen); 
+          m_joint_group_positions.at(0) += random_dist; 
+          this->moveBaseTo(m_joint_group_positions.at(0)); 
+      }
+
       ROS_INFO("Set pose attempts: %d", attempts); 
       m_joint_group_positions = current_joint_group_positions; 
       moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
@@ -404,17 +413,14 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
       if (found_ik) {
         std::vector<double> target_joint_group_positions; 
         current_state->copyJointGroupPositions(joint_model_group, target_joint_group_positions);
-        for (auto& joint: target_joint_group_positions) {
-          ROS_INFO("%f ", joint); 
-        }
         if (target_joint_group_positions.at(2) > -0.17 or 
             target_joint_group_positions.at(2) < -1.74) {
-          ROS_INFO("Target joint 2 infisible"); 
+          ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
           continue; 
         }
         if (target_joint_group_positions.at(3) > 2.5 or 
             target_joint_group_positions.at(3) < 0.05) {
-          ROS_INFO("Target joint 3 infisible"); 
+          ROS_INFO("Target joint 3 infisible: %f", target_joint_group_positions.at(3)); 
           continue; 
         }
         current_joint_group_positions.at(0) = target_joint_group_positions.at(0); 
@@ -440,7 +446,7 @@ bool KittingArm::pickPart(std::string part_type,
                           const geometry_msgs::Pose& part_init_pose,
                           std::string camera_id) 
 {
-    ROS_INFO("Start pick part"); 
+    ROS_INFO("---Start pick part"); 
     m_arm_group.setMaxVelocityScalingFactor(0.6);
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
@@ -459,9 +465,9 @@ bool KittingArm::pickPart(std::string part_type,
 
     // m_arm_group.setPoseTarget(postgrasp_pose);
     // m_arm_group.move();
-    ROS_INFO("Start moving to postgrasp pose"); 
+    ROS_INFO("Move to postgrasp pose"); 
     if (not this->moveTargetPose(postgrasp_pose)) {
-      ROS_INFO("IK not found for postgrasp"); 
+      ROS_INFO("---End pick part: IK not found for postgrasp"); 
       return false; 
     }
      
@@ -501,12 +507,7 @@ bool KittingArm::pickPart(std::string part_type,
         activateGripper();
     }
 
-    ROS_INFO("Start moving to grasp pose"); 
-
-    // move the arm to the pregrasp pose
-    // m_arm_group.setPoseTarget(grasp_pose);
-    // m_arm_group.move();
-    //
+    ROS_INFO("Move to grasp pose"); 
     if (not this->moveTargetPose(grasp_pose)) {
       ROS_INFO("IK not found for grasp"); 
       return false; 
@@ -527,7 +528,7 @@ bool KittingArm::pickPart(std::string part_type,
         }
         geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
         if (arm_ee_link_pose.position.z < 0.78) {
-          ROS_INFO("Arm moving lower then part, abort"); 
+          ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
           this->lift(); 
           return false; 
         }
@@ -543,24 +544,23 @@ bool KittingArm::pickPart(std::string part_type,
     ros::Duration(0.5).sleep();
 
     this->lift(); 
-    ROS_INFO("End pick part"); 
 
     ariac_group1::IsPartPicked srv; 
     srv.request.camera_id = camera_id; 
     srv.request.part_type = part_type; 
     if (m_is_part_picked_client.call(srv)) {
       if (srv.response.picked) {
-        ROS_INFO("Pick success"); 
+        ROS_INFO("---End pick part: pick success"); 
         return true; 
       }
       else {
-        ROS_INFO("Pick fails"); 
+        ROS_INFO("---End pick part: pick fails"); 
         deactivateGripper();
         return false; 
       }
     } 
     else {
-      ROS_INFO("No such camera: %s", camera_id.c_str()); 
+      ROS_INFO("---End pick part: no such camera: %s", camera_id.c_str()); 
       return false; 
     }
 }
@@ -572,13 +572,12 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
 {
     goToPresetLocation(agv);
 
-
     // get the target pose of the part in the world frame
     auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
          part_pose_in_frame,
          agv);
 
-    ROS_INFO("Start place part"); 
+    ROS_INFO("---Start place part"); 
     Utility::print_pose(target_pose_in_world); 
 
    
@@ -664,7 +663,7 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     deactivateGripper();
 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
-    ROS_INFO("End place part"); 
+    ROS_INFO("---End place part"); 
 
     return target_pose_in_world;
 }
@@ -684,7 +683,7 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
         camera_id = "logical_camera_ks4"; 
       } 
 
-      ROS_INFO("Start discard part"); 
+      ROS_INFO("---Start discard part"); 
       ariac_group1::GetPartPosition srv; 
       srv.request.camera_id = camera_id; 
       srv.request.part = faulty_part; 
@@ -699,7 +698,7 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
       std::mt19937 gen(rd()); 
 
       int trial_count = 1; 
-      ROS_INFO("trial %d", trial_count); 
+      ROS_INFO("  trial %d", trial_count); 
       while (not pickPart(faulty_part.type, faulty_part_pose, camera_id)) {
         
         ROS_INFO("Discard picking fails, try new joint config for discarding"); 
@@ -730,17 +729,17 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
         
         if (trial_count > 5) return false; 
       }
+      ROS_INFO("Discard picking success"); 
 
       goToPresetLocation("home_face_bins");
       ros::Duration(0.5).sleep();
       deactivateGripper();
-      ROS_INFO("End discard part"); 
+      ROS_INFO("---End discard part"); 
       return true; 
 }
 
 bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
 {
-  ROS_INFO("Check faulty"); 
   ariac_group1::IsFaulty srv; 
   
   srv.request.part = faulty_part; 
@@ -769,6 +768,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         faulty_part.type = part_type; 
         faulty_part.pose = target_pose_in_world; 
 
+        ROS_INFO("Check faulty"); 
         if (this->check_faulty(faulty_part)) {
           ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
@@ -868,7 +868,7 @@ void KittingArm::execute()
      
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
-      ROS_INFO("Moving part success"); 
+      ROS_INFO("Move part success"); 
       m_shipments_total_parts[part_task.shipment_type]--; 
       ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
 
@@ -887,7 +887,7 @@ void KittingArm::execute()
     }
   }
   else {
-    ROS_INFO("Not Found %s, back to task queue", part_task.part.type.c_str()); 
+    ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
     priority += PriorityWeight::Penalty::NO_PART;  
     ROS_INFO("Priority decrease to %d", priority); 
     return; 
