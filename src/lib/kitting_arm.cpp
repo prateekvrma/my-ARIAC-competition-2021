@@ -527,7 +527,7 @@ bool KittingArm::pickPart(std::string part_type,
           step -= 0.0001; 
         }
         geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-        if (arm_ee_link_pose.position.z < 0.78) {
+        if (arm_ee_link_pose.position.z < 0.76) {
           ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
           this->lift(); 
           return false; 
