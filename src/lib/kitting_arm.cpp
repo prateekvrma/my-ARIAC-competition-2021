@@ -552,7 +552,8 @@ bool KittingArm::pickPart(std::string part_type,
 
     ariac_group1::IsPartPicked srv; 
     srv.request.camera_id = camera_id; 
-    srv.request.part_type = part_type; 
+    srv.request.part.type = part_type; 
+    srv.request.part.pose = part_init_pose; 
     if (m_is_part_picked_client.call(srv)) {
       if (srv.response.picked) {
         ROS_INFO("---End pick part: pick success"); 

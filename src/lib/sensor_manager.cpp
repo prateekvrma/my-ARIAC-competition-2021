@@ -210,6 +210,14 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
   if (m_sensors_blackout) {
     ROS_INFO("Sensor blackout, assuming pick success"); 
     res.picked = true; 
+    // clear from database
+    for (auto& part_info_ptr: m_parts_database[req.part.type]) {
+      if (Utility::is_same_part(req.part, part_info_ptr->part, 0.05)) {
+        ROS_INFO("Clear part at x: %f, y: %f", req.part.pose.position.x, req.part.pose.position.y); 
+        part_info_ptr.reset(nullptr); 
+        break; 
+      }
+    }
     return true;  
   }
 
@@ -229,7 +237,7 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       if (part == nullptr) {
         continue; 
       }
-      if (part->type != req.part_type) {
+      if (part->type != req.part.type) {
         continue; 
       }
       double picked_margin = 0.03; 

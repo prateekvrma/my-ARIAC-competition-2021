@@ -1,4 +1,4 @@
-string part_type
+nist_gear/Model part
 string camera_id
 ---
 bool picked
