@@ -86,7 +86,7 @@ class KittingArm {
     void lift(); 
     bool moveTargetPose(const geometry_msgs::Pose& pose); 
 
-    void print_joints_position();  
+    void print_joint_group_positions();  
     void print_shipments_total_parts();  
 
     bool get_order(); 

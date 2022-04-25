@@ -143,6 +143,11 @@ KittingArm::KittingArm():
   location_bins1.joints_position.at(0) = -4; 
   location_bins1.name = "bins1"; 
 
+
+  
+
+
+
   // initialize home position
   this->goToPresetLocation("home_face_belt"); 
   this->goToPresetLocation("home_face_bins"); 
@@ -158,12 +163,10 @@ void KittingArm::copyCurrentJointsPosition()
   current_state->copyJointGroupPositions(joint_model_group, m_joint_group_positions);
 }
 
-void KittingArm::print_joints_position() {
-
-  this->copyCurrentJointsPosition(); 
-  
-  for (auto& joint: m_joint_group_positions) {
-    ROS_INFO("%f", joint); 
+void KittingArm::print_joint_group_positions() {
+  ROS_INFO("Target Joint positions: "); 
+  for (int i; i < m_joint_group_positions.size(); ++i) {
+    ROS_INFO("  Joint %d: %f", i, m_joint_group_positions.at(i)); 
   }
 }
 
@@ -194,14 +197,14 @@ void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
                                                  std::make_unique<ariac_group1::PartTask>(*msg))); 
   if (not m_shipments_total_parts.count(msg->shipment_type)) {
     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+    ROS_INFO("Receive shipment %s including %d parts", msg->shipment_type.c_str(), msg->total_parts); 
   }
-  this->print_shipments_total_parts(); 
-  Utility::print_part_pose(msg->part); 
 }
 
 void KittingArm::print_shipments_total_parts() {
+  ROS_INFO("Shipment total parts: "); 
   for (auto& part_count: m_shipments_total_parts) {
-    ROS_INFO("%s: %d", part_count.first.c_str(), part_count.second); 
+    ROS_INFO("  %s: %d", part_count.first.c_str(), part_count.second); 
   }
 
 }
@@ -217,7 +220,7 @@ void KittingArm::activateGripper()
     srv.request.enable = true;
     m_gripper_control_client.call(srv);
 
-    ROS_INFO_STREAM("[Arm][activateGripper] DEBUG: srv.response =" << srv.response);
+    ROS_INFO_STREAM("Activate gripper " << srv.response);
 }
 
 void KittingArm::deactivateGripper()
@@ -226,7 +229,7 @@ void KittingArm::deactivateGripper()
     srv.request.enable = false;
     m_gripper_control_client.call(srv);
 
-    ROS_INFO_STREAM("[Arm][deactivateGripper] DEBUG: srv.response =" << srv.response);
+    ROS_INFO_STREAM("Deactivate gripper" << srv.response);
 }
 
 void KittingArm::goToPresetLocation(std::string location_name)
@@ -236,39 +239,39 @@ void KittingArm::goToPresetLocation(std::string location_name)
 
     ArmPresetLocation location;
     if (location_name.compare("home_face_belt") == 0) {
-        ROS_INFO("Moving to home_face_belt"); 
+        ROS_INFO("Move to home_face_belt"); 
         location = home_face_belt;
     }
     else if (location_name.compare("home_face_bins") == 0) {
-        ROS_INFO("Moving to home_face_bins"); 
+        ROS_INFO("Move to home_face_bins"); 
         location = home_face_bins;
     }
     else if (location_name.compare("agv1") == 0 or
              location_name.find("ks1") != std::string::npos) {
-        ROS_INFO("Moving to agv1"); 
+        ROS_INFO("Move to agv1"); 
         location = location_agv1;
     }
     else if (location_name.compare("agv2") == 0 or 
              location_name.find("ks2") != std::string::npos) {
-        ROS_INFO("Moving to agv2"); 
+        ROS_INFO("Move to agv2"); 
         location = location_agv2;
     }
     else if (location_name.compare("agv3") == 0 or
              location_name.find("ks3") != std::string::npos) {
-        ROS_INFO("Moving to agv3"); 
+        ROS_INFO("Move to agv3"); 
         location = location_agv3;
     }
     else if (location_name.compare("agv4") == 0 or 
              location_name.find("ks4") != std::string::npos) {
-        ROS_INFO("Moving to agv4"); 
+        ROS_INFO("Move to agv4"); 
         location = location_agv4;
     }
     else if (location_name.find("bins0") != std::string::npos) {
-        ROS_INFO("Moving to bins0"); 
+        ROS_INFO("Move to bins0"); 
         location = location_bins0;
     }
     else if (location_name.find("bins1") != std::string::npos) {
-        ROS_INFO("Moving to bins1"); 
+        ROS_INFO("Move to bins1"); 
         location = location_bins1;
 
     }
@@ -280,7 +283,6 @@ void KittingArm::goToPresetLocation(std::string location_name)
     m_joint_group_positions.at(4) = location.joints_position.at(4);
     m_joint_group_positions.at(5) = location.joints_position.at(5);
     m_joint_group_positions.at(6) = location.joints_position.at(6);
-
 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
     m_arm_group.setJointValueTarget(m_joint_group_positions);
@@ -294,6 +296,8 @@ bool KittingArm::move_arm_group()
     bool success = (m_arm_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if (success)
         m_arm_group.move();
+    else
+        ROS_INFO("Path planning fails"); 
 
     return success; 
 }
@@ -351,6 +355,37 @@ void KittingArm::lift()
 
 bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
 {
+  // set constraint to shoulder lift and elbow
+  moveit_msgs::Constraints constraints;
+
+  moveit_msgs::JointConstraint joint_constraint; 
+  joint_constraint.joint_name = "shoulder_pan_joint"; 
+  joint_constraint.position = -M_PI;  
+  joint_constraint.tolerance_above = 1.2; 
+  joint_constraint.tolerance_below = 1.2; 
+  joint_constraint.weight = 1; 
+
+  constraints.joint_constraints.push_back(joint_constraint); 
+
+
+  joint_constraint.joint_name = "shoulder_lift_joint"; 
+  joint_constraint.position = -1.25;  
+  joint_constraint.tolerance_above = 1.05; 
+  joint_constraint.tolerance_below = 0.5; 
+  joint_constraint.weight = 1; 
+
+  constraints.joint_constraints.push_back(joint_constraint); 
+
+  joint_constraint.joint_name = "elbow_joint"; 
+  joint_constraint.position = 1.74;  
+  joint_constraint.tolerance_above = 0.76; 
+  joint_constraint.tolerance_below = 1.7; 
+  joint_constraint.weight = 1; 
+
+  constraints.joint_constraints.push_back(joint_constraint); 
+
+  m_arm_group.setPathConstraints(constraints);
+
   unsigned int max_attempts = 3; 
   int attempts = 0; 
   std::vector<double> current_joint_group_positions = m_joint_group_positions; 
@@ -391,10 +426,12 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
         m_joint_group_positions = target_joint_group_positions; 
         m_arm_group.setJointValueTarget(m_joint_group_positions);
         this->move_arm_group(); 
+        m_arm_group.clearPathConstraints();
         return true; 
       }
   }
 
+  m_arm_group.clearPathConstraints();
   return false; 
 
 }
