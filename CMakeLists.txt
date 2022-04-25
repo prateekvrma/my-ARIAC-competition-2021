@@ -86,6 +86,7 @@ add_service_files(
   IsPartPicked.srv
   GetPartPosition.srv
   CheckQualitySensor.srv
+  GetCompetitionTime.srv
 )
 
 

@@ -22,6 +22,7 @@
 #include <ariac_group1/IsPartPicked.h>
 #include <ariac_group1/GetPartPosition.h>
 #include <ariac_group1/CheckQualitySensor.h>
+#include <ariac_group1/GetCompetitionTime.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -77,7 +78,11 @@ KittingArm::KittingArm():
       m_nh.serviceClient<ariac_group1::CheckQualitySensor>("/sensor_manager/check_quality_sensor"); 
   m_check_quality_sensor_client.waitForExistence();
 
-  
+  m_get_competition_time_client = 
+      m_nh.serviceClient<ariac_group1::GetCompetitionTime>("/factory_manager/get_competition_time"); 
+  m_get_competition_time_client.waitForExistence();
+
+
   // Preset locations
   // ^^^^^^^^^^^^^^^^
   // Joints for the arm are in this order:
@@ -869,14 +874,7 @@ void KittingArm::execute()
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
       ROS_INFO("Move part success"); 
-      m_shipments_total_parts[part_task.shipment_type]--; 
-      ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
-
-      auto shipment_state = this->check_shipment_state(part_task); 
-      this->process_shipment_state(shipment_state, part_task, priority); 
-      if (shipment_state == ShipmentState::NOT_READY) {
-        m_part_task_queue.pop_back();
-      }
+      this->clear_part_task(part_task, priority); 
       return; 
 
     }
@@ -890,9 +888,31 @@ void KittingArm::execute()
     ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
     priority += PriorityWeight::Penalty::NO_PART;  
     ROS_INFO("Priority decrease to %d", priority); 
+    if (priority < -6) {
+      ariac_group1::GetCompetitionTime get_comp_time_srv; 
+      m_get_competition_time_client.call(get_comp_time_srv); 
+      auto competition_time = get_comp_time_srv.response.competition_time;
+      if (competition_time > 25) {
+        ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
+        this->clear_part_task(part_task, priority); 
+      }
+    }
+     
     return; 
   }
 
+}
+
+void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priority)
+{
+  m_shipments_total_parts[part_task.shipment_type]--; 
+  ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
+
+  auto shipment_state = this->check_shipment_state(part_task); 
+  this->process_shipment_state(shipment_state, part_task, priority); 
+  if (shipment_state == ShipmentState::NOT_READY) {
+    m_part_task_queue.pop_back();
+  }
 }
 
 ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task)

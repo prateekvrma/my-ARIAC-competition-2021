@@ -17,6 +17,9 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
   m_kitting_publisher = m_nh.advertise<nist_gear::KittingShipment>("/factory_manager/kitting_task", 10); 
   m_assembly_publisher = m_nh.advertise<nist_gear::AssemblyShipment>("/factory_manager/assembly_task", 10); 
 
+  // Services
+  m_get_competition_time_service = m_nh.advertiseService("/factory_manager/get_competition_time", &FactoryManager::get_competition_time, this); 
+
   // All workers are free at start
   for (auto& worker: m_workers) {
     m_busy_state[worker] = false; 
@@ -138,3 +141,11 @@ bool FactoryManager::work_done()
   return true; 
 }
 
+bool FactoryManager::get_competition_time(ariac_group1::GetCompetitionTime::Request &req,
+                                         ariac_group1::GetCompetitionTime::Response &res)
+{
+  auto competition_time = ros::Time::now() - m_start_time; 
+  res.competition_time = competition_time.toSec(); 
+
+  return true; 
+}

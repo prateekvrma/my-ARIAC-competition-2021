@@ -108,6 +108,7 @@ class KittingArm {
     void arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg);
     void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
 
+    void clear_part_task(ariac_group1::PartTask& part_task, int& priority); 
     ShipmentState check_shipment_state(ariac_group1::PartTask& part_task); 
     void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 
 
@@ -138,6 +139,7 @@ class KittingArm {
     ros::ServiceClient m_is_part_picked_client;
     ros::ServiceClient m_get_part_position_client;  
     ros::ServiceClient m_check_quality_sensor_client;  
+    ros::ServiceClient m_get_competition_time_client;   
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;

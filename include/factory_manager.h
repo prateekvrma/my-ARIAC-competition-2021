@@ -11,6 +11,7 @@
 #include <ariac_group1/Busy.h>
 
 #include "orders.h"
+#include <ariac_group1/GetCompetitionTime.h>
 
 class FactoryManager {
   public:
@@ -42,6 +43,9 @@ class FactoryManager {
      * @Param shipment
      */
     void assign_assembly_task(nist_gear::AssemblyShipment& shipment);
+
+    bool get_competition_time(ariac_group1::GetCompetitionTime::Request &req,
+                              ariac_group1::GetCompetitionTime::Response &res); 
 
     Orders m_orders; 
 
@@ -77,6 +81,8 @@ class FactoryManager {
      *
      */
     ros::Subscriber m_busy_subscriber;
+
+    ros::ServiceServer m_get_competition_time_service; 
 
     /**
      * @Brief The working status of all the worker machine  
