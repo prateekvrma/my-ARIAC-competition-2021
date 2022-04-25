@@ -85,6 +85,9 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
 {
   ros::spinOnce(); 
   for (auto& part_info_ptr: m_parts_database[req.type]) {
+    if (part_info_ptr == nullptr) {
+        continue; 
+    }
     res.parts_info.push_back(*part_info_ptr); 
     Utility::print_part_pose(part_info_ptr->part); 
   }
@@ -233,7 +236,17 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       ROS_INFO("Is part picked height: %f", part->pose.position.z); 
       if ((part->pose.position.z - platform_height) > picked_margin) {
         res.picked = true; 
+
+        // clear from database
+        for (auto& part_info_ptr: m_parts_database[part->type]) {
+          if (Utility::is_same_part(*part, part_info_ptr->part, 0.05)) {
+            ROS_INFO("Clear part at x: %f, y: %f", part->pose.position.x, part->pose.position.y); 
+            part_info_ptr.reset(nullptr); 
+            break; 
+          }
+        }
         part.reset(nullptr); 
+
         return true; 
       }
     }
