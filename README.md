@@ -32,7 +32,7 @@ catkin_make or cakin build
 
 ## RWA3
 ```
-roslaunch ariac_group1 ariac_testing.launch trial_config:=1
+roslaunch ariac_group1 ariac_testing.launch trial_config:=rwa3_trial_1
 roslaunch ariac_group1 kitting_arm.launch
 roslaunch ariac_group1 rwa3.launch
 ```
@@ -44,24 +44,32 @@ Kitting robot assumes every part is not faulty when sensor blackout happens.
 It will discard all the miss placed faulty part before final shipping. 
 
 ### trial configuration
-1.  
+```
+rwa3_trial_1:  
   Parts: sensor, battery  
   Challenges:   
     High-Priority Order  
     Sensor Blackout  
     Faulty Parts  
 
-1_no_sensor_blackout.  
+rwa3_trial_1_no_sensor_blackout:
   Parts: sensor, battery  
   Challenges:   
     High-Priority Order  
     Faulty Parts  
 
-2.  
+rwa3_trial_2:  
   Parts: pump, regulator   
   Challenges:  
     High-Priority Order  
     Sensor Blackout  
     Faulty Parts
+
+rwa3_all_faulty:
+  All the parts are faulty, the kitting robot should throw all the parts away
+
+rwa3_insufficient:
+  Test for insufficient order
+```
      
 
