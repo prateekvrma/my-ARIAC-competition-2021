@@ -44,6 +44,10 @@ namespace Utility
     void print(const tf2::Quaternion& quat);
     void print(const geometry_msgs::Pose& pose);
   }
+
+  namespace location {
+    std::string get_pose_location(const geometry_msgs::Pose& pose);  
+  }
 }
 
 #endif 

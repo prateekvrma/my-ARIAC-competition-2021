@@ -340,5 +340,141 @@ namespace Utility
 
         return tray_pose; 
     }
-}
+  }
+
+  namespace location
+  {
+      std::string get_pose_location(const geometry_msgs::Pose& pose) {
+          double x = pose.position.x; 
+          double y = pose.position.y; 
+
+
+          // Caution: top is smaller than bottom
+          double bins_top_x = -3; 
+          double bins_middle_x = -2.3; 
+          double bins_bottom_x = -1.5; 
+
+          double bins0_right_y = 3.8; 
+          double bins0_middle_y = 3; 
+          double bins0_left_y = 2.1; 
+
+          if (y > bins0_middle_y and
+              y < bins0_right_y and
+              x < bins_bottom_x and
+              x > bins_middle_x) {
+
+              return "bin1"; 
+          }
+
+          if (y > bins0_left_y and
+              y < bins0_middle_y and
+              x < bins_bottom_x and
+              x > bins_middle_x) {
+
+              return "bin2"; 
+          }    
+
+          if (y > bins0_left_y  and
+              y < bins0_middle_y and
+              x < bins_middle_x and
+              x > bins_top_x) {
+
+              return "bin3"; 
+          }    
+
+          if (y > bins0_middle_y  and
+              y < bins0_right_y and
+              x < bins_middle_x and
+              x > bins_top_x) {
+
+              return "bin4"; 
+          }
+
+          double bins1_right_y = -2.1; 
+          double bins1_middle_y = -3; 
+          double bins1_left_y = -3.8; 
+
+          if (y > bins1_middle_y and
+              y < bins1_right_y and
+              x < bins_bottom_x and
+              x > bins_middle_x) {
+
+              return "bin6"; 
+          }
+
+          if (y > bins1_left_y and
+              y < bins1_middle_y and
+              x < bins_bottom_x and
+              x > bins_middle_x) {
+
+              return "bin5"; 
+          }    
+
+          if (y > bins1_left_y  and
+              y < bins1_middle_y and
+              x < bins_middle_x and
+              x > bins_top_x) {
+
+              return "bin8"; 
+          }    
+
+          if (y > bins1_middle_y  and
+              y < bins1_right_y and
+              x < bins_middle_x and
+              x > bins_top_x) {
+
+              return "bin7"; 
+          }
+
+          double ks_top_x = -2.5; 
+          double ks_bottom_x = -1.6; 
+
+          double ks1_right_y = 5; 
+          double ks1_left_y = 4.3; 
+
+          if (y > ks1_left_y  and
+               y < ks1_right_y and
+               x < ks_bottom_x and
+               x > ks_top_x) {
+
+               return "ks1"; 
+           }
+
+          double ks2_right_y = 1.7; 
+          double ks2_left_y = 1; 
+
+          if (y > ks2_left_y  and
+               y < ks2_right_y and
+               x < ks_bottom_x and
+               x > ks_top_x) {
+
+               return "ks2"; 
+           }
+
+          double ks3_right_y = -1; 
+          double ks3_left_y = -1.7;  
+
+          if (y > ks3_left_y  and
+               y < ks3_right_y and
+               x < ks_bottom_x and
+               x > ks_top_x) {
+
+               return "ks3"; 
+           }
+
+          double ks4_right_y = -4.3; 
+          double ks4_left_y = -5; 
+
+          if (y > ks4_left_y  and
+               y < ks4_right_y and
+               x < ks_bottom_x and
+               x > ks_top_x) {
+
+               return "ks4"; 
+           }
+
+          return ""; 
+      }
+  }
+
 }
