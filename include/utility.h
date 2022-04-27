@@ -47,6 +47,12 @@ namespace Utility
 
   namespace location {
     std::string get_pose_location(const geometry_msgs::Pose& pose);  
+
+    // part location
+    //     1 2
+    //     3 4
+    // conveyer belt
+    int get_pose_location_in_bin(const geometry_msgs::Pose& pose, const std::string& bin_id);  
   }
 }
 

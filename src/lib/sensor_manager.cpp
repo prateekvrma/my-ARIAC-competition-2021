@@ -24,11 +24,48 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
     m_quality_sensors_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, camera_id); 
   }
 
+  for (auto& bin_id: m_bins_id) {
+    bins_occupancy[bin_id].resize(4); 
+    for (int i=0; i<4; i++) {
+      bins_occupancy[bin_id].at(i) = false; 
+    }
+  }
+
 }
 
 void SensorManager::update_parts()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
+  for (auto& bin_id: m_bins_id) {
+    for (int i=0; i<4; i++) {
+      bins_occupancy[bin_id].at(i) = false; 
+    }
+  }
+
+  for (auto& data: m_parts_database) {
+    auto key = data.first; 
+    for (auto& part_info_ptr: data.second) {
+      if (part_info_ptr  == nullptr) {
+          continue; 
+      }
+      auto loc = Utility::location::get_pose_location(part_info_ptr->part.pose); 
+      for (auto& bin_id: m_bins_id) {
+          if (bin_id == loc) {
+              auto loc_in_bin = Utility::location::get_pose_location_in_bin(part_info_ptr->part.pose, bin_id); 
+              bins_occupancy[bin_id].at(loc_in_bin) = true; 
+              break; 
+          }
+      }
+    }
+  }
+
+  this->print_bins_occupancy(); 
+
+  if (m_sensors_blackout) {
+      return; 
+  }
+
   m_parts_database.clear(); 
 
   for (auto& camera_id: m_logical_cameras) {
@@ -37,6 +74,33 @@ void SensorManager::update_parts()
   
   for (auto& camera_id: m_quality_sensors) {
     m_quality_sensors_dict[camera_id]->update_parts(m_parts_database);  
+  }
+
+  
+}
+
+void SensorManager::print_bins_occupancy()
+{
+  for (auto& bin_id: m_bins_id) {
+    ROS_INFO("%s: ", bin_id.c_str()); 
+    std::string pos_1 = " "; 
+    std::string pos_2 = " "; 
+    std::string pos_3 = " "; 
+    std::string pos_4 = " "; 
+    if (bins_occupancy[bin_id].at(0)) {
+      pos_1 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(1)) {
+      pos_2 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(2)) {
+      pos_3 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(3)) {
+      pos_4 = "O"; 
+    }
+    ROS_INFO("  %s  %s", pos_1.c_str(), pos_2.c_str()); 
+    ROS_INFO("  %s  %s", pos_3.c_str(), pos_4.c_str()); 
   }
 }
 

@@ -475,6 +475,87 @@ namespace Utility
 
           return ""; 
       }
+
+      int get_pose_location_in_bin(const geometry_msgs::Pose& pose, const std::string& bin_id) {
+          double bin1_center_x = -1.9; 
+          double bin1_center_y = 3.38; 
+
+          double bin2_center_x = -1.9; 
+          double bin2_center_y = 2.565; 
+
+          double bin3_center_x = -2.65; 
+          double bin3_center_y = 2.565; 
+
+          double bin4_center_x = -2.65; 
+          double bin4_center_y = 3.38; 
+
+          double bin5_center_x = -1.9; 
+          double bin5_center_y = -3.38; 
+
+          double bin6_center_x = -1.9; 
+          double bin6_center_y = -2.565; 
+
+          double bin7_center_x = -2.65; 
+          double bin7_center_y = -2.565; 
+
+          double bin8_center_x = -2.65; 
+          double bin8_center_y = -3.38;
+
+          double center_x; 
+          double center_y; 
+          if (bin_id == "bin1") {
+              center_x = bin1_center_x; 
+              center_y = bin1_center_y; 
+          }
+          if (bin_id == "bin2") {
+              center_x = bin2_center_x; 
+              center_y = bin2_center_y; 
+          }
+          if (bin_id == "bin3") {
+              center_x = bin3_center_x; 
+              center_y = bin3_center_y; 
+          }
+          if (bin_id == "bin4") {
+              center_x = bin4_center_x; 
+              center_y = bin4_center_y; 
+          }
+          if (bin_id == "bin5") {
+              center_x = bin5_center_x; 
+              center_y = bin5_center_y; 
+          }
+          if (bin_id == "bin6") {
+              center_x = bin6_center_x; 
+              center_y = bin6_center_y; 
+          }
+          if (bin_id == "bin7") {
+              center_x = bin7_center_x; 
+              center_y = bin7_center_y; 
+          }
+          if (bin_id == "bin8") {
+              center_x = bin8_center_x; 
+              center_y = bin8_center_y; 
+          }
+
+          double x = pose.position.x; 
+          double y = pose.position.y; 
+          // part location
+          //     1 2
+          //     3 4
+          // conveyer belt
+          if (x < center_x and y < center_y) {
+              return 0;
+          }
+          if (x < center_x and y > center_y) {
+              return 1;
+          }
+          if (x > center_x and y < center_y) {
+              return 2;
+          }
+          if (x > center_x and y > center_y) {
+              return 3; 
+          }
+
+      }
   }
 
 }

@@ -30,6 +30,8 @@ class SensorManager {
     void check_blackout(); 
 
   private:
+    void print_bins_occupancy(); 
+
     bool get_parts(ariac_group1::GetParts::Request &req, 
                    ariac_group1::GetParts::Response &res); 
 
@@ -84,6 +86,10 @@ class SensorManager {
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_quality_sensors_dict; 
 
     std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>> m_parts_database; 
+
+
+    const std::vector<std::string> m_bins_id{"bin1", "bin2", "bin3", "bin4", "bin5", "bin6", "bin7", "bin8"}; 
+    std::map<std::string, std::vector<bool>> bins_occupancy; 
 
     ros::NodeHandle m_nh; 
 
