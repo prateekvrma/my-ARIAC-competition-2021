@@ -70,6 +70,12 @@ rwa3_all_faulty:
 
 rwa3_insufficient:
   Test for insufficient order
+
+agv_test:
+   agv_test/agv1
+   agv_test/agv2
+   agv_test/agv3
+   agv_test/agv4
 ```
      
 

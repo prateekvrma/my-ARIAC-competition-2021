@@ -83,7 +83,7 @@ models_over_bins:
         rpy: [0, 0, 0]
         num_models_x: 2
         num_models_y: 2
-  bin3:
+  bin6:
     models:
       assembly_battery_blue:
         xyz_start: [0.2, 0.2, 0.0]

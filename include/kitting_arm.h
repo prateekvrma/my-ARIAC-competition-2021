@@ -81,9 +81,11 @@ class KittingArm {
 
     bool move_arm_group(); 
     void moveBaseTo(double linear_arm_actuator_joint_position);
+    void resetArm(); 
     void turnToBins(); 
     void turnToBelt(); 
     void lift(); 
+    void setPickConstraints(); 
     bool moveTargetPose(const geometry_msgs::Pose& pose); 
 
     void print_joint_group_positions();  
@@ -150,6 +152,7 @@ class KittingArm {
 
     ros::Subscriber m_part_task_subscriber;  
 
+    
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
 
     std::map<std::string, int> m_shipments_total_parts; 

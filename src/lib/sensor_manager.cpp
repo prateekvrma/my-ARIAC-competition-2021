@@ -215,6 +215,11 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
       if (Utility::is_same_part(req.part, part_info_ptr->part, 0.05)) {
         ROS_INFO("Clear part at x: %f, y: %f", req.part.pose.position.x, req.part.pose.position.y); 
         part_info_ptr.reset(nullptr); 
+        // erase null pointer in database
+        m_parts_database[req.part.type].erase(std::remove(m_parts_database[req.part.type].begin(),
+                                                          m_parts_database[req.part.type].end(),
+                                                          nullptr)); 
+        ROS_INFO("Part %s left in database: %d", req.part.type.c_str(), int(m_parts_database[req.part.type].size())); 
         break; 
       }
     }
@@ -250,6 +255,12 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
           if (Utility::is_same_part(*part, part_info_ptr->part, 0.05)) {
             ROS_INFO("Clear part at x: %f, y: %f", part->pose.position.x, part->pose.position.y); 
             part_info_ptr.reset(nullptr); 
+            // erase null pointer in database
+            m_parts_database[part->type].erase(std::remove(m_parts_database[part->type].begin(),
+                                                           m_parts_database[part->type].end(),
+                                                           nullptr)); 
+
+            ROS_INFO("Part %s left in database: %d", part->type.c_str(), int(m_parts_database[part->type].size())); 
             break; 
           }
         }
@@ -258,9 +269,15 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
         return true; 
       }
     }
+    ROS_INFO("No part get picked"); 
+    res.picked = false; 
+    return true; 
+  }
+  else {
+    ROS_INFO("No camera: %s", req.camera_id.c_str()); 
+    return false; 
   }
 
-  return false; 
 }
 
 bool SensorManager::get_part_position(ariac_group1::GetPartPosition::Request &req,
