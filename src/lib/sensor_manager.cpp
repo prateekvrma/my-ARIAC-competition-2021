@@ -12,6 +12,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_is_part_picked_service = m_nh.advertiseService("/sensor_manager/is_part_picked", &SensorManager::is_part_picked, this); 
   m_get_part_position_service = m_nh.advertiseService("/sensor_manager/get_part_position", &SensorManager::get_part_position, this); 
   m_check_quality_sensor_service = m_nh.advertiseService("/sensor_manager/check_quality_sensor", &SensorManager::check_quality_sensor, this); 
+  m_get_vacancy_pose_service = m_nh.advertiseService("/sensor_manager/get_vacancy_pose", &SensorManager::get_vacancy_pose, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -417,3 +418,21 @@ bool SensorManager::check_quality_sensor(ariac_group1::CheckQualitySensor::Reque
   }
   return true; 
 }
+
+bool SensorManager::get_vacancy_pose(ariac_group1::GetVacancyPose::Request &req,
+                                     ariac_group1::GetVacancyPose::Response &res)
+{
+  std::vector<std::string> test_bins{"bin1", "bin2", "bin5", "bin6"}; 
+  for (auto& bin_id: test_bins) {
+    bins_occupancy[bin_id].resize(4); 
+    for (int i=0; i<4; i++) {
+      if (not bins_occupancy[bin_id].at(i)) {
+        auto pose = Utility::location::get_pose_from_bin_location(bin_id, i); 
+        res.vacancy_poses.push_back(pose); 
+      }
+    }
+  }
+  return true; 
+}
+
+

@@ -539,8 +539,8 @@ namespace Utility
           double x = pose.position.x; 
           double y = pose.position.y; 
           // part location
-          //     1 2
-          //     3 4
+          //     0 1
+          //     2 3
           // conveyer belt
           if (x < center_x and y < center_y) {
               return 0;
@@ -555,6 +555,169 @@ namespace Utility
               return 3; 
           }
 
+      }
+
+      geometry_msgs::Pose get_pose_from_bin_location(const std::string& bin_id, int i) {
+          double x, y; 
+          double z = 0.75; 
+          if (bin_id == "bin1") {
+            if (i == 0) {
+                x = -1.998; 
+                y = 3.28; 
+            }
+            if (i == 1) {
+                x = -1.998; 
+                y = 3.48; 
+            }
+            if (i == 2) {
+                x = -1.799; 
+                y = 3.28; 
+            }
+            if (i == 3) {
+                x = -1.799; 
+                y = 3.48; 
+            }
+          }
+
+          if (bin_id == "bin2") {
+            if (i == 0) {
+                x = -1.998; 
+                y = 2.465; 
+            }
+            if (i == 1) {
+                x = -1.998; 
+                y = 2.665; 
+            }
+            if (i == 2) {
+                x = -1.799; 
+                y = 2.465; 
+            }
+            if (i == 3) {
+                x = -1.799; 
+                y = 2.665; 
+            }
+          }
+
+          if (bin_id == "bin4") {
+            if (i == 0) {
+                x = -2.75; 
+                y = 3.28; 
+            }
+            if (i == 1) {
+                x = -2.75; 
+                y = 3.48; 
+            }
+            if (i == 2) {
+                x = -2.55; 
+                y = 3.28; 
+            }
+            if (i == 3) {
+                x = -2.55; 
+                y = 3.48; 
+            }
+          }
+
+          if (bin_id == "bin3") {
+            if (i == 0) {
+                x = -2.75; 
+                y = 2.465; 
+            }
+            if (i == 1) {
+                x = -2.75; 
+                y = 2.665; 
+            }
+            if (i == 2) {
+                x = -2.55; 
+                y = 2.465; 
+            }
+            if (i == 3) {
+                x = -2.55; 
+                y = 2.665; 
+            }
+          }
+
+          if (bin_id == "bin6") {
+            if (i == 0) {
+                x = -1.998; 
+                y = -2.665; 
+            }
+            if (i == 1) {
+                x = -1.998; 
+                y = -2.465; 
+            }
+            if (i == 2) {
+                x = -1.799; 
+                y = -2.665; 
+            }
+            if (i == 3) {
+                x = -1.799; 
+                y = -2.465; 
+            }
+          }
+
+          if (bin_id == "bin5") {
+            if (i == 0) {
+                x = -1.998; 
+                y = -3.48; 
+            }
+            if (i == 1) {
+                x = -1.998; 
+                y = -3.28; 
+            }
+            if (i == 2) {
+                x = -1.799; 
+                y = -3.48; 
+            }
+            if (i == 3) {
+                x = -1.799; 
+                y = -3.28; 
+            }
+          }
+
+          if (bin_id == "bin7") {
+            if (i == 0) {
+                x = -2.75; 
+                y = -2.665; 
+            }
+            if (i == 1) {
+                x = -2.75; 
+                y = -2.465; 
+            }
+            if (i == 2) {
+                x = -2.55; 
+                y = -2.665; 
+            }
+            if (i == 3) {
+                x = -2.55; 
+                y = -2.465; 
+            }
+          }
+
+          if (bin_id == "bin8") {
+            if (i == 0) {
+                x = -2.75; 
+                y = -3.48; 
+            }
+            if (i == 1) {
+                x = -2.75; 
+                y = -3.28; 
+            }
+            if (i == 2) {
+                x = -2.55; 
+                y = -3.48; 
+            }
+            if (i == 3) {
+                x = -2.55; 
+                y = -3.28; 
+            }
+          }
+
+          geometry_msgs::Pose pose; 
+          pose.position.x = x; 
+          pose.position.y = y; 
+          pose.position.z = z; 
+
+          return pose; 
       }
   }
 
