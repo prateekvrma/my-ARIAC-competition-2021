@@ -89,6 +89,10 @@ void LogicalCamera::camera_to_world()
   
 }
 
+void LogicalCamera::update_parts()
+{
+  this->camera_to_world(); 
+}
 
 void LogicalCamera::update_parts(PartsDB& parts_database)
 {

@@ -59,6 +59,7 @@ class LogicalCamera: public Sensors {
      */
     int find_parts(const std::string& product_type); 
     void update_parts(PartsDB& parts_database); 
+    void update_parts(); 
 
     std::vector<std::unique_ptr<nist_gear::Model>> parts_world_frame; 
 

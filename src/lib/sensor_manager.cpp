@@ -14,6 +14,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_check_quality_sensor_service = m_nh.advertiseService("/sensor_manager/check_quality_sensor", &SensorManager::check_quality_sensor, this); 
   m_get_vacancy_pose_service = m_nh.advertiseService("/sensor_manager/get_vacancy_pose", &SensorManager::get_vacancy_pose, this); 
   m_is_belt_sensor_triggered_service = m_nh.advertiseService("/sensor_manager/is_belt_sensor_triggered", &SensorManager::is_belt_sensor_triggered, this); 
+  m_get_belt_part_service = m_nh.advertiseService("/sensor_manager/get_belt_part", &SensorManager::get_belt_part, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -27,6 +28,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   }
 
   m_belt_breakbeam = std::make_unique<BreakBeam>(nodehandle, m_belt_breakbeam_id);
+  m_belt_camera = std::make_unique<LogicalCamera>(nodehandle, m_belt_camera_id); 
 
   for (auto& bin_id: m_bins_id) {
     bins_occupancy[bin_id].resize(4); 
@@ -442,6 +444,11 @@ bool SensorManager::is_belt_sensor_triggered(std_srvs::Trigger::Request &req,
                                              std_srvs::Trigger::Response &res)
 {
     res.success = false; 
+    if (m_sensors_blackout) {
+        // assume not triggered
+        return true; 
+    }
+
     if (m_belt_breakbeam->is_triggered()) {
         res.success = true; 
         m_belt_breakbeam->reset_triggered(); 
@@ -450,3 +457,25 @@ bool SensorManager::is_belt_sensor_triggered(std_srvs::Trigger::Request &req,
     return true; 
 }
 
+bool SensorManager::get_belt_part(ariac_group1::GetBeltPart::Request &req,
+                                  ariac_group1::GetBeltPart::Response &res)
+{
+  ros::spinOnce(); 
+
+  if (m_sensors_blackout) {
+      // assume no part
+      return true; 
+  }
+
+  m_belt_camera->update_parts(); 
+  for (auto& part_ptr: m_belt_camera->parts_world_frame) {
+      if (part_ptr == nullptr) {
+          continue; 
+      }
+      res.part = *part_ptr; 
+      break; 
+  }
+
+  return true; 
+
+}

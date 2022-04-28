@@ -114,6 +114,8 @@ class KittingArm {
     ShipmentState check_shipment_state(ariac_group1::PartTask& part_task); 
     void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 
 
+    bool check_emergency_interrupt(); 
+
     void submit_shipment(const std::string& agv_id,
                          const std::string& shipment_type,
                          const std::string& station_id); 
@@ -142,6 +144,7 @@ class KittingArm {
     ros::ServiceClient m_get_part_position_client;  
     ros::ServiceClient m_check_quality_sensor_client;  
     ros::ServiceClient m_get_competition_time_client;   
+    ros::ServiceClient m_is_belt_sensor_triggered_client;   
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;

@@ -22,6 +22,7 @@
 #include <ariac_group1/GetPartPosition.h>
 #include <ariac_group1/CheckQualitySensor.h>
 #include <ariac_group1/GetCompetitionTime.h>
+#include <std_srvs/Trigger.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -81,7 +82,13 @@ KittingArm::KittingArm():
       m_nh.serviceClient<ariac_group1::GetCompetitionTime>("/factory_manager/get_competition_time"); 
   m_get_competition_time_client.waitForExistence();
 
+  m_is_belt_sensor_triggered_client = 
+      m_nh.serviceClient<std_srvs::Trigger>("/sensor_manager/is_belt_sensor_triggered"); 
+  m_is_belt_sensor_triggered_client.waitForExistence();
 
+
+
+    ros::ServiceClient m_;   
   // Preset locations
   // ^^^^^^^^^^^^^^^^
   // Joints for the arm are in this order:
@@ -581,7 +588,10 @@ bool KittingArm::pickPart(std::string part_type,
       ROS_INFO("---End pick part: IK not found for postgrasp"); 
       return false; 
     }
-    
+
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
 
     // pregrasp pose: right above the part
     auto pregrasp_pose = part_init_pose;
@@ -599,6 +609,11 @@ bool KittingArm::pickPart(std::string part_type,
     if (not this->moveTargetPose(pregrasp_pose)) {
       ROS_INFO("IK not found for grasp"); 
       deactivateGripper();
+      this->lift(); 
+      return false; 
+    }
+
+    if (this->check_emergency_interrupt()) {
       this->lift(); 
       return false; 
     }
@@ -637,6 +652,14 @@ bool KittingArm::pickPart(std::string part_type,
           return false; 
         }
 
+        if (count > 3) {
+          if (this->check_emergency_interrupt()) {
+              deactivateGripper();
+              this->lift(); 
+              return false; 
+          }
+        }
+
         if (count > 7) {
           this->lift(); 
           ROS_INFO("Hard to grasp. Move back to pregrasp pose"); 
@@ -646,6 +669,7 @@ bool KittingArm::pickPart(std::string part_type,
             this->lift(); 
             return false; 
           }
+
           grasp_pose = pregrasp_pose; 
           count = 0; 
           trial++; 
@@ -922,9 +946,19 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     // goToPresetLocation(camera_id);
     moveBaseTo(part_init_pose_in_world.position.y - 0.3);
 
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+
     if (pickPart(part_type, part_init_pose_in_world, camera_id)) {
         auto target_pose_in_world = placePart(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
         ros::Duration(1).sleep(); 
+
+        if (this->check_emergency_interrupt()) {
+          this->lift(); 
+          // place success, check faulty later
+          return true; 
+        }
 
         nist_gear::Model faulty_part; 
         faulty_part.type = part_type; 
@@ -953,13 +987,33 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     }
 }
 
+bool KittingArm::check_emergency_interrupt()
+{
+  ROS_INFO("Checking for emergency interrupt"); 
+  std_srvs::Trigger srv; 
+  
+  m_is_belt_sensor_triggered_client.call(srv); 
+
+  if (srv.response.success) {
+    ROS_INFO("Belt sensor triggered"); 
+    this->goToPresetLocation("home_face_belt");
+    ros::Duration(5.0).sleep(); 
+    this->resetArm(); 
+    return true; 
+  }
+
+  return false; 
+}
+
 bool KittingArm::get_order()
 {
   ros::Duration(1.0).sleep();
   ros::Rate wait_rate(20); 
+  this->check_emergency_interrupt();  
   // check if there are tasks and make sure ROS is running 
   while (m_part_task_queue.empty() && ros::ok()) {
     ROS_INFO_THROTTLE(3, "Waiting for part task.");
+    this->check_emergency_interrupt();  
     
     wait_rate.sleep(); 
   }
@@ -1026,7 +1080,7 @@ void KittingArm::execute()
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
     ROS_INFO("Part location: "); 
     Utility::print_part_pose(part_init_info.part); 
-     
+
     bool success = this->movePart(part_init_info, part_task); 
     if (success) {
       ROS_INFO("Move part success"); 

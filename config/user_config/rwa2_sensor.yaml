@@ -106,7 +106,7 @@ sensors:
   logical_camera_belt:
     type: logical_camera
     pose:
-      xyz: [-0.559490, 2.307264, 2]
+      xyz: [-0.559490, 0, 1.8]
       rpy: [3.141593, 1.570792, 0.000000]
 
   proximity_sensor_0:
