@@ -18,6 +18,7 @@
 #include <ariac_group1/GetPartPosition.h>
 #include <ariac_group1/CheckQualitySensor.h>
 #include <ariac_group1/GetVacancyPose.h>
+#include <std_srvs/Trigger.h>
 
 #include "sensors.h"
 #include "utility.h"
@@ -57,6 +58,9 @@ class SensorManager {
     bool get_vacancy_pose(ariac_group1::GetVacancyPose::Request &req,
                           ariac_group1::GetVacancyPose::Response &res); 
 
+    bool is_belt_sensor_triggered(std_srvs::Trigger::Request &req,
+                                  std_srvs::Trigger::Response &res); 
+
     std::string convert_id_to_internal(std::string global_id); 
  
     ros::ServiceServer m_get_parts_service; 
@@ -67,6 +71,7 @@ class SensorManager {
     ros::ServiceServer m_get_part_position_service;
     ros::ServiceServer m_check_quality_sensor_service;
     ros::ServiceServer m_get_vacancy_pose_service;
+    ros::ServiceServer m_is_belt_sensor_triggered_service;
 
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      // "as1_1", "as2_1", "as1_2", "as2_2",
@@ -89,6 +94,9 @@ class SensorManager {
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_logical_cameras_dict; 
 
     std::map<std::string, std::unique_ptr<LogicalCamera>> m_quality_sensors_dict; 
+
+    std::string m_belt_breakbeam_id = "breakbeam_0"; 
+    std::unique_ptr<BreakBeam> m_belt_breakbeam; 
 
     std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>> m_parts_database; 
 

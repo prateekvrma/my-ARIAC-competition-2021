@@ -161,6 +161,8 @@ class LaserProfiler: public Sensors {
 class BreakBeam: public Sensors {
   public:
     BreakBeam(ros::NodeHandle* nodehandle, const std::string& id); 
+    bool is_triggered(); 
+    void reset_triggered(); 
 
   private:
 
@@ -181,6 +183,8 @@ class BreakBeam: public Sensors {
 
     void sensor_change_callback(const nist_gear::Proximity::ConstPtr& msg); 
     ros::Subscriber m_sensor_change_subscriber; 
+
+    bool m_triggered = false; 
 }; 
 
 

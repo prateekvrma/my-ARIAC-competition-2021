@@ -13,6 +13,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_get_part_position_service = m_nh.advertiseService("/sensor_manager/get_part_position", &SensorManager::get_part_position, this); 
   m_check_quality_sensor_service = m_nh.advertiseService("/sensor_manager/check_quality_sensor", &SensorManager::check_quality_sensor, this); 
   m_get_vacancy_pose_service = m_nh.advertiseService("/sensor_manager/get_vacancy_pose", &SensorManager::get_vacancy_pose, this); 
+  m_is_belt_sensor_triggered_service = m_nh.advertiseService("/sensor_manager/is_belt_sensor_triggered", &SensorManager::is_belt_sensor_triggered, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -24,6 +25,8 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   for (auto& camera_id: m_quality_sensors) {
     m_quality_sensors_dict[camera_id] = std::make_unique<LogicalCamera>(nodehandle, camera_id); 
   }
+
+  m_belt_breakbeam = std::make_unique<BreakBeam>(nodehandle, m_belt_breakbeam_id);
 
   for (auto& bin_id: m_bins_id) {
     bins_occupancy[bin_id].resize(4); 
@@ -61,7 +64,7 @@ void SensorManager::update_parts()
     }
   }
 
-  this->print_bins_occupancy(); 
+  // this->print_bins_occupancy(); 
 
   if (m_sensors_blackout) {
       return; 
@@ -435,4 +438,15 @@ bool SensorManager::get_vacancy_pose(ariac_group1::GetVacancyPose::Request &req,
   return true; 
 }
 
+bool SensorManager::is_belt_sensor_triggered(std_srvs::Trigger::Request &req,
+                                             std_srvs::Trigger::Response &res)
+{
+    res.success = false; 
+    if (m_belt_breakbeam->is_triggered()) {
+        res.success = true; 
+        m_belt_breakbeam->reset_triggered(); 
+    }
+
+    return true; 
+}
 

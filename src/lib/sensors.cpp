@@ -240,17 +240,30 @@ BreakBeam::BreakBeam(ros::NodeHandle* nodehandle, const std::string& id):
 void BreakBeam::sensor_callback(const nist_gear::Proximity::ConstPtr& msg)
 {
   m_blackout = false; 
-  ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
-  if (msg->object_detected) {  // If there is an object in proximity.
-    ROS_INFO("%s triggered.", m_id.c_str());
-  }
+  // ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
+  // if (msg->object_detected) {  // If there is an object in proximity.
+  //   ROS_INFO("%s triggered.", m_id.c_str());
+  // }
 }
 
 void BreakBeam::sensor_change_callback(const nist_gear::Proximity::ConstPtr& msg)
 {
   m_blackout = false; 
-  ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
+  // ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
   if (msg->object_detected) {  // If there is an object in proximity.
     ROS_INFO("%s triggered.", (m_id + "_change").c_str());
+    m_triggered = true;
   }
 }
+
+bool BreakBeam::is_triggered()
+{
+    return m_triggered; 
+}
+
+void BreakBeam::reset_triggered()
+{
+    m_triggered = false; 
+}
+
+
