@@ -23,6 +23,8 @@
 #include <ariac_group1/CheckQualitySensor.h>
 #include <ariac_group1/GetCompetitionTime.h>
 #include <std_srvs/Trigger.h>
+#include <ariac_group1/GetBeltPart.h>
+#include <ariac_group1/GetBeltProximitySensor.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -86,9 +88,15 @@ KittingArm::KittingArm():
       m_nh.serviceClient<std_srvs::Trigger>("/sensor_manager/is_belt_sensor_triggered"); 
   m_is_belt_sensor_triggered_client.waitForExistence();
 
+  m_get_belt_part_client = 
+      m_nh.serviceClient<ariac_group1::GetBeltPart>("/sensor_manager/get_belt_part"); 
+  m_get_belt_part_client.waitForExistence();
+
+  m_get_belt_proximity_sensor_client = 
+      m_nh.serviceClient<ariac_group1::GetBeltProximitySensor>("/sensor_manager/get_belt_proximity_sensor"); 
+  m_get_belt_proximity_sensor_client.waitForExistence();
 
 
-    ros::ServiceClient m_;   
   // Preset locations
   // ^^^^^^^^^^^^^^^^
   // Joints for the arm are in this order:
@@ -123,6 +131,18 @@ KittingArm::KittingArm():
   // shoulder_pan_joint
   home_face_bins.joints_position.at(1) = -M_PI;
   home_face_bins.name = "home_face_bins";
+
+  location_belt_part.joints_position = default_pos;
+  location_belt_part.joints_position.at(0) = -3;
+  location_belt_part.name = "belt_part";
+
+  location_belt_intercept.joints_position = default_pos;
+  location_belt_intercept.joints_position.at(1) = -M_PI;
+  location_belt_intercept.joints_position.at(2) = -2;
+  location_belt_intercept.joints_position.at(3) = -2;
+  location_belt_intercept.joints_position.at(5) = 3.05;
+  location_belt_intercept.name = "belt_intercept";
+
 
   location_agv1.joints_position = home_face_bins.joints_position; 
   // linear actuator at y axis 
@@ -284,6 +304,14 @@ void KittingArm::goToPresetLocation(std::string location_name)
         location = location_bins1;
 
     }
+    else if (location_name.find("belt_part") != std::string::npos) {
+        ROS_INFO("Move to belt part"); 
+        location = location_belt_part;
+    }
+    else if (location_name.find("belt_intercept") != std::string::npos) {
+        ROS_INFO("Move to belt intercept"); 
+        location = location_belt_intercept;
+    }
 
     m_joint_group_positions.at(0) = location.joints_position.at(0);
     m_joint_group_positions.at(1) = location.joints_position.at(1);
@@ -311,7 +339,8 @@ bool KittingArm::move_arm_group()
     return success; 
 }
 
-void KittingArm::moveBaseTo(double linear_arm_actuator_joint_position) {
+void KittingArm::moveBaseTo(double linear_arm_actuator_joint_position)
+{
 
     this->copyCurrentJointsPosition(); 
     
@@ -323,7 +352,8 @@ void KittingArm::moveBaseTo(double linear_arm_actuator_joint_position) {
     this->move_arm_group(); 
 }
 
-void KittingArm::resetArm() {
+void KittingArm::resetArm()
+{
     this->copyCurrentJointsPosition(); 
     m_joint_group_positions.at(1) = -M_PI;
     m_joint_group_positions.at(2) = -1.25;
@@ -380,14 +410,14 @@ void KittingArm::setPickConstraints()
   moveit_msgs::Constraints constraints;
 
   moveit_msgs::JointConstraint joint_constraint; 
-  joint_constraint.joint_name = "shoulder_pan_joint"; 
-  joint_constraint.position = -M_PI;  
-  joint_constraint.tolerance_above = 1.2; 
-  joint_constraint.tolerance_below = 1.2; 
-  joint_constraint.weight = 1; 
-
-  constraints.joint_constraints.push_back(joint_constraint); 
-
+  // joint_constraint.joint_name = "shoulder_pan_joint"; 
+  // joint_constraint.position = -M_PI;  
+  // joint_constraint.tolerance_above = 1.2; 
+  // joint_constraint.tolerance_below = 1.2; 
+  // joint_constraint.weight = 1; 
+  //
+  // constraints.joint_constraints.push_back(joint_constraint); 
+  //
 
   joint_constraint.joint_name = "shoulder_lift_joint"; 
   joint_constraint.position = -1.25;  
@@ -465,10 +495,10 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
         auto joint_2 = target_joint_group_positions.at(2);  
         auto joint_3 = target_joint_group_positions.at(3);  
         auto joint_4 = target_joint_group_positions.at(4);  
-        if (joint_1 > 0) {
-            joint_1 = joint_1 - M_PI * 2; 
-        }
-
+        // if (joint_1 > 0) {
+        //     joint_1 = joint_1 - M_PI * 2; 
+        // }
+        //
         if (joint_2 > 0) {
             joint_2 = joint_2 - M_PI * 2; 
         }
@@ -481,11 +511,11 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
             joint_4 = joint_4 - M_PI * 2; 
         }
 
-        if (joint_1 > -1.94 or joint_1 < -4.34) {
-          ROS_INFO("Target joint 1 infisible: %f", target_joint_group_positions.at(2)); 
-          target_joints_infeasible = true; 
-        }
-
+        // if (joint_1 > -1.94 or joint_1 < -4.34) {
+        //   ROS_INFO("Target joint 1 infisible: %f", target_joint_group_positions.at(2)); 
+        //   target_joints_infeasible = true; 
+        // }
+        //
         if (joint_2 > -0.17 or joint_2 < -1.74) { 
           ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
           target_joints_infeasible = true; 
@@ -652,8 +682,9 @@ bool KittingArm::pickPart(std::string part_type,
           return false; 
         }
 
-        if (count > 3) {
+        if (count > 5) {
           if (this->check_emergency_interrupt()) {
+              ROS_INFO("Hard to grasp. "); 
               deactivateGripper();
               this->lift(); 
               return false; 
@@ -990,19 +1021,108 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
 bool KittingArm::check_emergency_interrupt()
 {
   ROS_INFO("Checking for emergency interrupt"); 
-  std_srvs::Trigger srv; 
+  ariac_group1::GetBeltProximitySensor srv; 
   
-  m_is_belt_sensor_triggered_client.call(srv); 
+  m_get_belt_proximity_sensor_client.call(srv); 
 
-  if (srv.response.success) {
+  if (srv.response.range > 0) {
     ROS_INFO("Belt sensor triggered"); 
-    this->goToPresetLocation("home_face_belt");
-    ros::Duration(5.0).sleep(); 
+    this->resetArm(); 
+    this->get_belt_part(srv.response.range); 
+    ros::Duration(3.0).sleep(); 
     this->resetArm(); 
     return true; 
   }
 
   return false; 
+}
+
+void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part)
+{
+    this->goToPresetLocation("belt_intercept"); 
+    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(2, 0, 1.57);
+    arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    arm_ee_link_pose.orientation.w = flat_orientation.getW();
+
+    arm_ee_link_pose.position.x = belt_part.position.x; 
+    arm_ee_link_pose.position.z = belt_part.position.z;
+
+    m_arm_group.setPoseTarget(arm_ee_link_pose); 
+    m_arm_group.move(); 
+
+    ros::Duration(5.0).sleep(); 
+}
+
+void KittingArm::get_belt_part(double range)
+{
+    // ariac_group1::GetBeltPart srv; 
+    // do {
+    //     m_get_belt_part_client.call(srv); 
+    //     ros::Duration(0.2).sleep(); 
+    //
+    // } while(srv.response.part.type.empty()); 
+    //
+    ROS_INFO("Get belt part"); 
+    // Utility::print_part_pose(srv.response.part); 
+    //
+
+    // geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    // auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    // arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    // arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    // arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    // arm_ee_link_pose.orientation.w = flat_orientation.getW();
+    //
+    // // preset z depending on the part type
+    // auto part_type = srv.response.part.type; 
+    // double z_pos{};
+    // if (part_type.find("pump") != std::string::npos) {
+    //     z_pos = 0.07;
+    // }
+    // if (part_type.find("sensor") != std::string::npos) {
+    //     z_pos = 0.05;
+    // }
+    // if (part_type.find("battery") != std::string::npos) {
+    //     z_pos = 0.052;
+    // }
+    // if (part_type.find("regulator") != std::string::npos) {
+    //     z_pos = 0.057;
+    // }
+
+    // pregrasp pose: right above the part
+    // auto pregrasp_pose = srv.response.part.pose;
+    // pregrasp_pose.orientation = arm_ee_link_pose.orientation;
+    // pregrasp_pose.position.y = srv.response.part.pose.position.y - 0.5;
+    // pregrasp_pose.position.z = srv.response.part.pose.position.z + z_pos;
+    //
+    // activate gripper
+    // sometimes it does not activate right away
+    // so we are doing this in a loop
+    while (!m_gripper_state.enabled) {
+        activateGripper();
+    }
+
+    geometry_msgs::Pose belt_part; 
+    belt_part.position.x = -0.7 + range; 
+    belt_part.position.z = 0.93; 
+
+    this->move_to_belt_intercept_pose(belt_part); 
+
+    while (!m_gripper_state.attached) {
+        ROS_INFO("Not attached"); 
+        moveBaseTo(m_current_joint_states.position.at(1) + 0.1); 
+        ros::Duration(0.2).sleep(); 
+    }
+
+    ROS_INFO("Attached!!!"); 
+
+    this->resetArm(); 
+    ros::Duration(5.0).sleep(); 
+
+    assert(false); 
 }
 
 bool KittingArm::get_order()

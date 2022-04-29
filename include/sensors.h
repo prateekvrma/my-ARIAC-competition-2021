@@ -123,6 +123,8 @@ class DepthCamera: public Sensors {
 class ProximitySensor: public Sensors {
   public:
     ProximitySensor(ros::NodeHandle* nodehandle, const std::string& id); 
+    double get_object_range(); 
+    void reset_object_range(); 
 
   private:
 
@@ -132,6 +134,8 @@ class ProximitySensor: public Sensors {
      * @Param msg
      */
     void sensor_callback(const sensor_msgs::Range::ConstPtr& msg); 
+
+    double m_object_range = 0.0; 
 }; 
 
 /**

@@ -206,11 +206,19 @@ ProximitySensor::ProximitySensor(ros::NodeHandle* nodehandle, const std::string&
 void ProximitySensor::sensor_callback(const sensor_msgs::Range::ConstPtr& msg)
 {
   m_blackout = false; 
-  ROS_INFO_THROTTLE(1, "Callback triggered for Topic %s", m_id.c_str());
   if ((msg->max_range - msg->range) > 0.01) {
-    // If there is an object in proximity.
-    ROS_INFO_THROTTLE(1, "%s: sensed object", m_id.c_str());
+      m_object_range = msg->range; 
   }
+}
+
+double ProximitySensor::get_object_range() 
+{
+    return m_object_range; 
+}
+
+void ProximitySensor::reset_object_range()
+{
+    m_object_range = 0; 
 }
 
 LaserProfiler::LaserProfiler(ros::NodeHandle* nodehandle, const std::string& id): 

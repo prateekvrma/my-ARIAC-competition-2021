@@ -97,7 +97,7 @@ models_over_bins:
         # num_models_y: 2
         #
 belt_models:
-  assembly_pump_red:
+  assembly_sensor_red:
     15.0:
       pose:
         xyz: [0.0, 4.3, 0.92]

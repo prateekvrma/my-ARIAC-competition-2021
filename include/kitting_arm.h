@@ -96,7 +96,8 @@ class KittingArm {
     void execute(); 
 
     //--preset locations;
-    ArmPresetLocation home_face_belt, home_face_bins,
+    ArmPresetLocation home_face_belt, home_face_bins, 
+                      location_belt_part, location_belt_intercept,
                       location_agv1, location_agv2, location_agv3, location_agv4,
                       location_bins0, location_bins1; 
 
@@ -115,6 +116,8 @@ class KittingArm {
     void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 
 
     bool check_emergency_interrupt(); 
+    void move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part); 
+    void get_belt_part(double range); 
 
     void submit_shipment(const std::string& agv_id,
                          const std::string& shipment_type,
@@ -145,6 +148,8 @@ class KittingArm {
     ros::ServiceClient m_check_quality_sensor_client;  
     ros::ServiceClient m_get_competition_time_client;   
     ros::ServiceClient m_is_belt_sensor_triggered_client;   
+    ros::ServiceClient m_get_belt_part_client; 
+    ros::ServiceClient m_get_belt_proximity_sensor_client;  
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;

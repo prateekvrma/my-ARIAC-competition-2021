@@ -15,6 +15,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_get_vacancy_pose_service = m_nh.advertiseService("/sensor_manager/get_vacancy_pose", &SensorManager::get_vacancy_pose, this); 
   m_is_belt_sensor_triggered_service = m_nh.advertiseService("/sensor_manager/is_belt_sensor_triggered", &SensorManager::is_belt_sensor_triggered, this); 
   m_get_belt_part_service = m_nh.advertiseService("/sensor_manager/get_belt_part", &SensorManager::get_belt_part, this); 
+  m_get_belt_proximity_sensor_service = m_nh.advertiseService("/sensor_manager/get_belt_proximity_sensor", &SensorManager::get_belt_proximity_sensor, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -29,6 +30,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
 
   m_belt_breakbeam = std::make_unique<BreakBeam>(nodehandle, m_belt_breakbeam_id);
   m_belt_camera = std::make_unique<LogicalCamera>(nodehandle, m_belt_camera_id); 
+  m_belt_proximity_sensor = std::make_unique<ProximitySensor>(nodehandle, m_belt_proximity_sensor_id); 
 
   for (auto& bin_id: m_bins_id) {
     bins_occupancy[bin_id].resize(4); 
@@ -478,4 +480,20 @@ bool SensorManager::get_belt_part(ariac_group1::GetBeltPart::Request &req,
 
   return true; 
 
+}
+
+bool SensorManager::get_belt_proximity_sensor(ariac_group1::GetBeltProximitySensor::Request &req,
+                                              ariac_group1::GetBeltProximitySensor::Response &res)
+{
+  ros::spinOnce(); 
+
+  if (m_sensors_blackout) {
+      // assume no part
+      return true; 
+  }
+
+  res.range = m_belt_proximity_sensor->get_object_range(); 
+  m_belt_proximity_sensor->reset_object_range(); 
+
+  return true; 
 }

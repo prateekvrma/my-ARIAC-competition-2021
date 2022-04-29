@@ -89,6 +89,7 @@ add_service_files(
   GetCompetitionTime.srv
   GetVacancyPose.srv
   GetBeltPart.srv
+  GetBeltProximitySensor.srv
 )
 
 
