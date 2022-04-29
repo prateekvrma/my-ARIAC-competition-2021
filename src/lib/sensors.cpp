@@ -208,6 +208,14 @@ void ProximitySensor::sensor_callback(const sensor_msgs::Range::ConstPtr& msg)
   m_blackout = false; 
   if ((msg->max_range - msg->range) > 0.01) {
       m_object_range = msg->range; 
+      m_last_detect_time = ros::Time::now(); 
+  }
+  if (m_object_range > 0) {
+      auto duration = ros::Time::now() - m_last_detect_time; 
+      if (duration.toSec() > 7) {
+          ROS_INFO("Object left belt picking point, reset"); 
+          m_object_range = 0;  
+      }
   }
 }
 

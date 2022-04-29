@@ -25,6 +25,7 @@
 #include <std_srvs/Trigger.h>
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
+#include <ariac_group1/GetVacancyPose.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -95,6 +96,10 @@ KittingArm::KittingArm():
   m_get_belt_proximity_sensor_client = 
       m_nh.serviceClient<ariac_group1::GetBeltProximitySensor>("/sensor_manager/get_belt_proximity_sensor"); 
   m_get_belt_proximity_sensor_client.waitForExistence();
+
+  m_get_vacancy_pose_client = 
+      m_nh.serviceClient<ariac_group1::GetVacancyPose>("/sensor_manager/get_vacancy_pose"); 
+  m_get_vacancy_pose_client.waitForExistence();
 
 
   // Preset locations
@@ -611,6 +616,10 @@ bool KittingArm::pickPart(std::string part_type,
     postgrasp_pose.orientation = arm_ee_link_pose.orientation;
     postgrasp_pose.position.z = part_init_pose.position.z + z_pos + 0.05;
 
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+
     // m_arm_group.setPoseTarget(postgrasp_pose);
     // m_arm_group.move();
     ROS_INFO("Move to postgrasp pose"); 
@@ -682,10 +691,11 @@ bool KittingArm::pickPart(std::string part_type,
           return false; 
         }
 
-        if (count > 5) {
+        if (count > 2) {
           if (this->check_emergency_interrupt()) {
               ROS_INFO("Hard to grasp. "); 
               deactivateGripper();
+              ros::Duration(0.3).sleep();
               this->lift(); 
               return false; 
           }
@@ -870,7 +880,7 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
       auto random_dist = gauss_dist(gen); 
       m_joint_group_positions.at(0) += random_dist; 
       this->moveBaseTo(m_joint_group_positions.at(0));
-      ros::Duration(3.0).sleep();
+      ros::Duration(0.1).sleep();
     }
     
     ros::Duration(1.0).sleep();
@@ -972,7 +982,11 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     auto part_type = part_init_info.part.type; 
     auto target_pose_in_frame = part_task.part.pose; 
     auto target_agv = part_task.agv_id; 
-    
+
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+
     // use -0.3 to reduce awkward pick trajectory
     // goToPresetLocation(camera_id);
     moveBaseTo(part_init_pose_in_world.position.y - 0.3);
@@ -1000,6 +1014,8 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
           ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
           bool discard_success = this->discard_faulty(faulty_part, target_agv); 
+          this->check_emergency_interrupt(); 
+
           if (discard_success) {
             // if discard success, move part fails
             return false; 
@@ -1021,20 +1037,34 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
 bool KittingArm::check_emergency_interrupt()
 {
   ROS_INFO("Checking for emergency interrupt"); 
-  ariac_group1::GetBeltProximitySensor srv; 
-  
-  m_get_belt_proximity_sensor_client.call(srv); 
+  ariac_group1::GetBeltProximitySensor belt_proximity_sensor_srv; 
 
-  if (srv.response.range > 0) {
-    ROS_INFO("Belt sensor triggered"); 
-    this->resetArm(); 
-    this->get_belt_part(srv.response.range); 
-    ros::Duration(3.0).sleep(); 
-    this->resetArm(); 
-    return true; 
+  bool interrupt = false; 
+
+  bool get_belt_part_available = false; 
+
+  do {
+    m_get_belt_proximity_sensor_client.call(belt_proximity_sensor_srv); 
+    auto range = belt_proximity_sensor_srv.response.range; 
+
+    ariac_group1::GetVacancyPose vacancy_pose_srv; 
+    m_get_vacancy_pose_client.call(vacancy_pose_srv); 
+    auto& vacancy_poses = vacancy_pose_srv.response.vacancy_poses;  
+
+    get_belt_part_available = range > 0 and not vacancy_poses.empty(); 
+    if (get_belt_part_available) {
+      ROS_INFO("Belt sensor triggered"); 
+      this->resetArm(); 
+      if (this->get_belt_part(range)) {
+          this->place_to_vacancy(vacancy_poses.at(0)); 
+      }
+      this->resetArm();
+      interrupt = true; 
+    }
   }
-
-  return false; 
+  while (get_belt_part_available);  
+     
+  return interrupt; 
 }
 
 void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part)
@@ -1052,11 +1082,9 @@ void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_par
 
     m_arm_group.setPoseTarget(arm_ee_link_pose); 
     m_arm_group.move(); 
-
-    ros::Duration(5.0).sleep(); 
 }
 
-void KittingArm::get_belt_part(double range)
+bool KittingArm::get_belt_part(double range)
 {
     // ariac_group1::GetBeltPart srv; 
     // do {
@@ -1106,23 +1134,52 @@ void KittingArm::get_belt_part(double range)
     }
 
     geometry_msgs::Pose belt_part; 
-    belt_part.position.x = -0.7 + range; 
+    belt_part.position.x = -0.68 + range; 
     belt_part.position.z = 0.93; 
 
     this->move_to_belt_intercept_pose(belt_part); 
 
+    int count = 0; 
     while (!m_gripper_state.attached) {
         ROS_INFO("Not attached"); 
-        moveBaseTo(m_current_joint_states.position.at(1) + 0.1); 
+        moveBaseTo(m_current_joint_states.position.at(1) + 0.3); 
         ros::Duration(0.2).sleep(); 
+        count++; 
+        if (m_current_joint_states.position.at(1) > 3) {
+            ROS_INFO("No belt part"); 
+            deactivateGripper();
+            return false; 
+        }
     }
 
     ROS_INFO("Attached!!!"); 
 
     this->resetArm(); 
-    ros::Duration(5.0).sleep(); 
+    ros::Duration(0.1).sleep(); 
+    return true; 
 
-    assert(false); 
+}
+
+void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose)
+{
+    ROS_INFO("Place to vacancy"); 
+    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(2, 0, 1.57);
+    arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    arm_ee_link_pose.orientation.w = flat_orientation.getW();
+
+    arm_ee_link_pose.position.x = vacancy_pose.position.x; 
+    arm_ee_link_pose.position.y = vacancy_pose.position.y; 
+    arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.1;
+
+    m_arm_group.setPoseTarget(arm_ee_link_pose); 
+    m_arm_group.move();
+    ros::Duration(0.1).sleep(); 
+    deactivateGripper();
+    ros::Duration(0.1).sleep(); 
+    this->lift(); 
 }
 
 bool KittingArm::get_order()

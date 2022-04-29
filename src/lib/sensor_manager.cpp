@@ -436,6 +436,8 @@ bool SensorManager::get_vacancy_pose(ariac_group1::GetVacancyPose::Request &req,
       if (not bins_occupancy[bin_id].at(i)) {
         auto pose = Utility::location::get_pose_from_bin_location(bin_id, i); 
         res.vacancy_poses.push_back(pose); 
+        bins_occupancy[bin_id].at(i) = true; 
+        return true; 
       }
     }
   }

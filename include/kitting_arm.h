@@ -117,7 +117,8 @@ class KittingArm {
 
     bool check_emergency_interrupt(); 
     void move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part); 
-    void get_belt_part(double range); 
+    bool get_belt_part(double range); 
+    void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose); 
 
     void submit_shipment(const std::string& agv_id,
                          const std::string& shipment_type,
@@ -150,6 +151,7 @@ class KittingArm {
     ros::ServiceClient m_is_belt_sensor_triggered_client;   
     ros::ServiceClient m_get_belt_part_client; 
     ros::ServiceClient m_get_belt_proximity_sensor_client;  
+    ros::ServiceClient m_get_vacancy_pose_client;  
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;

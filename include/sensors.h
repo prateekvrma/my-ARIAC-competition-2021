@@ -135,6 +135,7 @@ class ProximitySensor: public Sensors {
      */
     void sensor_callback(const sensor_msgs::Range::ConstPtr& msg); 
 
+    ros::Time m_last_detect_time; 
     double m_object_range = 0.0; 
 }; 
 
