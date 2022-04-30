@@ -89,6 +89,7 @@ class KittingArm {
     void arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg);
     void part_task_callback(const ariac_group1::PartTask::ConstPtr& msg); 
 
+    bool check_insufficient_shipment(int priority); 
     void clear_part_task(ariac_group1::PartTask& part_task, int& priority); 
     ShipmentState check_shipment_state(ariac_group1::PartTask& part_task); 
     void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 

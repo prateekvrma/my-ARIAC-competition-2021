@@ -1256,6 +1256,10 @@ void KittingArm::execute()
         }
         ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
         priority += Constants::PriorityWeight::Penalty::NO_PART;  
+        if (this->check_insufficient_shipment(priority)) {
+          ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
+          this->clear_part_task(part_task, priority); 
+        }
         return; 
       }
       idx++; 
@@ -1283,19 +1287,28 @@ void KittingArm::execute()
     ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
     priority += Constants::PriorityWeight::Penalty::NO_PART;  
     ROS_INFO("Priority decrease to %d", priority); 
-    if (priority < -6) {
-      ariac_group1::GetCompetitionTime get_comp_time_srv; 
-      m_get_competition_time_client.call(get_comp_time_srv); 
-      auto competition_time = get_comp_time_srv.response.competition_time;
-      if (competition_time > 25) {
-        ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-        this->clear_part_task(part_task, priority); 
-      }
+    
+    if (this->check_insufficient_shipment(priority)) {
+      ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
+      this->clear_part_task(part_task, priority); 
     }
      
     return; 
   }
 
+}
+
+bool KittingArm::check_insufficient_shipment(int priority)
+{
+  if (priority < -6) {
+    ariac_group1::GetCompetitionTime get_comp_time_srv; 
+    m_get_competition_time_client.call(get_comp_time_srv); 
+    auto competition_time = get_comp_time_srv.response.competition_time;
+    if (competition_time > 25) {
+      return true; 
+    }
+  }
+  return false; 
 }
 
 void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priority)
