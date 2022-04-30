@@ -33,7 +33,8 @@ KittingArm::KittingArm():
   m_nh{"/ariac/kitting"},
   m_planning_group{"/ariac/kitting/robot_description"},
   m_arm_options{"kitting_arm", m_planning_group, m_nh},
-  m_arm_group{m_arm_options} 
+  m_arm_group{m_arm_options}, 
+  m_shipments{&m_nh}
 {
   // publishers to directly control the joints without moveit
   m_arm_joint_trajectory_publisher =
@@ -49,8 +50,8 @@ KittingArm::KittingArm():
   m_gripper_state_subscriber = 
       m_nh.subscribe("/ariac/kitting/arm/gripper/state", 10, &KittingArm::gripper_state_callback, this);
 
-  m_part_task_subscriber =
-      m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
+  // m_part_task_subscriber =
+  //     m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
 
   // clients
   m_gripper_control_client =
@@ -223,25 +224,25 @@ void KittingArm::gripper_state_callback(const nist_gear::VacuumGripperState::Con
     m_gripper_state = *gripper_state_msg;
 }
 
-void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
-{
-  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-  // add tasks to task vector
-  m_part_task_queue.emplace_back(std::make_tuple(msg->priority * PriorityWeight::Ratio::HIGH_PRIORITY,
-                                                 std::make_unique<ariac_group1::PartTask>(*msg))); 
-  if (not m_shipments_total_parts.count(msg->shipment_type)) {
-    m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
-    ROS_INFO("Receive shipment %s including %d parts", msg->shipment_type.c_str(), msg->total_parts); 
-  }
-}
+// void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
+// {
+//   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+//   // add tasks to task vector
+//   m_part_task_queue.emplace_back(std::make_tuple(msg->priority * Constants::PriorityWeight::Ratio::HIGH_PRIORITY,
+//                                                  std::make_unique<ariac_group1::PartTask>(*msg))); 
+//   if (not m_shipments_total_parts.count(msg->shipment_type)) {
+//     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+//     ROS_INFO("Receive shipment %s including %d parts", msg->shipment_type.c_str(), msg->total_parts); 
+//   }
+// }
 
-void KittingArm::print_shipments_total_parts() {
-  ROS_INFO("Shipment total parts: "); 
-  for (auto& part_count: m_shipments_total_parts) {
-    ROS_INFO("  %s: %d", part_count.first.c_str(), part_count.second); 
-  }
-
-}
+// void KittingArm::print_shipments_total_parts() {
+//   ROS_INFO("Shipment total parts: "); 
+//   for (auto& part_count: m_shipments.shipment_record) {
+//     ROS_INFO("  %s: %d", part_count.first.c_str(), part_count.second); 
+//   }
+//
+// }
 
 nist_gear::VacuumGripperState KittingArm::getGripperState()
 {
@@ -653,7 +654,6 @@ bool KittingArm::pickPart(std::string part_type,
     }
 
     if (this->check_emergency_interrupt()) {
-      this->lift(); 
       return false; 
     }
 
@@ -693,10 +693,6 @@ bool KittingArm::pickPart(std::string part_type,
 
         if (count > 2) {
           if (this->check_emergency_interrupt()) {
-              ROS_INFO("Hard to grasp. "); 
-              deactivateGripper();
-              ros::Duration(0.3).sleep();
-              this->lift(); 
               return false; 
           }
         }
@@ -1000,7 +996,6 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         ros::Duration(1).sleep(); 
 
         if (this->check_emergency_interrupt()) {
-          this->lift(); 
           // place success, check faulty later
           return true; 
         }
@@ -1054,6 +1049,8 @@ bool KittingArm::check_emergency_interrupt()
     get_belt_part_available = range > 0 and not vacancy_poses.empty(); 
     if (get_belt_part_available) {
       ROS_INFO("Belt sensor triggered"); 
+      deactivateGripper();
+      ros::Duration(0.1).sleep(); 
       this->resetArm(); 
       if (this->get_belt_part(range)) {
           this->place_to_vacancy(vacancy_poses.at(0)); 
@@ -1063,6 +1060,10 @@ bool KittingArm::check_emergency_interrupt()
     }
   }
   while (get_belt_part_available);  
+
+  if (m_shipments.is_high_priority_alert()) {
+      interrupt = true; 
+  }
      
   return interrupt; 
 }
@@ -1134,7 +1135,7 @@ bool KittingArm::get_belt_part(double range)
     }
 
     geometry_msgs::Pose belt_part; 
-    belt_part.position.x = -0.68 + range; 
+    belt_part.position.x = -0.65 + range; 
     belt_part.position.z = 0.93; 
 
     this->move_to_belt_intercept_pose(belt_part); 
@@ -1171,7 +1172,7 @@ void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose)
     arm_ee_link_pose.orientation.w = flat_orientation.getW();
 
     arm_ee_link_pose.position.x = vacancy_pose.position.x; 
-    arm_ee_link_pose.position.y = vacancy_pose.position.y; 
+    arm_ee_link_pose.position.y = vacancy_pose.position.y - 0.05; 
     arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.1;
 
     m_arm_group.setPoseTarget(arm_ee_link_pose); 
@@ -1188,9 +1189,15 @@ bool KittingArm::get_order()
   ros::Rate wait_rate(20); 
   this->check_emergency_interrupt();  
   // check if there are tasks and make sure ROS is running 
-  while (m_part_task_queue.empty() && ros::ok()) {
+  while (ros::ok()) {
     ROS_INFO_THROTTLE(3, "Waiting for part task.");
     this->check_emergency_interrupt();  
+
+    m_shipments.update_part_task_queue(m_part_task_queue); 
+
+    if (not m_part_task_queue.empty()) {
+        break; 
+    }
     
     wait_rate.sleep(); 
   }
@@ -1216,6 +1223,7 @@ void KittingArm::execute()
   auto& part_task = *std::get<1>(part_task_info); 
 
   auto shipment_state = this->check_shipment_state(part_task); 
+  m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
   this->process_shipment_state(shipment_state, part_task, priority); 
   if (shipment_state != ShipmentState::NOT_READY) {
     return; 
@@ -1242,12 +1250,16 @@ void KittingArm::execute()
     // don't use part on ks unless necessary
     while (part_init_info.camera_id.find("ks") != std::string::npos) {
       if (idx >= (parts_info.size() - 1)) {
-        if (priority >= PriorityWeight::Level::HIGH) {
+        if (priority >= Constants::PriorityWeight::Level::HIGH) {
           ROS_INFO("High priority gets part from agv"); 
           break; 
         }
         ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
-        priority += PriorityWeight::Penalty::NO_PART;  
+        priority += Constants::PriorityWeight::Penalty::NO_PART;  
+        if (this->check_insufficient_shipment(priority)) {
+          ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
+          this->clear_part_task(part_task, priority); 
+        }
         return; 
       }
       idx++; 
@@ -1267,22 +1279,18 @@ void KittingArm::execute()
     }
     else {
       ROS_INFO("Move part fails"); 
-      priority += PriorityWeight::Penalty::MOVE_FAILS; 
+      priority += Constants::PriorityWeight::Penalty::MOVE_FAILS; 
       return; 
     }
   }
   else {
     ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
-    priority += PriorityWeight::Penalty::NO_PART;  
+    priority += Constants::PriorityWeight::Penalty::NO_PART;  
     ROS_INFO("Priority decrease to %d", priority); 
-    if (priority < -6) {
-      ariac_group1::GetCompetitionTime get_comp_time_srv; 
-      m_get_competition_time_client.call(get_comp_time_srv); 
-      auto competition_time = get_comp_time_srv.response.competition_time;
-      if (competition_time > 25) {
-        ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-        this->clear_part_task(part_task, priority); 
-      }
+    
+    if (this->check_insufficient_shipment(priority)) {
+      ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
+      this->clear_part_task(part_task, priority); 
     }
      
     return; 
@@ -1290,10 +1298,24 @@ void KittingArm::execute()
 
 }
 
+bool KittingArm::check_insufficient_shipment(int priority)
+{
+  if (priority < -6) {
+    ariac_group1::GetCompetitionTime get_comp_time_srv; 
+    m_get_competition_time_client.call(get_comp_time_srv); 
+    auto competition_time = get_comp_time_srv.response.competition_time;
+    if (competition_time > 25) {
+      return true; 
+    }
+  }
+  return false; 
+}
+
 void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priority)
 {
-  m_shipments_total_parts[part_task.shipment_type]--; 
-  ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(), m_shipments_total_parts[part_task.shipment_type]); 
+  m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+  ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(),
+                                           m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks); 
 
   auto shipment_state = this->check_shipment_state(part_task); 
   this->process_shipment_state(shipment_state, part_task, priority); 
@@ -1305,7 +1327,7 @@ void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priorit
 ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task)
 {
   // Check if shipment is ready to submit
-  if (m_shipments_total_parts[part_task.shipment_type] == 0) {
+  if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
     ariac_group1::CheckQualitySensor srv; 
     srv.request.agv_id = part_task.agv_id; 
     if (m_check_quality_sensor_client.call(srv)) {
@@ -1338,6 +1360,7 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
   if (shipment_state == ShipmentState::READY) {
     ros::Duration(1).sleep();
     this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+    m_shipments.shipments_record[part_task.shipment_type]->state = ShipmentState::FINISH; 
     m_part_task_queue.pop_back(); 
 
   }
@@ -1352,12 +1375,12 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
     part_task.part.pose = pose_in_tray_frame; 
     if (discard_success) {
       // ready to replace the discard part
-      m_shipments_total_parts[part_task.shipment_type]++; 
+      m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
     }
   }
   else if (shipment_state == ShipmentState::POSTPONE) {
 
-    priority += PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
+    priority += Constants::PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
 
   }
 }
