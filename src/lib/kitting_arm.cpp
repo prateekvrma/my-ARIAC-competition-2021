@@ -103,6 +103,10 @@ KittingArm::KittingArm():
   m_get_vacancy_pose_client.waitForExistence();
 
 
+  for (auto& id: m_agvs_id) {
+      m_agvs_dict[id] = std::make_unique<AGV>(&m_nh, id); 
+  }
+
   // Preset locations
   // ^^^^^^^^^^^^^^^^
   // Joints for the arm are in this order:
@@ -1365,7 +1369,9 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
 {
   if (shipment_state == ShipmentState::READY) {
     ros::Duration(1).sleep();
-    this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+
+    // this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+    m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
     m_shipments.shipments_record[part_task.shipment_type]->state = ShipmentState::FINISH; 
     m_part_task_queue.pop_back(); 
 
@@ -1391,33 +1397,33 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
   }
 }
 
-void KittingArm::submit_shipment(const std::string& agv_id, 
-                                 const std::string& shipment_type,  
-                                 const std::string& station_id)
-{
-  ROS_INFO("%s", shipment_type.c_str()); 
-  ROS_INFO("%s", station_id.c_str()); 
-
-  auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
-  auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
-
-  // check if the client exists
-  if (!client.exists()) {
-    ROS_INFO("Waiting for the competition to be ready...");
-    client.waitForExistence();
-    ROS_INFO("Competition is now ready.");
-  }
-
-  AGVToAssem srv; 
-  srv.request.assembly_station_name = station_id;  
-  srv.request.shipment_type = shipment_type; 
-  // call the service to allow AGV to submit kitting shipment
-  if (client.call(srv)) {
-    ROS_INFO("Calling service %s", service_name.c_str()); 
-    ROS_INFO("%s", srv.response.message.c_str()); 
-  }
-  else{
-    ROS_ERROR("Failed to call %s", service_name.c_str()); 
-  }
-
-}
+// void KittingArm::submit_shipment(const std::string& agv_id, 
+//                                  const std::string& shipment_type,  
+//                                  const std::string& station_id)
+// {
+//   ROS_INFO("%s", shipment_type.c_str()); 
+//   ROS_INFO("%s", station_id.c_str()); 
+//
+//   auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
+//   auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
+//
+//   // check if the client exists
+//   if (!client.exists()) {
+//     ROS_INFO("Waiting for the competition to be ready...");
+//     client.waitForExistence();
+//     ROS_INFO("Competition is now ready.");
+//   }
+//
+//   AGVToAssem srv; 
+//   srv.request.assembly_station_name = station_id;  
+//   srv.request.shipment_type = shipment_type; 
+//   // call the service to allow AGV to submit kitting shipment
+//   if (client.call(srv)) {
+//     ROS_INFO("Calling service %s", service_name.c_str()); 
+//     ROS_INFO("%s", srv.response.message.c_str()); 
+//   }
+//   else{
+//     ROS_ERROR("Failed to call %s", service_name.c_str()); 
+//   }
+//
+// }

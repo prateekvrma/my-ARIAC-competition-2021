@@ -154,7 +154,7 @@ add_library(utility_lib src/lib/utility.cpp)
 add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
-add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utility.cpp src/lib/shipments.cpp)
+add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utility.cpp src/lib/shipments.cpp src/lib/agv.cpp)
 add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
 add_library(orders_lib src/lib/orders.cpp)
 add_library(shipments_lib src/lib/shipments.cpp)
@@ -170,15 +170,6 @@ add_dependencies(sensor_manager_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(orders_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(shipments_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(factory_manager_lib ${catkin_EXPORTED_TARGETS})
-
-
-# Declare a C++ executable
-add_executable(${PROJECT_NAME}_agv_node src/nodes/agv_node.cpp)
-add_dependencies(${PROJECT_NAME}_agv_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_agv_node
-  agv_lib
-  ${catkin_LIBRARIES}
-)
 
 # add_executable(${PROJECT_NAME}_sensors_node src/nodes/sensors_node.cpp)
 # add_dependencies(${PROJECT_NAME}_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
