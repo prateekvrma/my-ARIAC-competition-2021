@@ -995,17 +995,17 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         auto target_pose_in_world = placePart(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
         ros::Duration(1).sleep(); 
 
-        if (this->check_emergency_interrupt()) {
-          // place success, check faulty later
-          return true; 
-        }
-
         nist_gear::Model faulty_part; 
         faulty_part.type = part_type; 
         faulty_part.pose = target_pose_in_world; 
 
         ROS_INFO("Check faulty"); 
         if (this->check_faulty(faulty_part)) {
+          if (this->check_emergency_interrupt()) {
+              // do emergency first, discard later
+              return true; 
+          }
+
           ROS_INFO("Found faulty part:"); 
           Utility::print_part_pose(faulty_part); 
           bool discard_success = this->discard_faulty(faulty_part, target_agv); 
@@ -1038,6 +1038,8 @@ bool KittingArm::check_emergency_interrupt()
 
   bool get_belt_part_available = false; 
 
+  int count = 0; 
+
   do {
     m_get_belt_proximity_sensor_client.call(belt_proximity_sensor_srv); 
     auto range = belt_proximity_sensor_srv.response.range; 
@@ -1058,8 +1060,9 @@ bool KittingArm::check_emergency_interrupt()
       this->resetArm();
       interrupt = true; 
     }
+    count++; 
   }
-  while (get_belt_part_available);  
+  while (get_belt_part_available or count < 3);  
 
   if (m_shipments.is_high_priority_alert()) {
       interrupt = true; 
@@ -1136,10 +1139,12 @@ bool KittingArm::get_belt_part(double range)
 
     geometry_msgs::Pose belt_part; 
     belt_part.position.x = -0.65 + range; 
-    belt_part.position.z = 0.93; 
+    // belt_part.position.z = 0.93; 
+    belt_part.position.z = 0.945; 
 
     this->move_to_belt_intercept_pose(belt_part); 
 
+    m_arm_group.setMaxVelocityScalingFactor(0.6);
     int count = 0; 
     while (!m_gripper_state.attached) {
         ROS_INFO("Not attached"); 
@@ -1155,6 +1160,7 @@ bool KittingArm::get_belt_part(double range)
 
     ROS_INFO("Attached!!!"); 
 
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
     this->resetArm(); 
     ros::Duration(0.1).sleep(); 
     return true; 
@@ -1173,7 +1179,7 @@ void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose)
 
     arm_ee_link_pose.position.x = vacancy_pose.position.x; 
     arm_ee_link_pose.position.y = vacancy_pose.position.y - 0.05; 
-    arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.1;
+    arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.2;
 
     m_arm_group.setPoseTarget(arm_ee_link_pose); 
     m_arm_group.move();
