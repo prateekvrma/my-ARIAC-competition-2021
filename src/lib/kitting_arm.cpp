@@ -653,7 +653,6 @@ bool KittingArm::pickPart(std::string part_type,
     }
 
     if (this->check_emergency_interrupt()) {
-      this->lift(); 
       return false; 
     }
 
@@ -693,10 +692,6 @@ bool KittingArm::pickPart(std::string part_type,
 
         if (count > 2) {
           if (this->check_emergency_interrupt()) {
-              ROS_INFO("Hard to grasp. "); 
-              deactivateGripper();
-              ros::Duration(0.3).sleep();
-              this->lift(); 
               return false; 
           }
         }
@@ -1000,7 +995,6 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         ros::Duration(1).sleep(); 
 
         if (this->check_emergency_interrupt()) {
-          this->lift(); 
           // place success, check faulty later
           return true; 
         }
@@ -1054,6 +1048,8 @@ bool KittingArm::check_emergency_interrupt()
     get_belt_part_available = range > 0 and not vacancy_poses.empty(); 
     if (get_belt_part_available) {
       ROS_INFO("Belt sensor triggered"); 
+      deactivateGripper();
+      ros::Duration(0.1).sleep(); 
       this->resetArm(); 
       if (this->get_belt_part(range)) {
           this->place_to_vacancy(vacancy_poses.at(0)); 
@@ -1134,7 +1130,7 @@ bool KittingArm::get_belt_part(double range)
     }
 
     geometry_msgs::Pose belt_part; 
-    belt_part.position.x = -0.68 + range; 
+    belt_part.position.x = -0.65 + range; 
     belt_part.position.z = 0.93; 
 
     this->move_to_belt_intercept_pose(belt_part); 
@@ -1171,7 +1167,7 @@ void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose)
     arm_ee_link_pose.orientation.w = flat_orientation.getW();
 
     arm_ee_link_pose.position.x = vacancy_pose.position.x; 
-    arm_ee_link_pose.position.y = vacancy_pose.position.y; 
+    arm_ee_link_pose.position.y = vacancy_pose.position.y - 0.05; 
     arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.1;
 
     m_arm_group.setPoseTarget(arm_ee_link_pose); 
