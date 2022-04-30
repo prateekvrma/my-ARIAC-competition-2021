@@ -28,35 +28,13 @@
 
 // custom
 #include "utility.h"
-
-enum class ShipmentState{NOT_READY, READY, HAS_FAULTY, POSTPONE}; 
+#include "shipments.h"
+#include "constants.h"
 
 struct ArmPresetLocation {
       std::vector<double> joints_position;  //9 joints
       std::string name;
 };
-
-namespace PriorityWeight {
-  namespace Ratio {
-    int HIGH_PRIORITY = 10; 
-  }
-
-  namespace Penalty {
-    int NO_PART = -3;   
-    int MOVE_FAILS = -1; 
-    int SHIPMENT_POSTPONE = -1; 
-  }
-
-  namespace Reward {
-    int SHIPMENT_READY = 1; 
-  }
-
-  namespace Level {
-    int EMERGENCY = 10; 
-    int HIGH = 5; 
-    int LOW = 2; 
-  }
-}
 
 class KittingArm {
   public: 
@@ -163,9 +141,10 @@ class KittingArm {
     ros::Subscriber m_part_task_subscriber;  
 
     
+    Shipments m_shipments; 
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
 
-    std::map<std::string, int> m_shipments_total_parts; 
+    // std::map<std::string, int> m_shipments_total_parts; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

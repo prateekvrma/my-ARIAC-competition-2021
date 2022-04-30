@@ -154,9 +154,10 @@ add_library(utility_lib src/lib/utility.cpp)
 add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
-add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utility.cpp)
+add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utility.cpp src/lib/shipments.cpp)
 add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
 add_library(orders_lib src/lib/orders.cpp)
+add_library(shipments_lib src/lib/shipments.cpp)
 add_library(factory_manager_lib src/lib/factory_manager.cpp src/lib/orders.cpp) 
 
 
@@ -167,6 +168,7 @@ add_dependencies(agv_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(kitting_arm_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(sensor_manager_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(orders_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(shipments_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(factory_manager_lib ${catkin_EXPORTED_TARGETS})
 
 
