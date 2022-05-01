@@ -28,6 +28,8 @@ namespace Utility
   namespace motioncontrol {
     geometry_msgs::Pose transformToWorldFrame(const geometry_msgs::Pose& target,std::string agv);
     geometry_msgs::Pose transformToWorldFrame(std::string part_in_camera_frame);
+    geometry_msgs::Pose transformBriefcaseToWorldFrame(const geometry_msgs::Pose& target, std::string station); 
+
     geometry_msgs::Pose transformToTrayFrame(const geometry_msgs::Pose& target,std::string agv); 
     std::array<double, 3> eulerFromQuaternion(const geometry_msgs::Pose& pose);
     std::array<double, 3> eulerFromQuaternion(double x, double y, double z, double w);

@@ -16,6 +16,7 @@
 #include <random>
 
 #include <nist_gear/AGVToAssemblyStation.h>
+#include <nist_gear/AssemblyStationSubmitShipment.h>
 #include <ariac_group1/IsFaulty.h>
 #include <ariac_group1/PartsInCamera.h>
 #include <ariac_group1/IsPartPicked.h>
@@ -27,7 +28,9 @@
 #include <ariac_group1/GetBeltProximitySensor.h>
 #include <ariac_group1/GetVacancyPose.h>
 
+
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
+using AssemSubmit = nist_gear::AssemblyStationSubmitShipment; 
 
 GantryArm::GantryArm():
   m_nh{"/ariac/gantry"},
@@ -106,6 +109,9 @@ GantryArm::GantryArm():
       m_nh.serviceClient<ariac_group1::GetVacancyPose>("/sensor_manager/get_vacancy_pose"); 
   m_get_vacancy_pose_client.waitForExistence();
 
+  m_parts_under_camera_client = 
+      m_nh.serviceClient<ariac_group1::PartsUnderCamera>("/sensor_manager/parts_under_camera"); 
+  m_parts_under_camera_client.waitForExistence();
 
   for (auto& id: m_agvs_id) {
       m_agvs_dict[id] = std::make_unique<AGV>(&m_nh, id); 
@@ -395,7 +401,7 @@ void GantryArm::goToPresetLocation(std::string location_name)
         location = at_as3;
     }
 
-    else if (location_name.compare("at_agv4_at_as3") == 0) {
+    else if (location_name.compare("as3_4") == 0) {
         ROS_INFO("Moving to at_agv4_at_as3"); 
         location = at_agv4_at_as3;
     }
@@ -405,7 +411,7 @@ void GantryArm::goToPresetLocation(std::string location_name)
         location = at_as1;
     }
 
-    else if (location_name.compare("at_agv2_at_as1") == 0) {
+    else if (location_name.compare("as1_2") == 0) {
         ROS_INFO("Moving to at_agv2_at_as1"); 
         location = at_agv2_at_as1;
     }
@@ -451,11 +457,11 @@ void GantryArm::moveBaseTo(double linear_arm_actuator_joint_position)
     this->copyCurrentJointsPosition(); 
     
     // next, assign a value to only the linear_arm_actuator_joint
-    m_joint_group_positions.at(0) = linear_arm_actuator_joint_position;
+    m_joint_group_positions.at(1) = linear_arm_actuator_joint_position;
 
     // move the arm
-    m_gantry_group.setJointValueTarget(m_joint_group_positions);
-    this->move_arm_group(); 
+    m_full_gantry_group.setJointValueTarget(m_joint_group_positions);
+    m_full_gantry_group.move();
 }
 
 void GantryArm::resetArm()
@@ -651,195 +657,52 @@ bool GantryArm::pickPart(std::string part_type,
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
     arm_ee_link_pose.orientation.z = flat_orientation.getZ();
     arm_ee_link_pose.orientation.w = flat_orientation.getW();
-    
+
+    arm_ee_link_pose.position.x = part_init_pose.position.x; 
+    arm_ee_link_pose.position.y = part_init_pose.position.y; 
+
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.075;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.0052;
-        }
-    }
-    if (part_type.find("sensor") != std::string::npos) {
-        z_pos = 0.05;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
+        z_pos = 0.083;
     }
     if (part_type.find("battery") != std::string::npos) {
         z_pos = 0.052;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
-    }
-    if (part_type.find("regulator") != std::string::npos) {
-        z_pos = 0.057;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
     }
 
-    
+    arm_ee_link_pose.position.z = part_init_pose.position.z + z_pos;
 
-    // post-grasp pose 
-    // store the pose of the arm before it goes down to pick the part
-    // we will bring the arm back to this pose after picking up the part
-    auto postgrasp_pose = part_init_pose;
-    postgrasp_pose.orientation = arm_ee_link_pose.orientation;
-    postgrasp_pose.position.z = part_init_pose.position.z + z_pos + 0.05;
-
-    if (this->check_emergency_interrupt()) {
-        return false; 
-    }
-
-    // m_gantry_group.setPoseTarget(postgrasp_pose);
-    // m_gantry_group.move();
-    ROS_INFO("Move to postgrasp pose"); 
-    if (not this->moveTargetPose(postgrasp_pose)) {
-      ROS_INFO("---End pick part: IK not found for postgrasp"); 
-      return false; 
-    }
-
-    if (this->check_emergency_interrupt()) {
-        return false; 
-    }
-
-    // pregrasp pose: right above the part
-    auto pregrasp_pose = part_init_pose;
-    pregrasp_pose.orientation = arm_ee_link_pose.orientation;
-    pregrasp_pose.position.z = part_init_pose.position.z + z_pos;
-
-    // activate gripper
-    // sometimes it does not activate right away
-    // so we are doing this in a loop
     while (!m_gripper_state.enabled) {
         activateGripper();
     }
+    m_gantry_group.setPoseTarget(arm_ee_link_pose); 
+    m_gantry_group.move();
 
-    ROS_INFO("Move to pregrasp pose"); 
-    if (not this->moveTargetPose(pregrasp_pose)) {
-      ROS_INFO("IK not found for grasp"); 
-      deactivateGripper();
-      this->lift(); 
-      return false; 
-    }
-
-    if (this->check_emergency_interrupt()) {
-      return false; 
-    }
-
-    ros::Duration(0.5).sleep();
-    
-    m_gantry_group.setMaxVelocityScalingFactor(0.5);
-    auto grasp_pose = pregrasp_pose; 
-    // this->setPickConstraints(); 
-    ROS_INFO("Start grasping"); 
-    // move the arm 1 mm down until the part is attached
-    int count = 0; 
-    int trial = 0; 
+    auto grasp_pose = arm_ee_link_pose; 
     double step = 0.001;
     while (!m_gripper_state.attached) {
         grasp_pose.position.z -= step;
         m_gantry_group.setPoseTarget(grasp_pose);
         m_gantry_group.move();
-        count++; 
         ros::Duration(0.3).sleep();
-        // if (step > 0.0008) {
-          // step -= 0.0001; 
-        // }
-        geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
-        if (arm_ee_link_pose.position.z < 0.76) {
-          ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
-          this->resetArm(); 
-          deactivateGripper();
-          return false; 
-        }
-
-        if (trial > 3) {
-          ROS_INFO("Hard to grasp. Abort"); 
-          this->resetArm(); 
-          deactivateGripper();
-          return false; 
-        }
-
-        if (count > 2) {
-          if (this->check_emergency_interrupt()) {
-              return false; 
-          }
-        }
-
-        if (count > 7) {
-          this->lift(); 
-          ROS_INFO("Hard to grasp. Move back to pregrasp pose"); 
-          if (not this->moveTargetPose(pregrasp_pose)) {
-            ROS_INFO("IK not found for grasp"); 
-            deactivateGripper();
-            this->lift(); 
-            return false; 
-          }
-
-          grasp_pose = pregrasp_pose; 
-          count = 0; 
-          trial++; 
-        }
     }
-    // m_gantry_group.clearPathConstraints();
+    ROS_INFO("grasp success"); 
     
-    m_gantry_group.setMaxVelocityScalingFactor(1.0);
-    m_gantry_group.setMaxAccelerationScalingFactor(1.0);
-    ROS_INFO_STREAM("[Gripper] = object attached");
-    ros::Duration(0.5).sleep();
-
-    ROS_INFO("Move back to postgrasp pose"); 
-    if (not this->moveTargetPose(postgrasp_pose)) {
-      ROS_INFO("---End pick part: IK not found for postgrasp"); 
-      this->lift(); 
-      return false; 
-    }
-    // m_gantry_group.setPoseTarget(postgrasp_pose);
-    // m_gantry_group.move();
-    ros::Duration(0.5).sleep();
-
-    this->lift(); 
-
-    ariac_group1::IsPartPicked srv; 
-    srv.request.camera_id = camera_id; 
-    srv.request.part.type = part_type; 
-    srv.request.part.pose = part_init_pose; 
-    if (m_is_part_picked_client.call(srv)) {
-      if (srv.response.picked) {
-        ROS_INFO("---End pick part: pick success"); 
-        return true; 
-      }
-      else {
-        ROS_INFO("---End pick part: pick fails"); 
-        deactivateGripper();
-        return false; 
-      }
-    } 
-    else {
-      ROS_INFO("---End pick part: no such camera: %s", camera_id.c_str()); 
-      deactivateGripper();
-      return false; 
-    }
 }
 
 geometry_msgs::Pose GantryArm::placePart(std::string part_type, 
                                           geometry_msgs::Pose part_init_pose, 
                                           geometry_msgs::Pose part_pose_in_frame, 
-                                          std::string agv)
+                                          std::string station)
 {
-    goToPresetLocation(agv);
 
     // get the target pose of the part in the world frame
-    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+    auto target_pose_in_world = Utility::motioncontrol::transformBriefcaseToWorldFrame(
          part_pose_in_frame,
-         agv);
+         station);
 
     ROS_INFO("---Start place part"); 
     Utility::print_pose(target_pose_in_world); 
-
-   
 
     geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
     auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
@@ -866,24 +729,6 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     arm_ee_link_pose.position.y = target_pose_in_world.position.y;
     // move the arm
     m_gantry_group.setMaxVelocityScalingFactor(0.8);
-
-    ROS_INFO("Move to place pose above"); 
-    while (not this->moveTargetPose(arm_ee_link_pose)) {
-      ROS_INFO("IK not found for place pose above"); 
-      goToPresetLocation(agv);
-
-      std::random_device rd; 
-      std::mt19937 gen(rd());
-      std::normal_distribution<double> gauss_dist(-0.1, 0.1); 
-      auto random_dist = gauss_dist(gen); 
-      m_joint_group_positions.at(0) += random_dist; 
-      this->moveBaseTo(m_joint_group_positions.at(0));
-      ros::Duration(3.0).sleep();
-    }
-
-    // m_gantry_group.setPoseTarget(arm_ee_link_pose);
-    // m_gantry_group.move();
-
   
     // orientation of the part in the bin, in world frame
     tf2::Quaternion q_init_part(
@@ -906,13 +751,11 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     tf2::Quaternion q_rslt = q_rot * q_current;
     q_rslt.normalize();
 
-    double z_margin{};
-    if (part_type.find("pump") != std::string::npos) {
-        z_margin = 0.14;
+    double y_margin{};
+    if (part_type.find("battery") != std::string::npos) {
+        y_margin = -0.25;
     }
-    else {
-      z_margin = 0.11; 
-    }
+    double z_margin = 0.1;
 
     // else if (part_type.find("regulator") != std::string::npos) {
       // z_margin = 0.11; 
@@ -923,42 +766,42 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
+
+    target_pose_in_world.position.y += y_margin;
     target_pose_in_world.position.z += z_margin;
 
-    // auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
-    // auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(target_rpy.at(0), target_rpy.at(1), target_rpy.at(2));
+    m_gantry_group.setPoseTarget(target_pose_in_world); 
+    m_gantry_group.move();
 
-    // target_pose_in_world.orientation.x = q_target_pose_flat.x();
-    // target_pose_in_world.orientation.y = q_target_pose_flat.y();
-    // target_pose_in_world.orientation.z = q_target_pose_flat.z();
-    // target_pose_in_world.orientation.w = q_target_pose_flat.w();
-
-    // m_gantry_group.setMaxVelocityScalingFactor(0.1);
-    // m_gantry_group.setPoseTarget(target_pose_in_world);
-    // m_gantry_group.move();
-    ROS_INFO("Move to place pose"); 
-    while (not this->moveTargetPose(target_pose_in_world)) {
-      ROS_INFO("IK not found for place"); 
-      goToPresetLocation(agv);
-
-      std::random_device rd; 
-      std::mt19937 gen(rd());
-      std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
-      auto random_dist = gauss_dist(gen); 
-      m_joint_group_positions.at(0) += random_dist; 
-      this->moveBaseTo(m_joint_group_positions.at(0));
-      ros::Duration(0.1).sleep();
+    if (part_type.find("battery") != std::string::npos) {
+        ROS_INFO("move for battery"); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(1) = m_current_joint_states.position.at(10) - 0.25; 
+        six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+        m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+        m_torso_gantry_group.move(); 
     }
-    
+
     ros::Duration(1.0).sleep();
     deactivateGripper();
 
+    if (part_type.find("battery") != std::string::npos) {
+        ROS_INFO("move for battery"); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(1) = m_current_joint_states.position.at(10) + 0.25; 
+        six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+        m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+        m_torso_gantry_group.move(); 
+        m_gantry_group.setJointValueTarget(six.gantry_arm); 
+        m_gantry_group.move(); 
+    }
+
     m_gantry_group.setMaxVelocityScalingFactor(1.0);
-    this->lift(); 
     ROS_INFO("---End place part"); 
 
     return target_pose_in_world;
 }
+
 bool GantryArm::discard_faulty(const nist_gear::Model& faulty_part, std::string target_agv)
 {
       std::string camera_id; 
@@ -1272,11 +1115,11 @@ bool GantryArm::get_order()
 {
   ros::Duration(1.0).sleep();
   ros::Rate wait_rate(20); 
-  this->check_emergency_interrupt();  
+  // this->check_emergency_interrupt();  
   // check if there are tasks and make sure ROS is running 
   while (ros::ok()) {
-    ROS_INFO_THROTTLE(3, "Waiting for part task.");
-    this->check_emergency_interrupt();  
+    ROS_INFO_THROTTLE(3, "Waiting for gantry part task.");
+    // this->check_emergency_interrupt();  
 
     m_shipments.update_part_task_queue(m_part_task_queue); 
 
@@ -1306,82 +1149,66 @@ void GantryArm::execute()
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
-
-  nist_gear::Model wrong_part; 
-  auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
-  m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
-  this->process_shipment_state(shipment_state, part_task, priority, wrong_part); 
-  if (shipment_state != ShipmentState::NOT_READY) {
-    return; 
-  }
-
+  
   ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
   ROS_INFO("Priority: %d", priority); 
   ROS_INFO("AGV: %s", part_task.agv_id.c_str()); 
   ROS_INFO("Station id: %s", part_task.station_id.c_str()); 
   ROS_INFO("Part type: %s", part_task.part.type.c_str()); 
-  // ros::Duration(30.0).sleep();
-  //
-  ariac_group1::GetParts get_parts_srv; 
-  get_parts_srv.request.type = part_task.part.type; 
+  // // ros::Duration(30.0).sleep();
+  // //
+  std::string camera_id = part_task.station_id; 
+  camera_id += "_"; 
+  camera_id += part_task.agv_id.back(); 
 
-  m_get_parts_client.call(get_parts_srv); 
+  ROS_INFO("camera_id: %s", camera_id.c_str()); 
 
-  auto& parts_info = get_parts_srv.response.parts_info; 
 
-  if (not parts_info.empty()) {
-    auto part_init_info = parts_info[0]; 
-    int idx = 0; 
+  ariac_group1::PartsUnderCamera parts_under_camera_srv; 
+  parts_under_camera_srv.request.camera_id = camera_id; 
+  m_parts_under_camera_client.call(parts_under_camera_srv); 
 
-    // don't use part on ks unless necessary
-    while (part_init_info.camera_id.find("ks") != std::string::npos) {
-      if (idx >= (parts_info.size() - 1)) {
-        if (priority >= Constants::PriorityWeight::Level::HIGH) {
-          ROS_INFO("High priority gets part from agv"); 
-          break; 
-        }
-        ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
-        priority += Constants::PriorityWeight::Penalty::NO_PART;  
-        if (this->check_insufficient_shipment(priority)) {
-          ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-          this->clear_part_task(part_task, priority); 
-        }
-        return; 
+  auto& parts = parts_under_camera_srv.response.parts; 
+  ROS_INFO("Parts: %d", (int)parts.size()); 
+  if (parts.size() == 0) {
+      return; 
+  }
+
+  nist_gear::Model target_part; 
+  for (auto& part: parts) {
+      if (part_task.part.type == part.type) {
+        target_part = part;  
+        break; 
       }
-      idx++; 
-      part_init_info = parts_info[idx]; 
-    }
-
-    ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
-    ROS_INFO("Part location: "); 
-    Utility::print_part_pose(part_init_info.part); 
-
-    bool success = this->movePart(part_init_info, part_task); 
-    if (success) {
-      ROS_INFO("Move part success"); 
-      this->clear_part_task(part_task, priority); 
-      return; 
-
-    }
-    else {
-      ROS_INFO("Move part fails"); 
-      priority += Constants::PriorityWeight::Penalty::MOVE_FAILS; 
-      return; 
-    }
-  }
-  else {
-    ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
-    priority += Constants::PriorityWeight::Penalty::NO_PART;  
-    ROS_INFO("Priority decrease to %d", priority); 
-    
-    if (this->check_insufficient_shipment(priority)) {
-      ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-      this->clear_part_task(part_task, priority); 
-    }
-     
-    return; 
   }
 
+  Utility::print_part_pose(target_part); 
+
+  this->goToPresetLocation(camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->pickPart(target_part.type, target_part.pose, camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation(camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation("at_" + part_task.station_id); 
+
+  this->placePart(target_part.type, target_part.pose, part_task.part.pose, part_task.station_id); 
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation("at_" + part_task.station_id); 
+  m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+
+  if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+    m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
+  }
+
+  m_part_task_queue.pop_back();
 }
 
 bool GantryArm::check_insufficient_shipment(int priority)
@@ -1547,4 +1374,29 @@ void GantryArm::process_shipment_state(ShipmentState shipment_state, ariac_group
         break; 
   }
   
+}
+
+void GantryArm::submit_shipment(const std::string& shipment_type, const std::string& station_id)
+{  
+
+  auto service_name = "/ariac/" + station_id + "/submit_shipment"; 
+  static auto client = m_nh.serviceClient<AssemSubmit>(service_name); 
+
+  if (!client.exists()) {
+    ROS_INFO("Waiting for the competition to be ready...");
+    client.waitForExistence();
+    ROS_INFO("Competition is now ready.");
+  }
+
+  AssemSubmit srv; 
+  srv.request.shipment_type = shipment_type; 
+
+  if (client.call(srv)) {
+    ROS_INFO("Calling service %s", service_name.c_str()); 
+    ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+  }
+  else{
+    ROS_ERROR("Failed to call %s", service_name.c_str()); 
+  }
+
 }

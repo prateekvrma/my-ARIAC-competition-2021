@@ -28,7 +28,7 @@
 
 // custom
 #include "utility.h"
-#include "shipments.h"
+#include "assembly_shipments.h"
 #include "constants.h"
 #include "agv.h"
 
@@ -99,10 +99,9 @@ class GantryArm {
     bool get_belt_part(double range); 
     void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt=true); 
 
-    // void submit_shipment(const std::string& agv_id,
-                         // const std::string& shipment_type,
-                         // const std::string& station_id); 
- 
+    void submit_shipment(const std::string& shipment_type,
+                         const std::string& station_id); 
+
 
     std::vector<double> m_joint_group_positions;
     ros::NodeHandle m_nh;
@@ -138,6 +137,7 @@ class GantryArm {
     ros::ServiceClient m_get_belt_part_client; 
     ros::ServiceClient m_get_belt_proximity_sensor_client;  
     ros::ServiceClient m_get_vacancy_pose_client;  
+    ros::ServiceClient m_parts_under_camera_client; 
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
@@ -152,7 +152,7 @@ class GantryArm {
     std::vector<std::string> m_agvs_id = {"agv1", "agv2", "agv3", "agv4"}; 
     std::map<std::string, std::unique_ptr<AGV>> m_agvs_dict; 
     
-    Shipments m_shipments; 
+    AssemblyShipments m_shipments; 
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
 
     // std::map<std::string, int> m_shipments_total_parts; 
