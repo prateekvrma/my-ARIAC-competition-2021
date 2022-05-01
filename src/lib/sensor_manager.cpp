@@ -157,12 +157,22 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
                               ariac_group1::GetParts::Response &res) 
 {
   ros::spinOnce(); 
+
+  std::vector<std::string> kitting_arm_areas = {"bin1", "bin2", "bin5", "bin6",
+                                                "ks1", "ks2", "ks3", "ks4"}; 
+   
   for (auto& part_info_ptr: m_parts_database[req.type]) {
     if (part_info_ptr == nullptr) {
         continue; 
     }
-    res.parts_info.push_back(*part_info_ptr); 
-    Utility::print_part_pose(part_info_ptr->part); 
+    auto part_loc = Utility::location::get_pose_location(part_info_ptr->part.pose); 
+    for (auto& loc: kitting_arm_areas) {
+        if (part_loc == loc) {
+            res.parts_info.push_back(*part_info_ptr); 
+            Utility::print_part_pose(part_info_ptr->part); 
+            break; 
+        }
+    }
   }
 
   return true; 
@@ -268,6 +278,18 @@ std::string SensorManager::convert_id_to_internal(std::string global_id)
   }
   else if (global_id.compare("logical_camera_ks4") == 0) {
     internal_id = "ks4"; 
+  }
+  else if (global_id.compare("logical_camera_bfc1") == 0) {
+    internal_id = "bfc1"; 
+  }
+  else if (global_id.compare("logical_camera_bfc2") == 0) {
+    internal_id = "bfc2"; 
+  }
+  else if (global_id.compare("logical_camera_bfc3") == 0) {
+    internal_id = "bfc3"; 
+  }
+  else if (global_id.compare("logical_camera_bfc4") == 0) {
+    internal_id = "bfc4"; 
   }
 
   if (global_id.find("quality_control_sensor") != std::string::npos) {
