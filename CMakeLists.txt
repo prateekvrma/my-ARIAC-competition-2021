@@ -90,6 +90,7 @@ add_service_files(
   GetVacancyPose.srv
   GetBeltPart.srv
   GetBeltProximitySensor.srv
+  PartsUnderCamera.srv
 )
 
 

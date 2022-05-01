@@ -16,6 +16,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_is_belt_sensor_triggered_service = m_nh.advertiseService("/sensor_manager/is_belt_sensor_triggered", &SensorManager::is_belt_sensor_triggered, this); 
   m_get_belt_part_service = m_nh.advertiseService("/sensor_manager/get_belt_part", &SensorManager::get_belt_part, this); 
   m_get_belt_proximity_sensor_service = m_nh.advertiseService("/sensor_manager/get_belt_proximity_sensor", &SensorManager::get_belt_proximity_sensor, this); 
+  m_parts_under_camera_service = m_nh.advertiseService("/sensor_manager/parts_under_camera", &SensorManager::parts_under_camera, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -498,4 +499,35 @@ bool SensorManager::get_belt_proximity_sensor(ariac_group1::GetBeltProximitySens
   m_belt_proximity_sensor->reset_object_range(); 
 
   return true; 
+}
+
+bool SensorManager::parts_under_camera(ariac_group1::PartsUnderCamera::Request &req,
+                                       ariac_group1::PartsUnderCamera::Response &res)
+{
+    ros::spinOnce(); 
+    if (req.camera_id.find("belt") != std::string::npos) {
+       m_belt_camera->update_parts(); 
+       for (auto& part_ptr: m_belt_camera->parts_world_frame) {
+         if (part_ptr == nullptr) {
+            continue; 
+         }
+         res.parts.push_back(*part_ptr); 
+       }
+       return true; 
+    }
+
+    if (m_logical_cameras_dict.count(req.camera_id)) {
+      for (auto& part_ptr: m_logical_cameras_dict[req.camera_id]->parts_world_frame) {
+          if (part_ptr == nullptr) {
+              continue; 
+          }
+          res.parts.push_back(*part_ptr); 
+      }
+      
+      return true; 
+    }
+    else {
+      ROS_INFO("No camera: %s", req.camera_id.c_str()); 
+      return false; 
+    }
 }

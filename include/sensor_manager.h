@@ -21,6 +21,7 @@
 #include <std_srvs/Trigger.h>
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
+#include <ariac_group1/PartsUnderCamera.h>
 
 #include "sensors.h"
 #include "utility.h"
@@ -69,6 +70,9 @@ class SensorManager {
     bool get_belt_proximity_sensor(ariac_group1::GetBeltProximitySensor::Request &req,
                                   ariac_group1::GetBeltProximitySensor::Response &res); 
 
+    bool parts_under_camera(ariac_group1::PartsUnderCamera::Request &req,
+                            ariac_group1::PartsUnderCamera::Response &res); 
+
     std::string convert_id_to_internal(std::string global_id); 
  
     ros::ServiceServer m_get_parts_service; 
@@ -82,6 +86,7 @@ class SensorManager {
     ros::ServiceServer m_is_belt_sensor_triggered_service;
     ros::ServiceServer m_get_belt_part_service;
     ros::ServiceServer m_get_belt_proximity_sensor_service;
+    ros::ServiceServer m_parts_under_camera_service; 
 
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      // "as1_1", "as2_1", "as1_2", "as2_2",
