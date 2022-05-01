@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<launch>
+
+  <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${time}] [${node}]: ${message}"/>
+
+  <!-- 4 agvs -->
+  <node pkg="ariac_group1" 
+        type="ariac_group1_agv_node" 
+        name="my_agv1_node"
+        args="agv1"
+        output="screen"></node>
+
+  <node pkg="ariac_group1" 
+        type="ariac_group1_agv_node" 
+        name="my_agv2_node"
+        args="agv2"
+        output="screen"></node>
+
+  <node pkg="ariac_group1" 
+        type="ariac_group1_agv_node" 
+        name="my_agv3_node"
+        args="agv3"
+        output="screen"></node>
+
+  <node pkg="ariac_group1" 
+        type="ariac_group1_agv_node" 
+        name="my_agv4_node"
+        args="agv4"
+        output="screen"></node>
+
+  <!--  sensor manager -->
+  <node pkg="ariac_group1" 
+        type="ariac_group1_sensor_manager_node" 
+        name="sensor_manager" output="screen"></node>
+
+
+  <!--  factory manager -->
+  <node pkg="ariac_group1" 
+        type="ariac_group1_rwa2_node" 
+        name="rwa2" output="screen"></node>
+        
+  <node pkg="ariac_group1" 
+        type="ariac_group1_gantry_arm_test_node" 
+        name="test_gantry_arm" output="screen"></node>
+
+</launch>
