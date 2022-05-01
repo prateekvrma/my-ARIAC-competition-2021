@@ -92,13 +92,13 @@ class KittingArm {
 
     bool check_insufficient_shipment(int priority); 
     void clear_part_task(ariac_group1::PartTask& part_task, int& priority); 
-    ShipmentState check_shipment_state(ariac_group1::PartTask& part_task); 
-    void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority); 
+    ShipmentState check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
+    void process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority, nist_gear::Model& wrong_part); 
 
     bool check_emergency_interrupt(); 
     void move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part); 
     bool get_belt_part(double range); 
-    void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose); 
+    void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt=true); 
 
     // void submit_shipment(const std::string& agv_id,
                          // const std::string& shipment_type,

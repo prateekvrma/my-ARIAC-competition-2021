@@ -18,7 +18,9 @@
 #include "constants.h"
 #include "utility.h"
 
-enum class ShipmentState{NOT_READY, READY, HAS_FAULTY, POSTPONE, FINISH}; 
+enum class ShipmentState{NOT_READY, READY,
+                         HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_MISSING_PART, HAS_FAULTY,
+                         POSTPONE, FINISH}; 
 
 class ShipmentInfo {
   public: 
@@ -38,6 +40,7 @@ class Shipments {
     bool get_shipment(); 
     void update_part_task_queue(std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>>& part_task_queue); 
     bool is_high_priority_alert(); 
+    std::string check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
 
     std::map<std::string, std::unique_ptr<ShipmentInfo>> shipments_record; 
 

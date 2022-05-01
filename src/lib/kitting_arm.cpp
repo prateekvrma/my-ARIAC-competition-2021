@@ -1171,11 +1171,19 @@ bool KittingArm::get_belt_part(double range)
 
 }
 
-void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose)
+void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt)
 {
     ROS_INFO("Place to vacancy"); 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(2, 0, 1.57);
+
+    tf2::Quaternion flat_orientation; 
+    if (from_belt) {
+      flat_orientation = Utility::motioncontrol::quaternionFromEuler(2, 0, 1.57);
+    } 
+    else {
+      flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
+
+    }
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
     arm_ee_link_pose.orientation.z = flat_orientation.getZ();
@@ -1232,9 +1240,10 @@ void KittingArm::execute()
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
 
-  auto shipment_state = this->check_shipment_state(part_task); 
+  nist_gear::Model wrong_part; 
+  auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
   m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
-  this->process_shipment_state(shipment_state, part_task, priority); 
+  this->process_shipment_state(shipment_state, part_task, priority, wrong_part); 
   if (shipment_state != ShipmentState::NOT_READY) {
     return; 
   }
@@ -1327,21 +1336,47 @@ void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priorit
   ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(),
                                            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks); 
 
-  auto shipment_state = this->check_shipment_state(part_task); 
-  this->process_shipment_state(shipment_state, part_task, priority); 
+  //assume shipment has wrong_part
+  nist_gear::Model wrong_part; 
+  auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
+  this->process_shipment_state(shipment_state, part_task, priority, wrong_part); 
   if (shipment_state == ShipmentState::NOT_READY) {
     m_part_task_queue.pop_back();
   }
 }
 
-ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task)
+ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
+  static bool missing_check = false;  
+
   // Check if shipment is ready to submit
   if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
     ariac_group1::CheckQualitySensor srv; 
     srv.request.agv_id = part_task.agv_id; 
     if (m_check_quality_sensor_client.call(srv)) {
 
+      std::string result = m_shipments.check_shipment_parts(part_task, wrong_part); 
+      if (result == "wrong_type") {
+        // put the wrong type part back to vacancy spot
+        // possibily resolve insufficient shipment, therefore check missing
+        missing_check = true; 
+        ROS_INFO("Has wrong type in shipment %s", part_task.shipment_type.c_str()); 
+        return ShipmentState::HAS_WRONG_TYPE; 
+      }
+      else if (result == "wrong_pose"){
+        ROS_INFO("Has wrong pose in shipment %s", part_task.shipment_type.c_str()); 
+        return ShipmentState::HAS_WRONG_POSE; 
+      }
+      else if (result == "missing_part" and missing_check) {
+        // only check missing part if wrong type happens before
+        missing_check = false; 
+        ROS_INFO("Has missing part in shipment %s", part_task.shipment_type.c_str()); 
+        return ShipmentState::HAS_MISSING_PART; 
+      }
+      // else if (result == "redundant_part") {
+      //   return ShipmentState::HAS_REDUNDANT_PART; 
+      // }
+      
       if (srv.response.faulty_parts.empty()) {
         ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::READY; 
@@ -1365,65 +1400,144 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
   }
 }
 
-void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority)
+void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority, nist_gear::Model& wrong_part)
 {
-  if (shipment_state == ShipmentState::READY) {
-    ros::Duration(1).sleep();
+  switch(shipment_state) {
+    case ShipmentState::READY: 
+      {
+        ros::Duration(1).sleep();
 
-    // this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
-    m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
-    m_shipments.shipments_record[part_task.shipment_type]->state = ShipmentState::FINISH; 
-    m_part_task_queue.pop_back(); 
+        // this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+        m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
+        m_shipments.shipments_record[part_task.shipment_type]->state = ShipmentState::FINISH; 
+        m_part_task_queue.pop_back();
+        break; 
+      }
 
+    case ShipmentState::HAS_WRONG_TYPE: 
+      {
+        ariac_group1::GetVacancyPose vacancy_pose_srv; 
+        m_get_vacancy_pose_client.call(vacancy_pose_srv); 
+        auto& vacancy_poses = vacancy_pose_srv.response.vacancy_poses;
+        
+        if (vacancy_poses.empty()) {
+          bool discard_success = this->discard_faulty(wrong_part, part_task.agv_id); 
+          if (discard_success) {
+            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+          }
+          return; 
+        }
+        else {
+          std::string camera_id = "logical_camera_ks"; 
+          camera_id += part_task.agv_id.back(); 
+          if (pickPart(wrong_part.type, wrong_part.pose, camera_id)) {
+            place_to_vacancy(vacancy_poses[0], false); 
+            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+          }
+        }
+        break; 
+      }
+
+    case ShipmentState::HAS_WRONG_POSE: 
+      {
+        std::string camera_id = "logical_camera_ks"; 
+        camera_id += part_task.agv_id.back(); 
+        if (pickPart(wrong_part.type, wrong_part.pose, camera_id)) {
+          auto target_pose_in_world = placePart(wrong_part.type, wrong_part.pose, part_task.part.pose, part_task.agv_id);
+        }
+        break; 
+      }
+
+    case ShipmentState::HAS_MISSING_PART: 
+      {
+        m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+        break; 
+      }
+
+    case ShipmentState::HAS_FAULTY: 
+      {
+        goToPresetLocation(part_task.agv_id);
+        nist_gear::Model faulty_part; 
+        faulty_part.type = part_task.part.type; 
+        faulty_part.pose = part_task.part.pose; 
+        bool discard_success = this->discard_faulty(faulty_part, part_task.agv_id); 
+        auto pose_in_tray_frame = Utility::motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
+        part_task.part.pose = pose_in_tray_frame; 
+        if (discard_success) {
+          // ready to replace the discard part
+          m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+        }
+        break; 
+      }
+
+    case ShipmentState::POSTPONE: 
+      {
+        priority += Constants::PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
+        break; 
+      }
+
+    default: 
+        break; 
   }
-  else if (shipment_state == ShipmentState::HAS_FAULTY) {
 
-    goToPresetLocation(part_task.agv_id);
-    nist_gear::Model faulty_part; 
-    faulty_part.type = part_task.part.type; 
-    faulty_part.pose = part_task.part.pose; 
-    bool discard_success = this->discard_faulty(faulty_part, part_task.agv_id); 
-    auto pose_in_tray_frame = Utility::motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
-    part_task.part.pose = pose_in_tray_frame; 
-    if (discard_success) {
-      // ready to replace the discard part
-      m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
-    }
-  }
-  else if (shipment_state == ShipmentState::POSTPONE) {
-
-    priority += Constants::PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
-
-  }
+  // if (shipment_state == ShipmentState::READY) {
+  //   ros::Duration(1).sleep();
+  //
+  //   // this->submit_shipment(part_task.agv_id, part_task.shipment_type, part_task.station_id); 
+  //   m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
+  //   m_shipments.shipments_record[part_task.shipment_type]->state = ShipmentState::FINISH; 
+  //   m_part_task_queue.pop_back(); 
+  //
+  // }
+  // else if (shipment_state == ShipmentState::HAS_WRONG_TYPE) {
+  //   ariac_group1::GetVacancyPose vacancy_pose_srv; 
+  //   m_get_vacancy_pose_client.call(vacancy_pose_srv); 
+  //   auto& vacancy_poses = vacancy_pose_srv.response.vacancy_poses;
+  //   
+  //   if (vacancy_poses.empty()) {
+  //     bool discard_success = this->discard_faulty(wrong_part, part_task.agv_id); 
+  //     if (discard_success) {
+  //       m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+  //     }
+  //     return; 
+  //   }
+  //   else {
+  //     std::string camera_id = "logical_camera_ks"; 
+  //     camera_id += part_task.agv_id.back(); 
+  //     if (pickPart(wrong_part.type, wrong_part.pose, camera_id)) {
+  //       place_to_vacancy(vacancy_poses[0], false); 
+  //       m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+  //     }
+  //   }
+  //
+  // }
+  // else if (shipment_state == ShipmentState::HAS_WRONG_POSE) {
+  //   std::string camera_id = "logical_camera_ks"; 
+  //   camera_id += part_task.agv_id.back(); 
+  //   if (pickPart(wrong_part.type, wrong_part.pose, camera_id)) {
+  //     auto target_pose_in_world = placePart(wrong_part.type, wrong_part.pose, part_task.part.pose, part_task.agv_id);
+  //   }
+  // }
+  // else if (shipment_state == ShipmentState::HAS_MISSING_PART) {
+  //   m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+  // }
+  // else if (shipment_state == ShipmentState::HAS_FAULTY) {
+  //
+  //   goToPresetLocation(part_task.agv_id);
+  //   nist_gear::Model faulty_part; 
+  //   faulty_part.type = part_task.part.type; 
+  //   faulty_part.pose = part_task.part.pose; 
+  //   bool discard_success = this->discard_faulty(faulty_part, part_task.agv_id); 
+  //   auto pose_in_tray_frame = Utility::motioncontrol::transformToTrayFrame(faulty_part.pose, part_task.agv_id); 
+  //   part_task.part.pose = pose_in_tray_frame; 
+  //   if (discard_success) {
+  //     // ready to replace the discard part
+  //     m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+  //   }
+  // }
+  // else if (shipment_state == ShipmentState::POSTPONE) {
+  //
+  //   priority += Constants::PriorityWeight::Penalty::SHIPMENT_POSTPONE; 
+  //
+  // }
 }
-
-// void KittingArm::submit_shipment(const std::string& agv_id, 
-//                                  const std::string& shipment_type,  
-//                                  const std::string& station_id)
-// {
-//   ROS_INFO("%s", shipment_type.c_str()); 
-//   ROS_INFO("%s", station_id.c_str()); 
-//
-//   auto service_name = "/ariac/" + agv_id + "/submit_shipment"; 
-//   auto client = m_nh.serviceClient<AGVToAssem>(service_name); 
-//
-//   // check if the client exists
-//   if (!client.exists()) {
-//     ROS_INFO("Waiting for the competition to be ready...");
-//     client.waitForExistence();
-//     ROS_INFO("Competition is now ready.");
-//   }
-//
-//   AGVToAssem srv; 
-//   srv.request.assembly_station_name = station_id;  
-//   srv.request.shipment_type = shipment_type; 
-//   // call the service to allow AGV to submit kitting shipment
-//   if (client.call(srv)) {
-//     ROS_INFO("Calling service %s", service_name.c_str()); 
-//     ROS_INFO("%s", srv.response.message.c_str()); 
-//   }
-//   else{
-//     ROS_ERROR("Failed to call %s", service_name.c_str()); 
-//   }
-//
-// }
