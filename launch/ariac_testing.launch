@@ -38,7 +38,7 @@
           $(arg fill_demo_shipment_args)
           $(arg visualize_sensors_args)
           $(arg debug_mode_args)
-          -f $(find ariac_group1)/config/trial_config/$(arg trial_config).yaml
+          -f $(find ariac_group1)/config/trial_config/rwa4.yaml
           $(find ariac_group1)/config/user_config/rwa2_sensor.yaml
           " required="true" output="screen" />
 
