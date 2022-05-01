@@ -18,6 +18,11 @@ Shipments::Shipments(ros::NodeHandle* nodehandle):
   m_get_shipment_priority_client = 
       m_nh.serviceClient<ariac_group1::GetShipmentPriority>("/orders/get_shipment_priority"); 
   m_get_shipment_priority_client.waitForExistence();
+
+  m_parts_under_camera_client = 
+      m_nh.serviceClient<ariac_group1::PartsUnderCamera>("/sensor_manager/parts_under_camera"); 
+  m_parts_under_camera_client.waitForExistence();
+
 }
 
 void Shipments::shipment_callback(const nist_gear::KittingShipment::ConstPtr& msg)
@@ -60,6 +65,10 @@ void Shipments::update_part_task_queue(std::vector<std::tuple<int, std::unique_p
         part_task.station_id = shipments_record[id]->shipment->station_id; 
         part_task.priority = shipments_record[id]->priority; 
 
+        if (this->is_part_task_done(part_task)) {
+            continue; 
+        }
+
         if (part_task.priority != 0) {
             bool all_finish = true; 
             for (auto& high_priority_id: m_high_priorities_id) {
@@ -94,5 +103,38 @@ bool Shipments::is_high_priority_alert()
       m_high_priority_alert = false; 
     }
     return alert; 
+}
+
+bool Shipments::is_part_task_done(const ariac_group1::PartTask& part_task) 
+{
+    ariac_group1::PartsUnderCamera srv; 
+    srv.request.camera_id = "ks"; 
+    srv.request.camera_id += part_task.agv_id.back(); 
+    ROS_INFO("%s", srv.request.camera_id.c_str()); 
+    m_parts_under_camera_client.call(srv); 
+
+    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+         part_task.part.pose,
+         part_task.agv_id);
+
+    nist_gear::Model target_part; 
+    target_part.type = part_task.part.type; 
+    target_part.pose = target_pose_in_world; 
+
+    ROS_INFO("Parts under camera: %d", srv.response.parts.size()); 
+
+    for (auto& part: srv.response.parts) {
+      if (Utility::is_same_part(target_part, part, 0.05)) {
+        ROS_INFO("agv has type: %s", part_task.part.type.c_str()); 
+        shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+        if (shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+            // leave one last task for arm to submit shipment
+            return false; 
+        }
+        return true; 
+      }
+    }
+
+    return false; 
 }
 

@@ -30,6 +30,7 @@
 #include "utility.h"
 #include "shipments.h"
 #include "constants.h"
+#include "agv.h"
 
 struct ArmPresetLocation {
       std::vector<double> joints_position;  //9 joints
@@ -99,9 +100,9 @@ class KittingArm {
     bool get_belt_part(double range); 
     void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose); 
 
-    void submit_shipment(const std::string& agv_id,
-                         const std::string& shipment_type,
-                         const std::string& station_id); 
+    // void submit_shipment(const std::string& agv_id,
+                         // const std::string& shipment_type,
+                         // const std::string& station_id); 
  
 
     std::vector<double> m_joint_group_positions;
@@ -141,6 +142,9 @@ class KittingArm {
 
     ros::Subscriber m_part_task_subscriber;  
 
+
+    std::vector<std::string> m_agvs_id = {"agv1", "agv2", "agv3", "agv4"}; 
+    std::map<std::string, std::unique_ptr<AGV>> m_agvs_dict; 
     
     Shipments m_shipments; 
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 

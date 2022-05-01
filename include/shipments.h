@@ -13,8 +13,10 @@
 #include <std_msgs/String.h>
 #include <nist_gear/KittingShipment.h>
 #include <ariac_group1/PartTask.h>
+#include <ariac_group1/PartsUnderCamera.h>
 
 #include "constants.h"
+#include "utility.h"
 
 enum class ShipmentState{NOT_READY, READY, HAS_FAULTY, POSTPONE, FINISH}; 
 
@@ -42,11 +44,13 @@ class Shipments {
   private: 
     void shipment_callback(const nist_gear::KittingShipment::ConstPtr& msg); 
     bool has_shipment(); 
+    bool is_part_task_done(const ariac_group1::PartTask& part_task); 
 
     ros::NodeHandle m_nh; 
     ros::Subscriber m_shipment_subscriber;
 
     ros::ServiceClient m_get_shipment_priority_client;
+    ros::ServiceClient m_parts_under_camera_client; 
 
     std::vector<std::string> m_new_shipments_id; 
     std::vector<std::string> m_shipments_id; 
