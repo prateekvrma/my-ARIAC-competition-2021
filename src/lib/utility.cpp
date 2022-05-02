@@ -14,22 +14,58 @@
 
 namespace Utility
 {
-  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance = 0.05)
-  {
-    // double epsilon = 0.1; 
-
+  double distance(const nist_gear::Model& part1, const nist_gear::Model& part2) {
     auto x1 = part1.pose.position.x; 
     auto y1 = part1.pose.position.y; 
-    auto z1 = part1.pose.position.z; 
 
     auto x2 = part2.pose.position.x; 
     auto y2 = part2.pose.position.y; 
-    auto z2 = part2.pose.position.z; 
 
-    // auto dist = sqrt(pow((x2-x1), 2) + pow((y2-y1), 2) + pow((z2-z1), 2)); 
-    // ROS_INFO("distance: %f", dist); 
+    return sqrt(pow((x2-x1), 2) + pow((y2-y1), 2)); 
+  }
 
-    if (sqrt(pow((x2-x1), 2) + pow((y2-y1), 2)) < tolerance)
+  double angle_distance(const nist_gear::Model& part1, const nist_gear::Model& part2, std::string rpy) {
+    auto part1_rpy = Utility::motioncontrol::eulerFromQuaternion(part1.pose);
+    auto part2_rpy = Utility::motioncontrol::eulerFromQuaternion(part2.pose);
+
+    if (rpy == "roll") {
+        auto r1 = part1_rpy.at(0); 
+        auto r2 = part2_rpy.at(0); 
+        if (r1 < 0) {
+           r1 = 2 * M_PI + r1; 
+        }
+        if (r2 < 0) {
+           r2 = 2 * M_PI + r2; 
+        }
+        return abs(r1 - r2);  
+    }
+    else if (rpy == "pitch") {
+        auto p1 = part1_rpy.at(1); 
+        auto p2 = part2_rpy.at(1); 
+        if (p1 < 0) {
+           p1 = 2 * M_PI + p1; 
+        }
+        if (p2 < 0) {
+           p2 = 2 * M_PI + p2; 
+        }
+        return abs(p1 - p2);
+    }
+    else if (rpy == "yaw") {
+        auto y1 = part1_rpy.at(2); 
+        auto y2 = part2_rpy.at(2); 
+        if (y1 < 0) {
+           y1 = 2 * M_PI + y1; 
+        }
+        if (y2 < 0) {
+           y2 = 2 * M_PI + y2; 
+        }
+        return abs(y1 - y2);
+    }
+  }
+
+  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance = 0.05)
+  {
+    if (distance(part1, part2) < tolerance)
       return true; 
     else
       return false; 

@@ -153,31 +153,40 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
       nist_gear::Model target_part; 
       target_part.type = product.type; 
       target_part.pose = target_pose_in_world; 
+
       bool has_product = false; 
       for (auto& part: srv.response.parts) {
-        if (Utility::is_same_part(target_part, part, 0.05)) {
+        if (Utility::is_same_part(target_part, part, 0.07)) {
           if (target_part.type != part.type) {
-            part_task.part = product; 
-            wrong_part = part;  
-            return "wrong_type"; 
+              part_task.part = product; 
+              wrong_part = part;  
+              return "wrong_type"; 
           }
           else {
-            has_product = true; 
+              has_product = true; 
+          }
+
+          auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_part.pose);
+
+          if (abs(target_rpy.at(0)) > 0.1 and
+              Utility::angle_distance(target_part, part, "roll") > 0.1) {  
+              part_task.part = product; 
+              wrong_part = part;  
+              return "flip_part"; 
           }
           
-          auto target_part_rpy = Utility::motioncontrol::eulerFromQuaternion(target_part.pose);
-          auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
-          if (abs(target_part_rpy.at(2) - part_rpy.at(2)) > 0.1) {
-            part_task.part = product; 
-            wrong_part = part;  
-            return "wrong_pose"; 
+          if (Utility::distance(target_part, part) > 0.07 or
+              Utility::angle_distance(target_part, part) > 0.1) {
+              part_task.part = product; 
+              wrong_part = part;  
+              return "wrong_pose"; 
           }
         }
       }
 
       if (not has_product) {
-        part_task.part = product; 
-        return "missing_part"; 
+          part_task.part = product; 
+          return "missing_part"; 
       }
     }
 

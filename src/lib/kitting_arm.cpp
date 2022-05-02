@@ -1069,7 +1069,6 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
             bool flip_success = this->flip_part(part_task);
             if (not flip_success) {
                ROS_INFO("Flip fails"); 
-               return false; 
             }
           }
           ROS_INFO("Part not faulty"); 
@@ -1081,7 +1080,7 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     }
 }
 
-bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
+bool KittingArm::flip_part(const ariac_group1::PartTask& part_task) 
 {
     bool flip = true; 
     auto part_type = part_task.part.type; 
@@ -1113,27 +1112,33 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
             break; 
         }
     }
+    auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_part.pose);
+    // if target roll close to 0, then do two flip
+    if (abs(target_rpy.at(0)) < 0.1) {
+    
+        moveBaseTo(target_part.pose.position.y - 0.3);
 
-    moveBaseTo(target_part.pose.position.y - 0.3);
+        // flip first 90 degree
+        if (pickPart(part_type, target_part.pose, camera_id_flip)) {
+            auto flip_pose_in_world_1 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
+        }
+        else {
+            return false; 
+        }
 
-    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
-        auto flip_pose_in_world_1 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
-    }
-    else {
-        return false; 
-    }
+        ros::Duration(0.5).sleep(); 
+        m_parts_under_camera_client.call(srv);
 
-    ros::Duration(0.5).sleep(); 
-    m_parts_under_camera_client.call(srv);
-
-    for (auto part: srv.response.parts) {
-        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
-        if (abs(part_rpy.at(0)) > 0.1) {
-            target_part = part; 
-            break; 
+        for (auto part: srv.response.parts) {
+            auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
+            if (abs(part_rpy.at(0)) > 0.1) {
+                target_part = part; 
+                break; 
+            }
         }
     }
 
+    // flip second 90 degree
     if (pickPart(part_type, target_part.pose, camera_id_flip)) {
         auto flip_pose_in_world_2 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
     }
@@ -1151,6 +1156,7 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
         }
     }
 
+    // turn to correct orientation
     if (pickPart(part_type, target_part.pose, camera_id_flip)) {
         auto flip_pose_in_world_3 = placePart(part_type, target_part.pose, part_task.part.pose, target_agv);
     }
@@ -1493,6 +1499,10 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has wrong pose in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_WRONG_POSE; 
       }
+      else if (result == "flip_part") {
+        ROS_INFO("Has flip part in shipment %s", part_task.shipment_type.c_str()); 
+        return ShipmentState::HAS_FLIP_PART; 
+      }
       else if (result == "missing_part" and missing_check) {
         // only check missing part if wrong type happens before
         missing_check = false; 
@@ -1571,6 +1581,22 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         if (pickPart(wrong_part.type, wrong_part.pose, camera_id)) {
           auto target_pose_in_world = placePart(wrong_part.type, wrong_part.pose, part_task.part.pose, part_task.agv_id);
         }
+        break; 
+      }
+    case ShipmentState::HAS_FLIP_PART: 
+      {
+        auto wrong_part_rpy = Utility::motioncontrol::eulerFromQuaternion(wrong_part.pose);
+        ariac_group1::PartInfo part_info; 
+        part_info.part = wrong_part; 
+        part_info.roll = wrong_part_rpy.at(0); 
+        part_info.pitch = wrong_part_rpy.at(1); 
+        part_info.yaw = wrong_part_rpy.at(2); 
+        std::string camera_id = "logical_camera_ks"; 
+        camera_id += part_task.agv_id.back(); 
+        part_info.camera_id = camera_id; 
+
+        this->movePart(part_info, part_task); 
+
         break; 
       }
 

@@ -19,7 +19,7 @@
 #include "utility.h"
 
 enum class ShipmentState{NOT_READY, READY,
-                         HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_MISSING_PART, HAS_FAULTY,
+                         HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_FLIP_PART, HAS_MISSING_PART, HAS_FAULTY,
                          POSTPONE, FINISH}; 
 
 class ShipmentInfo {
