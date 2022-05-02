@@ -26,6 +26,7 @@
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
 #include <ariac_group1/GetVacancyPose.h>
+#include <ariac_group1/PartsUnderCamera.h>
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
 
@@ -102,6 +103,9 @@ KittingArm::KittingArm():
       m_nh.serviceClient<ariac_group1::GetVacancyPose>("/sensor_manager/get_vacancy_pose"); 
   m_get_vacancy_pose_client.waitForExistence();
 
+  m_parts_under_camera_client = 
+      m_nh.serviceClient<ariac_group1::PartsUnderCamera>("/sensor_manager/parts_under_camera"); 
+  m_parts_under_camera_client.waitForExistence();
 
   for (auto& id: m_agvs_id) {
       m_agvs_dict[id] = std::make_unique<AGV>(&m_nh, id); 
@@ -573,9 +577,11 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
 
 bool KittingArm::pickPart(std::string part_type, 
                           const geometry_msgs::Pose& part_init_pose,
-                          std::string camera_id) 
+                          std::string camera_id,
+                          bool flip) 
 {
     ROS_INFO("---Start pick part"); 
+    ROS_INFO("Picking under camera %s", camera_id.c_str()); 
     m_arm_group.setMaxVelocityScalingFactor(1.0);
 
     geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
@@ -621,9 +627,12 @@ bool KittingArm::pickPart(std::string part_type,
     postgrasp_pose.orientation = arm_ee_link_pose.orientation;
     postgrasp_pose.position.z = part_init_pose.position.z + z_pos + 0.05;
 
-    if (this->check_emergency_interrupt()) {
-        return false; 
+    if (not flip) {
+        if (this->check_emergency_interrupt()) {
+            return false; 
+        }
     }
+    
 
     // m_arm_group.setPoseTarget(postgrasp_pose);
     // m_arm_group.move();
@@ -633,8 +642,10 @@ bool KittingArm::pickPart(std::string part_type,
       return false; 
     }
 
-    if (this->check_emergency_interrupt()) {
-        return false; 
+    if (not flip) {
+        if (this->check_emergency_interrupt()) {
+            return false; 
+        }
     }
 
     // pregrasp pose: right above the part
@@ -657,8 +668,10 @@ bool KittingArm::pickPart(std::string part_type,
       return false; 
     }
 
-    if (this->check_emergency_interrupt()) {
-      return false; 
+    if (not flip) {
+        if (this->check_emergency_interrupt()) {
+            return false; 
+        }
     }
 
     ros::Duration(0.5).sleep();
@@ -696,8 +709,10 @@ bool KittingArm::pickPart(std::string part_type,
         }
 
         if (count > 2) {
-          if (this->check_emergency_interrupt()) {
-              return false; 
+          if (not flip) {
+              if (this->check_emergency_interrupt()) {
+                  return false; 
+              }
           }
         }
 
@@ -760,7 +775,8 @@ bool KittingArm::pickPart(std::string part_type,
 geometry_msgs::Pose KittingArm::placePart(std::string part_type, 
                                           geometry_msgs::Pose part_init_pose, 
                                           geometry_msgs::Pose part_pose_in_frame, 
-                                          std::string agv)
+                                          std::string agv, 
+                                          bool flip)
 {
     goToPresetLocation(agv);
 
@@ -869,20 +885,29 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     // m_arm_group.setMaxVelocityScalingFactor(0.1);
     // m_arm_group.setPoseTarget(target_pose_in_world);
     // m_arm_group.move();
+    //
     ROS_INFO("Move to place pose"); 
-    while (not this->moveTargetPose(target_pose_in_world)) {
-      ROS_INFO("IK not found for place"); 
-      goToPresetLocation(agv);
-
-      std::random_device rd; 
-      std::mt19937 gen(rd());
-      std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
-      auto random_dist = gauss_dist(gen); 
-      m_joint_group_positions.at(0) += random_dist; 
-      this->moveBaseTo(m_joint_group_positions.at(0));
-      ros::Duration(0.1).sleep();
+    if (flip) {
+        ROS_INFO("flip part"); 
+        target_pose_in_world.orientation.z += 5; 
+        m_arm_group.setPoseTarget(target_pose_in_world); 
+        m_arm_group.move(); 
     }
-    
+    else {
+        while (not this->moveTargetPose(target_pose_in_world)) {
+          ROS_INFO("IK not found for place"); 
+          goToPresetLocation(agv);
+
+          std::random_device rd; 
+          std::mt19937 gen(rd());
+          std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
+          auto random_dist = gauss_dist(gen); 
+          m_joint_group_positions.at(0) += random_dist; 
+          this->moveBaseTo(m_joint_group_positions.at(0));
+          ros::Duration(0.1).sleep();
+        }
+    }
+
     ros::Duration(1.0).sleep();
     deactivateGripper();
 
@@ -987,6 +1012,20 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         return false; 
     }
 
+    auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_frame); 
+
+    bool flip = false; 
+    if (abs(target_rpy.at(0)) > 0.1) {
+        ROS_INFO("Flipped part!"); 
+        flip = true; 
+        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part_init_pose_in_world);
+        auto rectified_orientation = Utility::motioncontrol::quaternionFromEuler(part_rpy.at(0), part_rpy.at(1), 0);
+        target_pose_in_frame.orientation.x = rectified_orientation.getX();
+        target_pose_in_frame.orientation.y = rectified_orientation.getY();
+        target_pose_in_frame.orientation.z = rectified_orientation.getZ();
+        target_pose_in_frame.orientation.w = rectified_orientation.getW();
+    }
+
     // use -0.3 to reduce awkward pick trajectory
     // goToPresetLocation(camera_id);
     moveBaseTo(part_init_pose_in_world.position.y - 0.3);
@@ -1024,9 +1063,34 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
             // discard later
             return true; 
           }
+        } 
+        else {
+          if (flip) {
+            ariac_group1::PartsUnderCamera srv; 
+            srv.request.camera_id = "ks"; 
+            srv.request.camera_id += part_task.agv_id.back(); 
+            ROS_INFO("%s", srv.request.camera_id.c_str()); 
+            m_parts_under_camera_client.call(srv);
+
+            ros::Duration(0.5).sleep(); 
+
+            std::string camera_id_flip = "logical_camera_ks"; 
+            camera_id_flip += part_task.agv_id.back(); 
+
+            moveBaseTo(srv.response.parts.at(0).pose.position.y - 0.3);
+            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
+            auto flip_pose_in_world_1 = placePart(part_type, srv.response.parts.at(0).pose, target_pose_in_frame, target_agv, flip);
+            ros::Duration(0.5).sleep(); 
+            m_parts_under_camera_client.call(srv);
+            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
+            auto flip_pose_in_world_2 = placePart(part_type, srv.response.parts.at(0).pose, target_pose_in_frame, target_agv, flip);
+            m_parts_under_camera_client.call(srv);
+            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
+            auto flip_pose_in_world_3 = placePart(part_type, srv.response.parts.at(0).pose, part_task.part.pose, target_agv);
+          }
+          ROS_INFO("Part not faulty"); 
+          return true; 
         }
-        ROS_INFO("Part not faulty"); 
-        return true; 
     }
     else {
       return false; 

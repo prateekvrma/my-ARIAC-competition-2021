@@ -31,6 +31,11 @@ void AGV::station_callback(const std_msgs::String::ConstPtr& msg)
   m_station = msg->data; 
 }
 
+std::string AGV::get_station()
+{
+    return m_station; 
+}
+
 void AGV::submit_shipment(const std::string& shipment_type,  
                           const std::string& station_id)
 {

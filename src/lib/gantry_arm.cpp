@@ -1170,7 +1170,8 @@ void GantryArm::execute()
 
   auto& parts = parts_under_camera_srv.response.parts; 
   ROS_INFO("Parts: %d", (int)parts.size()); 
-  if (parts.size() == 0) {
+  if (parts.size() == 0 or 
+      m_agvs_dict[part_task.agv_id]->get_station() != part_task.station_id) {
       return; 
   }
 

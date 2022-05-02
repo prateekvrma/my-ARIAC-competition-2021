@@ -331,7 +331,7 @@ bool SensorManager::is_part_picked(ariac_group1::IsPartPicked::Request &req,
   }
   
   ros::spinOnce(); 
-  res.picked = false; 
+  res.picked = false;  
   if (m_logical_cameras_dict.count(id)) {
     for (auto &part: m_logical_cameras_dict[id]->parts_world_frame) {
       if (part == nullptr) {

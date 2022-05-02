@@ -42,8 +42,8 @@ class KittingArm {
     KittingArm();
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
-    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
-    geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
+    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id, bool flip=false);
+    geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv, bool flip=false);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
 
     void activateGripper();
@@ -132,6 +132,7 @@ class KittingArm {
     ros::ServiceClient m_get_belt_part_client; 
     ros::ServiceClient m_get_belt_proximity_sensor_client;  
     ros::ServiceClient m_get_vacancy_pose_client;  
+    ros::ServiceClient m_parts_under_camera_client;  
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
