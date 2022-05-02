@@ -41,7 +41,7 @@ rslaunch ariac_group1 rwa4.launch
 
 The trial config argument can be any file name under the folder config/trial_config without the yaml ending.   
 
-###Other trial configs: 
+### Other trial configs: 
 flip: testing for fliping part 
 - half_flip: flip part only 90 degrees    
 - sensor_blackout: dealing with sensor blackout during flip part   
