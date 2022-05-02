@@ -16,32 +16,15 @@ int main(int argc, char** argv) {
     // initialize the gantry
     GantryArm gantry = GantryArm();
     std::pair<std::string, std::string> waypoints;
-    gantry.goToPresetLocation("at_agv4_at_as3"); 
-        
-    // if (gantry.pickPart(part_found)) {
-    //     // gantry.goToPresetLocation(gantry.after_bin1_);
-    //     ROS_INFO_STREAM("part picked");
-
-    // }
-    gantry.goToPresetLocation("at_agv4_at_as3");
-    gantry.goToPresetLocation("at_as3");
-    // if (gantry.placePart(part_in_agv, "agv1")) {
-    //         ROS_INFO_STREAM("part placed");
-    // }
-    gantry.goToPresetLocation("at_agv2_at_as1");
-    
-    // if (gantry.pickPart(part_found_2)) {
-    //     // gantry.goToPresetLocation(gantry.after_bin1_);
-    //     ROS_INFO_STREAM("part picked");
-
-    // }
-    gantry.goToPresetLocation("at_agv2_at_as1");
-    gantry.goToPresetLocation("at_as1");
-    // if (gantry.placePart(part_2, "agv1")) {
-    //         ROS_INFO_STREAM("part placed");
-    // }
-    gantry.goToPresetLocation("at_as1");
-
+    gantry.goToPresetLocation("five");
+    gantry.goToPresetLocation("as2"); 
+    gantry.goToPresetLocation("agv2_at_as2");
+    gantry.goToPresetLocation("as4"); 
+    gantry.goToPresetLocation("agv4_at_as4");
+    gantry.goToPresetLocation("agv3_at_as4");
+    gantry.goToPresetLocation("agv3_at_as3");
+    gantry.goToPresetLocation("agv1_at_as1");
+    gantry.goToPresetLocation("agv1_at_as2");
     ROS_INFO_STREAM("END !!!");
     ros::waitForShutdown();
 }
