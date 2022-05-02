@@ -1066,27 +1066,11 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
         } 
         else {
           if (flip) {
-            ariac_group1::PartsUnderCamera srv; 
-            srv.request.camera_id = "ks"; 
-            srv.request.camera_id += part_task.agv_id.back(); 
-            ROS_INFO("%s", srv.request.camera_id.c_str()); 
-            m_parts_under_camera_client.call(srv);
-
-            ros::Duration(0.5).sleep(); 
-
-            std::string camera_id_flip = "logical_camera_ks"; 
-            camera_id_flip += part_task.agv_id.back(); 
-
-            moveBaseTo(srv.response.parts.at(0).pose.position.y - 0.3);
-            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
-            auto flip_pose_in_world_1 = placePart(part_type, srv.response.parts.at(0).pose, target_pose_in_frame, target_agv, flip);
-            ros::Duration(0.5).sleep(); 
-            m_parts_under_camera_client.call(srv);
-            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
-            auto flip_pose_in_world_2 = placePart(part_type, srv.response.parts.at(0).pose, target_pose_in_frame, target_agv, flip);
-            m_parts_under_camera_client.call(srv);
-            pickPart(part_type, srv.response.parts.at(0).pose, camera_id_flip); 
-            auto flip_pose_in_world_3 = placePart(part_type, srv.response.parts.at(0).pose, part_task.part.pose, target_agv);
+            bool flip_success = this->flip_part(part_task);
+            if (not flip_success) {
+               ROS_INFO("Flip fails"); 
+               return false; 
+            }
           }
           ROS_INFO("Part not faulty"); 
           return true; 
@@ -1094,6 +1078,84 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
     }
     else {
       return false; 
+    }
+}
+
+bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
+{
+    bool flip = true; 
+    auto part_type = part_task.part.type; 
+    auto target_agv = part_task.agv_id; 
+    auto target_pose_in_frame = part_task.part.pose; 
+
+    ariac_group1::PartsUnderCamera srv; 
+    srv.request.camera_id = "ks"; 
+    srv.request.camera_id += part_task.agv_id.back(); 
+    m_parts_under_camera_client.call(srv);
+
+    ros::Duration(0.5).sleep(); 
+
+    std::string camera_id_flip = "logical_camera_ks"; 
+    camera_id_flip += part_task.agv_id.back(); 
+
+    nist_gear::Model target_part; 
+    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+         target_pose_in_frame,
+         target_agv);
+
+    target_part.type = part_type; 
+    target_part.pose = target_pose_in_world;
+
+    for (auto part: srv.response.parts) {
+        if (Utility::is_same_part(part, target_part, 0.1) and
+            part.type == target_part.type) {
+            target_part = part; 
+            break; 
+        }
+    }
+
+    moveBaseTo(target_part.pose.position.y - 0.3);
+
+    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
+        auto flip_pose_in_world_1 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
+    }
+    else {
+        return false; 
+    }
+
+    ros::Duration(0.5).sleep(); 
+    m_parts_under_camera_client.call(srv);
+
+    for (auto part: srv.response.parts) {
+        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
+        if (abs(part_rpy.at(0)) > 0.1) {
+            target_part = part; 
+            break; 
+        }
+    }
+
+    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
+        auto flip_pose_in_world_2 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
+    }
+    else {
+        return false; 
+    }
+
+    m_parts_under_camera_client.call(srv);
+
+    for (auto part: srv.response.parts) {
+        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
+        if (abs(part_rpy.at(0)) > 0.1) {
+            target_part = part; 
+            break; 
+        }
+    }
+
+    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
+        auto flip_pose_in_world_3 = placePart(part_type, target_part.pose, part_task.part.pose, target_agv);
+    }
+    else {
+        return false; 
     }
 }
 
