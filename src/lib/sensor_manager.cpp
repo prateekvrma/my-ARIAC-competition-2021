@@ -526,6 +526,11 @@ bool SensorManager::get_belt_proximity_sensor(ariac_group1::GetBeltProximitySens
 bool SensorManager::parts_under_camera(ariac_group1::PartsUnderCamera::Request &req,
                                        ariac_group1::PartsUnderCamera::Response &res)
 {
+    if (m_sensors_blackout) {
+      // assume no part
+      return false; 
+    }
+
     ros::spinOnce(); 
     if (req.camera_id.find("belt") != std::string::npos) {
        m_belt_camera->update_parts(); 

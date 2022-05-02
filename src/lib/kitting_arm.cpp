@@ -1038,7 +1038,12 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
     ariac_group1::PartsUnderCamera srv; 
     srv.request.camera_id = "ks"; 
     srv.request.camera_id += part_task.agv_id.back(); 
-    m_parts_under_camera_client.call(srv);
+
+    bool srv_success = m_parts_under_camera_client.call(srv);
+    if (not srv_success) {
+        ROS_INFO("Sensor blackout don't flip'"); 
+        return false; 
+    }
 
     ros::Duration(0.5).sleep(); 
 
@@ -1075,7 +1080,11 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
         }
 
         ros::Duration(0.5).sleep(); 
-        m_parts_under_camera_client.call(srv);
+        srv_success = m_parts_under_camera_client.call(srv);
+        if (not srv_success) {
+            ROS_INFO("Sensor blackout don't flip'"); 
+            return false; 
+        }
 
         for (auto part: srv.response.parts) {
             auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
@@ -1094,7 +1103,11 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
         return false; 
     }
 
-    m_parts_under_camera_client.call(srv);
+    srv_success = m_parts_under_camera_client.call(srv);
+    if (not srv_success) {
+        ROS_INFO("Sensor blackout don't flip'"); 
+        return false; 
+    }
 
     for (auto part: srv.response.parts) {
         auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
@@ -1493,6 +1506,10 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
     case ShipmentState::HAS_FLIP_PART: 
       {
         auto wrong_part_rpy = Utility::motioncontrol::eulerFromQuaternion(wrong_part.pose);
+        // auto yaw = wrong_part_rpy.at(2); 
+        // if (yaw < 0) {
+        //     yaw = 2 * M_PI + yaw; 
+        // }
         ariac_group1::PartInfo part_info; 
         part_info.part = wrong_part; 
         part_info.roll = wrong_part_rpy.at(0); 
@@ -1503,6 +1520,10 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         part_info.camera_id = camera_id; 
 
         this->movePart(part_info, part_task); 
+        // }
+        // else {
+        //     this->flip_part(part_task); 
+        // }
 
         break; 
       }
