@@ -41,6 +41,8 @@ class KittingArm {
   public: 
     KittingArm();
 
+    void wait_for_belt(int wait_time=5); 
+
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
     bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id, bool flip=false);
     geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv, bool flip=false);

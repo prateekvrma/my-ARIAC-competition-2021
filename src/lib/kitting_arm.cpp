@@ -1128,7 +1128,7 @@ bool KittingArm::flip_part(const ariac_group1::PartTask& part_task)
 
 bool KittingArm::check_emergency_interrupt()
 {
-  ROS_INFO("Checking for emergency interrupt"); 
+  // ROS_INFO("Checking for emergency interrupt"); 
   ariac_group1::GetBeltProximitySensor belt_proximity_sensor_srv; 
 
   bool interrupt = false; 
@@ -1250,6 +1250,21 @@ void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool 
     deactivateGripper();
     ros::Duration(0.1).sleep(); 
     this->lift(); 
+}
+
+void KittingArm::wait_for_belt(int wait_time)
+{
+  ariac_group1::GetCompetitionTime get_comp_time_srv; 
+  double competition_time; 
+  do {
+    ROS_INFO("Waiting for belt"); 
+    if (this->check_emergency_interrupt()) {
+        return; 
+    }
+    m_get_competition_time_client.call(get_comp_time_srv); 
+    competition_time = get_comp_time_srv.response.competition_time;
+    ros::Duration(1.0).sleep(); 
+  } while(competition_time < wait_time);
 }
 
 bool KittingArm::get_order()

@@ -8,7 +8,7 @@ int main(int argc, char** argv) {
     spinner.start();
 
     KittingArm kitting_arm = KittingArm();
-    // kitting_arm.print_joints_position(); 
+    kitting_arm.wait_for_belt(7); 
 
     while (ros::ok()) {
       auto success = kitting_arm.get_order(); 
