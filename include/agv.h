@@ -18,6 +18,7 @@ class AGV {
   public: 
     AGV(ros::NodeHandle* nodehandle, const std::string& id); 
 
+    std::string get_station(); 
     void submit_shipment(const std::string& shipment_type,
                          const std::string& station_id); 
 

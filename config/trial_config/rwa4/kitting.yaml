@@ -33,22 +33,12 @@ agv_infos:
         type: assembly_pump_blue
         pose:
           xyz: [-0.1, -0.1, 0]
-          rpy: [pi, 0, pi/2]
+          rpy: [0, 0, pi/2]
   agv3:
     location: ks3
   agv4:
-    location: as3    
-    products:
-      part_0:
-        type: assembly_battery_green
-        pose:
-          xyz: [0.1, 0.1, 0]
-          rpy: [0, 0, 0]
-      part_1:
-        type: assembly_pump_blue
-        pose:
-          xyz: [-0.1, -0.1, 0]
-          rpy: [pi, 0, pi/2]
+    location: ks4    
+    
 orders:
   order_0:
     priority: 1
@@ -70,28 +60,8 @@ orders:
           type: assembly_pump_blue
           pose:
             xyz: [-0.1, -0.1, 0]
-            rpy: [pi, 0, pi/2]
-  order_1:
-    priority: 1 # default is 1 if omitted, we could omit this line
-    kitting_robot_health: 1 
-    assembly_robot_health: 1
-    announcement_condition: agv_station_reached
-    announcement_condition_value: agv4_at_as3
-    assembly:
-      shipment_count: 2
-      stations: [as3, as1]
-      products:
-        part_0:
-          type: assembly_battery_green
-          pose:
-            xyz: [-0.032465, 0.174845, 0.15]
-            rpy: [0, 0, 0]
-        part_1:
-          type: assembly_pump_blue
-          pose:
-            xyz: [0.032085, -0.152835, 0.25]
-            rpy: [pi, 0, 0]
-
+            rpy: [0, 0, pi/2]
+  
 models_over_bins:
    bin3:
      models:
@@ -125,5 +95,5 @@ faulty_products:
 
 sensor_blackout:
   product_count: 1
-  duration: 50
+  duration: 10
 

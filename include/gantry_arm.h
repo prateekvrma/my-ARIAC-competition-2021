@@ -1,5 +1,5 @@
-#ifndef KITTING_ARM_H
-#define KITTING_ARM_H
+#ifndef GANTRY_ARM_H
+#define GANTRY_ARM_H
 
 // ros
 #include <ros/ros.h>
@@ -28,26 +28,25 @@
 
 // custom
 #include "utility.h"
-#include "shipments.h"
+#include "assembly_shipments.h"
 #include "constants.h"
 #include "agv.h"
 
 struct ArmPresetLocation {
-      std::vector<double> joints_position;  //9 joints
+      std::vector<double> gantry_torso;
+      std::vector<double> gantry_arm;
+      std::vector<double> gantry_full;
       std::string name;
 };
 
-class KittingArm {
+class GantryArm {
   public: 
-    KittingArm();
-
-    void wait_for_belt(int wait_time=5); 
+    GantryArm();
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
-    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id, bool flip=false);
-    geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv, bool flip=false);
+    bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
+    geometry_msgs::Pose placePart(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv);
     void testPreset(const std::vector<ArmPresetLocation>& preset_list);
-    bool flip_part(const ariac_group1::PartTask& part_task); 
 
     void activateGripper();
     void deactivateGripper();
@@ -63,9 +62,7 @@ class KittingArm {
 
     bool move_arm_group(); 
     void moveBaseTo(double linear_arm_actuator_joint_position);
-    void resetArm(); 
-    void turnToBins(); 
-    void turnToBelt(); 
+    void resetArm();
     void lift(); 
     void setPickConstraints(); 
     bool moveTargetPose(const geometry_msgs::Pose& pose); 
@@ -78,12 +75,11 @@ class KittingArm {
     void execute(); 
 
     //--preset locations;
-    ArmPresetLocation home_face_belt, home_face_bins, 
-                      location_belt_part, location_belt_intercept,
-                      location_agv1, location_agv2, location_agv3, location_agv4,
-                      location_bins0, location_bins1; 
+    ArmPresetLocation one, two, three, four, five, six, seven, eight, nine, at_bins3, at_bins4, at_bins7, at_bins8, at_agv1, at_agv2, at_agv3, at_agv4, at_as3, at_agv4_at_as3, at_agv2_at_as1, at_as1; 
 
   private:
+    std::map<std::string, double> m_model_height;
+
     // update joint positions
     void copyCurrentJointsPosition(); 
 
@@ -103,18 +99,24 @@ class KittingArm {
     bool get_belt_part(double range); 
     void place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt=true); 
 
-    // void submit_shipment(const std::string& agv_id,
-                         // const std::string& shipment_type,
-                         // const std::string& station_id); 
- 
+    void submit_shipment(const std::string& shipment_type,
+                         const std::string& station_id); 
+
 
     std::vector<double> m_joint_group_positions;
     ros::NodeHandle m_nh;
     std::string m_planning_group;
-    moveit::planning_interface::MoveGroupInterface::Options m_arm_options;
-    moveit::planning_interface::MoveGroupInterface m_arm_group;
+    
+    // moveit planning_interface
+    moveit::planning_interface::MoveGroupInterface::Options m_full_gantry_options;
+    moveit::planning_interface::MoveGroupInterface::Options m_gantry_options;
+    moveit::planning_interface::MoveGroupInterface::Options m_torso_gantry_options;
+    moveit::planning_interface::MoveGroupInterface m_full_gantry_group;
+    moveit::planning_interface::MoveGroupInterface m_gantry_group;
+    moveit::planning_interface::MoveGroupInterface m_torso_gantry_group;
+
     sensor_msgs::JointState m_current_joint_states;
-    control_msgs::JointTrajectoryControllerState m_arm_controller_state;
+    control_msgs::JointTrajectoryControllerState m_gantry_controller_state;
 
     nist_gear::VacuumGripperState m_gripper_state;
     // gripper state subscriber
@@ -135,7 +137,12 @@ class KittingArm {
     ros::ServiceClient m_get_belt_part_client; 
     ros::ServiceClient m_get_belt_proximity_sensor_client;  
     ros::ServiceClient m_get_vacancy_pose_client;  
-    ros::ServiceClient m_parts_under_camera_client;  
+    ros::ServiceClient m_parts_under_camera_client; 
+
+    ros::ServiceClient m_submit_shipment_as1_client;   
+    ros::ServiceClient m_submit_shipment_as2_client;   
+    ros::ServiceClient m_submit_shipment_as3_client;   
+    ros::ServiceClient m_submit_shipment_as4_client;   
 
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
@@ -150,7 +157,7 @@ class KittingArm {
     std::vector<std::string> m_agvs_id = {"agv1", "agv2", "agv3", "agv4"}; 
     std::map<std::string, std::unique_ptr<AGV>> m_agvs_dict; 
     
-    Shipments m_shipments; 
+    AssemblyShipments m_shipments; 
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
 
     // std::map<std::string, int> m_shipments_total_parts; 

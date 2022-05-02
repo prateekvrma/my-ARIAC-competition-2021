@@ -1,4 +1,4 @@
-#include "kitting_arm.h"
+#include "gantry_arm.h"
 
 #include <geometry_msgs/TransformStamped.h>
 #include <tf2_ros/transform_listener.h>
@@ -16,6 +16,7 @@
 #include <random>
 
 #include <nist_gear/AGVToAssemblyStation.h>
+#include <nist_gear/AssemblyStationSubmitShipment.h>
 #include <ariac_group1/IsFaulty.h>
 #include <ariac_group1/PartsInCamera.h>
 #include <ariac_group1/IsPartPicked.h>
@@ -26,37 +27,42 @@
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
 #include <ariac_group1/GetVacancyPose.h>
-#include <ariac_group1/PartsUnderCamera.h>
+
 
 using AGVToAssem = nist_gear::AGVToAssemblyStation; 
+using AssemSubmit = nist_gear::AssemblyStationSubmitShipment; 
 
-KittingArm::KittingArm():
-  m_nh{"/ariac/kitting"},
-  m_planning_group{"/ariac/kitting/robot_description"},
-  m_arm_options{"kitting_arm", m_planning_group, m_nh},
-  m_arm_group{m_arm_options}, 
+GantryArm::GantryArm():
+  m_nh{"/ariac/gantry"},
+  m_planning_group{"/ariac/gantry/robot_description"},
+  m_full_gantry_options{"gantry_full", m_planning_group, m_nh},
+  m_gantry_options{"gantry_arm", m_planning_group, m_nh},
+  m_torso_gantry_options{"gantry_torso", m_planning_group, m_nh},
+  m_full_gantry_group{m_full_gantry_options},
+  m_gantry_group{m_gantry_options},
+  m_torso_gantry_group{m_torso_gantry_options}, 
   m_shipments{&m_nh}
 {
   // publishers to directly control the joints without moveit
   m_arm_joint_trajectory_publisher =
-      m_nh.advertise<trajectory_msgs::JointTrajectory>("/ariac/kitting/kitting_arm_controller/command", 10);
+      m_nh.advertise<trajectory_msgs::JointTrajectory>("/ariac/gantry/gantry_arm_controller/command", 10);
 
   // subscribers
   m_arm_joint_states_subscriber =
-      m_nh.subscribe("/ariac/kitting/joint_states", 10, &KittingArm::arm_joint_states_callback, this);
+      m_nh.subscribe("/ariac/gantry/joint_states", 10, &GantryArm::arm_joint_states_callback, this);
   
   m_arm_controller_state_subscriber =
-      m_nh.subscribe("/ariac/kitting/kitting_arm_controller/state", 10, &KittingArm::arm_controller_state_callback, this);
+      m_nh.subscribe("/ariac/gantry/gantry_arm_controller/state", 10, &GantryArm::arm_controller_state_callback, this);
 
   m_gripper_state_subscriber = 
-      m_nh.subscribe("/ariac/kitting/arm/gripper/state", 10, &KittingArm::gripper_state_callback, this);
+      m_nh.subscribe("/ariac/gantry/arm/gripper/state", 10, &GantryArm::gripper_state_callback, this);
 
   // m_part_task_subscriber =
-  //     m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
+  //     m_nh.subscribe("/part_task", 10, &GantryArm::part_task_callback, this); 
 
   // clients
   m_gripper_control_client =
-      m_nh.serviceClient<nist_gear::VacuumGripperControl>("/ariac/kitting/arm/gripper/control");
+      m_nh.serviceClient<nist_gear::VacuumGripperControl>("/ariac/gantry/arm/gripper/control");
   m_gripper_control_client.waitForExistence();
 
   m_get_parts_client = 
@@ -107,113 +113,171 @@ KittingArm::KittingArm():
       m_nh.serviceClient<ariac_group1::PartsUnderCamera>("/sensor_manager/parts_under_camera"); 
   m_parts_under_camera_client.waitForExistence();
 
+  m_submit_shipment_as1_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as1/submit_shipment"); 
+  m_submit_shipment_as1_client.waitForExistence();
+
+  m_submit_shipment_as2_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as2/submit_shipment"); 
+  m_submit_shipment_as2_client.waitForExistence();
+
+  m_submit_shipment_as3_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as3/submit_shipment"); 
+  m_submit_shipment_as3_client.waitForExistence();
+
+  m_submit_shipment_as4_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as4/submit_shipment"); 
+  m_submit_shipment_as4_client.waitForExistence();
+
   for (auto& id: m_agvs_id) {
       m_agvs_dict[id] = std::make_unique<AGV>(&m_nh, id); 
   }
 
-  // Preset locations
-  // ^^^^^^^^^^^^^^^^
-  // Joints for the arm are in this order:
-  // - linear_arm_actuator_joint
-  // - shoulder_pan_joint
-  // - shoulder_lift_joint
-  // - elbow_joint
-  // - wrist_1_joint
-  // - wrist_2_joint
-  // - wrist_3_joint
+  // five
+  five.gantry_torso ={ -3.50, 0, 0 };
+  five.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  five.gantry_full = { -3.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  five.name = "five";
+  // two
+  two.gantry_torso ={ -1.50, 0, 0 };
+  two.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  two.gantry_full = { -1.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  two.name = "two";
+  // eight
+  eight.gantry_torso ={ -8.50, 0, 0 };
+  eight.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  eight.gantry_full = { -8.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  eight.name = "eight";
+  // six
+  six.gantry_torso ={ -3.50, -2.5, 0 };
+  six.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  six.gantry_full = { -3.50, -2.5, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  six.name = "six";
+  // three
+  three.gantry_torso ={ -1.50, -2.5, 0 };
+  three.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  three.gantry_full = { -1.50, -2.5, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  three.name = "three";
+  // nine
+  nine.gantry_torso ={ -8.50, -2.75, 0 };
+  nine.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  nine.gantry_full = { -8.50, -2.75, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  nine.name = "nine";
+  // four 
+  four.gantry_torso ={ -3.50, 2.5, 0 };
+  four.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  four.gantry_full = { -3.50, 2.5, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  four.name = "four";
+  // one
+  one.gantry_torso ={ -1.50, 2.5, 0 };
+  one.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  one.gantry_full = { -1.50, 2.5, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  one.name = "one";
+  // seven
+  seven.gantry_torso ={ -8.50, 2.75, 0 };
+  seven.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  seven.gantry_full = { -8.50, 2.75, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  seven.name = "seven";
+  
+  // above bins3
+  at_bins3.gantry_torso = { -0.56, -1.65, -0.02 };
+  at_bins3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins3.gantry_full = { -0.56, -1.65, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins3.name = "at_bins3";
 
-  double linear_arm_actuator_joint{ 0 };
-  double shoulder_pan_joint{ 0 };
-  double shoulder_lift_joint{ -1.25 };
-  double elbow_joint{ 1.74 };
-  double wrist_1_joint{ -2.04 };
-  double wrist_2_joint{ -1.57 };
-  double wrist_3_joint{ 0 };
+  // above bins4
+  at_bins4.gantry_torso = { -0.56, -2.5, -0.02 };
+  at_bins4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins4.gantry_full = { -0.56, -2.5, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins4.name = "at_bins4";
 
-  std::vector<double> default_pos = {linear_arm_actuator_joint,
-                                     shoulder_pan_joint,
-                                     shoulder_lift_joint,
-                                     elbow_joint,
-                                     wrist_1_joint,
-                                     wrist_2_joint,
-                                     wrist_3_joint}; 
-  //home position
-  home_face_belt.joints_position = default_pos;
-  home_face_belt.name = "home_face_belt";
+  // above bins7
+  at_bins7.gantry_torso = { -0.8, -3.2, -0.02 };
+  at_bins7.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins7.gantry_full = { -0.8, -3.2, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins7.name = "at_bins7";
 
-  home_face_bins.joints_position = default_pos;
-  // shoulder_pan_joint
-  home_face_bins.joints_position.at(1) = -M_PI;
-  home_face_bins.name = "home_face_bins";
+  // above bins8
+  at_bins8.gantry_torso = { -0.8, -4, -0.02 };
+  at_bins8.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins8.gantry_full = { -0.8, -4, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_bins8.name = "at_bins8";
 
-  location_belt_part.joints_position = default_pos;
-  location_belt_part.joints_position.at(0) = -3;
-  location_belt_part.name = "belt_part";
+  // at_agv1
+  at_agv1.gantry_torso = { 0.05, -3.7, -0.02 };
+  at_agv1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv1.gantry_full = { 0.05, -3.7, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv1.name = "at_agv1";
 
-  location_belt_intercept.joints_position = default_pos;
-  location_belt_intercept.joints_position.at(1) = -M_PI;
-  location_belt_intercept.joints_position.at(2) = -2;
-  location_belt_intercept.joints_position.at(3) = -2;
-  location_belt_intercept.joints_position.at(5) = 3.05;
-  location_belt_intercept.name = "belt_intercept";
+  // at_agv2
+  at_agv2.gantry_torso = { 0.05, -0.7, -0.02 };
+  at_agv2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv2.gantry_full = { 0.05, -0.7, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv2.name = "at_agv2";
+  
+  // at_agv3
+  at_agv3.gantry_torso = { 0.05, 2, -0.02 };
+  at_agv3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv3.gantry_full = { 0.05, 2, -0.02  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv3.name = "at_agv3";
 
+  // at_agv4
+  at_agv4.gantry_torso = { 0.56, 4.27, 1.57 };
+  at_agv4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv4.gantry_full = { 0.56, 4.27, 1.57  ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv4.name = "at_agv4";
 
-  location_agv1.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_agv1.joints_position.at(0) = 3.83; 
-  location_agv1.name = "agv1"; 
+  // at AS3
+  at_as3.gantry_torso = { -3.7 , -2.8 + 6.063705, 1.57 };
+  at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as3.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as3.name = "at_as3";
 
-  location_agv2.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_agv2.joints_position.at(0) = 0.83; 
-  location_agv2.name = "agv2"; 
+  // at agv4 at as3
+  at_agv4_at_as3.gantry_torso = { -2.72 , -1.26 + 6.063705, 1.57 };
+  at_agv4_at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv4_at_as3.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv4_at_as3.name = "at_agv4_at_as3";
 
-  location_agv3.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_agv3.joints_position.at(0) = -1.63; 
-  location_agv3.name = "agv3"; 
+  // at agv2 at as1
+  at_agv2_at_as1.gantry_torso = { -2.72 , -1.26 , 1.57 };
+  at_agv2_at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv2_at_as1.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv2_at_as1.name = "at_agv2_at_as1";
 
-  location_agv4.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_agv4.joints_position.at(0) = -4.1; 
-  location_agv4.name = "agv4"; 
+  // at as1
+  at_as1.gantry_torso = { -3.7 , -2.8, 1.57 };
+  at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as1.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as1.name = "at_as1";
 
-  location_bins0.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_bins0.joints_position.at(0) = 3; 
-  location_bins0.name = "bins0"; 
-
-  location_bins1.joints_position = home_face_bins.joints_position; 
-  // linear actuator at y axis 
-  location_bins1.joints_position.at(0) = -4; 
-  location_bins1.name = "bins1"; 
-
-  m_arm_group.setPlanningTime(10.0); 
-
-
-  // initialize home position
-  this->goToPresetLocation("home_face_belt"); 
-  this->goToPresetLocation("home_face_bins"); 
+  // raw pointers are frequently used to refer to the planning group for improved performance.
+  // to start, we will create a pointer that references the current robot’s state.
+  const moveit::core::JointModelGroup* joint_model_group =
+      m_full_gantry_group.getCurrentState()->getJointModelGroup("gantry_full");
+  moveit::core::RobotStatePtr current_state = m_full_gantry_group.getCurrentState();
+  // next get the current set of joint values for the group.
+  current_state->copyJointGroupPositions(joint_model_group, m_joint_group_positions);
 }
 
-void KittingArm::copyCurrentJointsPosition()
+void GantryArm::copyCurrentJointsPosition()
 {
-  moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
+  moveit::core::RobotStatePtr current_state = m_gantry_group.getCurrentState();
   const moveit::core::JointModelGroup* joint_model_group =
-          current_state->getJointModelGroup("kitting_arm");
+          current_state->getJointModelGroup("gantry_arm");
 
   // next get the current set of joint values for the group.
   current_state->copyJointGroupPositions(joint_model_group, m_joint_group_positions);
 }
 
-void KittingArm::print_joint_group_positions() {
+void GantryArm::print_joint_group_positions() {
   ROS_INFO("Target Joint positions: "); 
   for (int i; i < m_joint_group_positions.size(); ++i) {
     ROS_INFO("  Joint %d: %f", i, m_joint_group_positions.at(i)); 
   }
 }
 
-void KittingArm::arm_joint_states_callback(const sensor_msgs::JointState::ConstPtr& joint_state_msg)
+void GantryArm::arm_joint_states_callback(const sensor_msgs::JointState::ConstPtr& joint_state_msg)
 {
     if (joint_state_msg->position.size() == 0) {
         ROS_ERROR("[Arm][arm_joint_states_callback_] joint_state_msg->position.size() == 0!");
@@ -221,23 +285,43 @@ void KittingArm::arm_joint_states_callback(const sensor_msgs::JointState::ConstP
     m_current_joint_states = *joint_state_msg;
 }
 
-void KittingArm::arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg)
+void GantryArm::arm_controller_state_callback(const control_msgs::JointTrajectoryControllerState::ConstPtr& msg)
 {
-    m_arm_controller_state = *msg;
+    m_gantry_controller_state = *msg;
 }
 
 
-void KittingArm::gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg)
+void GantryArm::gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg)
 {
     m_gripper_state = *gripper_state_msg;
 }
 
-nist_gear::VacuumGripperState KittingArm::getGripperState()
+// void GantryArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
+// {
+//   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+//   // add tasks to task vector
+//   m_part_task_queue.emplace_back(std::make_tuple(msg->priority * Constants::PriorityWeight::Ratio::HIGH_PRIORITY,
+//                                                  std::make_unique<ariac_group1::PartTask>(*msg))); 
+//   if (not m_shipments_total_parts.count(msg->shipment_type)) {
+//     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
+//     ROS_INFO("Receive shipment %s including %d parts", msg->shipment_type.c_str(), msg->total_parts); 
+//   }
+// }
+
+// void GantryArm::print_shipments_total_parts() {
+//   ROS_INFO("Shipment total parts: "); 
+//   for (auto& part_count: m_shipments.shipment_record) {
+//     ROS_INFO("  %s: %d", part_count.first.c_str(), part_count.second); 
+//   }
+//
+// }
+
+nist_gear::VacuumGripperState GantryArm::getGripperState()
 {
     return m_gripper_state;
 }
 
-void KittingArm::activateGripper()
+void GantryArm::activateGripper()
 {
     nist_gear::VacuumGripperControl srv;
     srv.request.enable = true;
@@ -246,7 +330,7 @@ void KittingArm::activateGripper()
     ROS_INFO_STREAM("Activate gripper " << srv.response);
 }
 
-void KittingArm::deactivateGripper()
+void GantryArm::deactivateGripper()
 {
     nist_gear::VacuumGripperControl srv;
     srv.request.enable = false;
@@ -255,155 +339,184 @@ void KittingArm::deactivateGripper()
     ROS_INFO_STREAM("Deactivate gripper " << srv.response);
 }
 
-void KittingArm::goToPresetLocation(std::string location_name)
+void GantryArm::goToPresetLocation(std::string location_name)
 {
 
-    this->copyCurrentJointsPosition(); 
-
     ArmPresetLocation location;
-    if (location_name.compare("home_face_belt") == 0) {
-        ROS_INFO("Move to home_face_belt"); 
-        location = home_face_belt;
+    if (location_name.compare("one") == 0) {
+        ROS_INFO("Moving to one"); 
+        location = one;
     }
-    else if (location_name.compare("home_face_bins") == 0) {
-        ROS_INFO("Move to home_face_bins"); 
-        location = home_face_bins;
+    else if (location_name.compare("two") == 0) {
+        ROS_INFO("Moving to two"); 
+        location = two;
     }
-    else if (location_name.compare("agv1") == 0 or
-             location_name.find("ks1") != std::string::npos) {
-        ROS_INFO("Move to agv1"); 
-        location = location_agv1;
+    else if(location_name.compare("three")==0){
+        ROS_INFO("Moving to three");
+        location = three;
     }
-    else if (location_name.compare("agv2") == 0 or 
-             location_name.find("ks2") != std::string::npos) {
-        ROS_INFO("Move to agv2"); 
-        location = location_agv2;
+    else if(location_name.compare("four")==0){
+        ROS_INFO("Moving to four");
+        location = four;
     }
-    else if (location_name.compare("agv3") == 0 or
-             location_name.find("ks3") != std::string::npos) {
-        ROS_INFO("Move to agv3"); 
-        location = location_agv3;
+    else if(location_name.compare("five")==0){
+        ROS_INFO("Moving to five");
+        location = five;
     }
-    else if (location_name.compare("agv4") == 0 or 
-             location_name.find("ks4") != std::string::npos) {
-        ROS_INFO("Move to agv4"); 
-        location = location_agv4;
+    else if(location_name.compare("six")==0){
+        ROS_INFO("Moving to six");
+        location = six;
     }
-    else if (location_name.find("bins0") != std::string::npos) {
-        ROS_INFO("Move to bins0"); 
-        location = location_bins0;
+    else if(location_name.compare("seven")==0){
+        ROS_INFO("Moving to seven");
+        location = seven;
     }
-    else if (location_name.find("bins1") != std::string::npos) {
-        ROS_INFO("Move to bins1"); 
-        location = location_bins1;
+    else if (location_name.compare("eight") == 0) {
+        ROS_INFO("Moving to eight"); 
+        location = eight;
+    }
+    else if (location_name.compare("nine") == 0) {
+        ROS_INFO("Moving to nine"); 
+        location = nine;
+    }
+    else if (location_name.compare("at_bins3") == 0) {
+        ROS_INFO("Moving to at_bins3"); 
+        location = at_bins3;
+    }
+    else if (location_name.compare("at_bins4") == 0) {
+        ROS_INFO("Moving to at_bins4"); 
+        location = at_bins4;
+    }
+    else if (location_name.compare("at_bins7") == 0) {
+        ROS_INFO("Moving to at_bins7"); 
+        location = at_bins7;
+    }
+    else if (location_name.compare("at_bins8") == 0) {
+        ROS_INFO("Moving to at_bins8"); 
+        location = at_bins8;
+    }
+    else if (location_name.compare("at_agv1") == 0) {
+        ROS_INFO("Moving to at_agv1"); 
+        location = at_agv1;
+    }
+    else if (location_name.compare("at_agv2") == 0) {
+        ROS_INFO("Moving to at_agv2"); 
+        location = at_agv2;
+    }
+    else if (location_name.compare("at_agv3") == 0) {
+        ROS_INFO("Moving to at_agv3"); 
+        location = at_agv3;
+    }
+    else if (location_name.compare("at_agv4") == 0) {
+        ROS_INFO("Moving to at_agv4"); 
+        location = at_agv4;
+    }
 
-    }
-    else if (location_name.find("belt_part") != std::string::npos) {
-        ROS_INFO("Move to belt part"); 
-        location = location_belt_part;
-    }
-    else if (location_name.find("belt_intercept") != std::string::npos) {
-        ROS_INFO("Move to belt intercept"); 
-        location = location_belt_intercept;
+    else if (location_name.compare("at_as3") == 0) {
+        ROS_INFO("Moving to at_as3"); 
+        location = at_as3;
     }
 
-    m_joint_group_positions.at(0) = location.joints_position.at(0);
-    m_joint_group_positions.at(1) = location.joints_position.at(1);
-    m_joint_group_positions.at(2) = location.joints_position.at(2);
-    m_joint_group_positions.at(3) = location.joints_position.at(3);
-    m_joint_group_positions.at(4) = location.joints_position.at(4);
-    m_joint_group_positions.at(5) = location.joints_position.at(5);
-    m_joint_group_positions.at(6) = location.joints_position.at(6);
+    else if (location_name.compare("as3_4") == 0) {
+        ROS_INFO("Moving to at_agv4_at_as3"); 
+        location = at_agv4_at_as3;
+    }
 
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
-    m_arm_group.setJointValueTarget(m_joint_group_positions);
-    this->move_arm_group(); 
+    else if (location_name.compare("at_as1") == 0) {
+        ROS_INFO("Moving to at_as1"); 
+        location = at_as1;
+    }
+
+    else if (location_name.compare("as1_2") == 0) {
+        ROS_INFO("Moving to at_agv2_at_as1"); 
+        location = at_agv2_at_as1;
+    }
+    
+    else {
+        ROS_ERROR("[Arm][goToPresetLocation] ERROR: location_name not found!");
+    }
+    
+
+    // gantry torso
+    m_joint_group_positions.at(0) = location.gantry_torso.at(0);
+    m_joint_group_positions.at(1) = location.gantry_torso.at(1);
+    m_joint_group_positions.at(2) = location.gantry_torso.at(2);
+    // gantry arm
+    m_joint_group_positions.at(3) = location.gantry_arm.at(0);
+    m_joint_group_positions.at(4) = location.gantry_arm.at(1);
+    m_joint_group_positions.at(5) = location.gantry_arm.at(2);
+    m_joint_group_positions.at(6) = location.gantry_arm.at(3);
+    m_joint_group_positions.at(7) = location.gantry_arm.at(4);
+    m_joint_group_positions.at(8) = location.gantry_arm.at(5);
+
+
+    m_full_gantry_group.setJointValueTarget(m_joint_group_positions);
+    this->move_arm_group();
 }
 
-bool KittingArm::move_arm_group()
+bool GantryArm::move_arm_group()
 {
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
     // check a plan is found first then execute the action
-    bool success = (m_arm_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    bool success = (m_gantry_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if (success)
-        m_arm_group.move();
+        m_full_gantry_group.move();
     else
         ROS_INFO("Path planning fails"); 
 
     return success; 
 }
 
-void KittingArm::moveBaseTo(double linear_arm_actuator_joint_position)
+void GantryArm::moveBaseTo(double linear_arm_actuator_joint_position)
 {
 
     this->copyCurrentJointsPosition(); 
     
     // next, assign a value to only the linear_arm_actuator_joint
-    m_joint_group_positions.at(0) = linear_arm_actuator_joint_position;
+    m_joint_group_positions.at(1) = linear_arm_actuator_joint_position;
 
     // move the arm
-    m_arm_group.setJointValueTarget(m_joint_group_positions);
-    this->move_arm_group(); 
+    m_full_gantry_group.setJointValueTarget(m_joint_group_positions);
+    m_full_gantry_group.move();
 }
 
-void KittingArm::resetArm()
+void GantryArm::resetArm()
 {
     this->copyCurrentJointsPosition(); 
     m_joint_group_positions.at(1) = -M_PI;
-    m_joint_group_positions.at(2) = -1.25;
-    m_joint_group_positions.at(3) = 1.74;
-    m_joint_group_positions.at(4) = -2.04;
-    m_joint_group_positions.at(5) = -1.57;
-    m_joint_group_positions.at(6) = 0;
-    m_arm_group.setJointValueTarget(m_joint_group_positions);
+    m_joint_group_positions.at(2) = -1.13;
+    m_joint_group_positions.at(3) = 1.88;
+    m_joint_group_positions.at(4) = -0.72;
+    m_joint_group_positions.at(5) = 1.55;
+    m_joint_group_positions.at(6) = 0.83;
+    m_full_gantry_group.setJointValueTarget(m_joint_group_positions);
     this->move_arm_group(); 
 }
 
-void KittingArm::turnToBins()
-{
 
-  this->copyCurrentJointsPosition(); 
-
-  double epsilon = 0.01; 
-  if (abs(m_joint_group_positions.at(1) - (-M_PI)) < epsilon) {
-    return; 
-  }
-
-  m_joint_group_positions.at(1) = -M_PI; 
-  m_arm_group.setJointValueTarget(m_joint_group_positions);
-  this->move_arm_group(); 
-}
-
-void KittingArm::turnToBelt()
-{
-
-  this->copyCurrentJointsPosition(); 
-
-  double epsilon = 0.01; 
-  if (abs(m_joint_group_positions.at(1)) < epsilon) {
-    return; 
-  }
-
-  m_joint_group_positions.at(1) = 0; 
-  m_arm_group.setJointValueTarget(m_joint_group_positions);
-  this->move_arm_group(); 
-}
-
-void KittingArm::lift()
+void GantryArm::lift()
 {
   this->copyCurrentJointsPosition(); 
   m_joint_group_positions.at(2) -= 0.3; 
   m_joint_group_positions.at(3) -= 0.1; 
-  m_arm_group.setJointValueTarget(m_joint_group_positions);
+  m_gantry_group.setJointValueTarget(m_joint_group_positions);
   this->move_arm_group(); 
 }
 
-void KittingArm::setPickConstraints()
+void GantryArm::setPickConstraints()
 {
   // set constraint to shoulder lift and elbow
   moveit_msgs::Constraints constraints;
 
   moveit_msgs::JointConstraint joint_constraint; 
+  // joint_constraint.joint_name = "shoulder_pan_joint"; 
+  // joint_constraint.position = -M_PI;  
+  // joint_constraint.tolerance_above = 1.2; 
+  // joint_constraint.tolerance_below = 1.2; 
+  // joint_constraint.weight = 1; 
+  //
+  // constraints.joint_constraints.push_back(joint_constraint); 
+  //
 
   joint_constraint.joint_name = "shoulder_lift_joint"; 
   joint_constraint.position = -1.25;  
@@ -438,11 +551,11 @@ void KittingArm::setPickConstraints()
   constraints.joint_constraints.push_back(joint_constraint); 
 
 
-  m_arm_group.setPathConstraints(constraints);
+  m_gantry_group.setPathConstraints(constraints);
 
 }
 
-bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
+bool GantryArm::moveTargetPose(const geometry_msgs::Pose& pose)
 {
   this->setPickConstraints(); 
 
@@ -465,9 +578,9 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
 
       ROS_INFO("Set pose attempts: %d", attempts); 
       m_joint_group_positions = current_joint_group_positions; 
-      moveit::core::RobotStatePtr current_state = m_arm_group.getCurrentState();
+      moveit::core::RobotStatePtr current_state = m_gantry_group.getCurrentState();
       const moveit::core::JointModelGroup* joint_model_group =
-              current_state->getJointModelGroup("kitting_arm");
+              current_state->getJointModelGroup("gantry_arm");
 
       double timeout = 5; 
       bool found_ik = current_state->setFromIK(joint_model_group, pose, timeout); 
@@ -481,7 +594,10 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
         auto joint_2 = target_joint_group_positions.at(2);  
         auto joint_3 = target_joint_group_positions.at(3);  
         auto joint_4 = target_joint_group_positions.at(4);  
-
+        // if (joint_1 > 0) {
+        //     joint_1 = joint_1 - M_PI * 2; 
+        // }
+        //
         if (joint_2 > 0) {
             joint_2 = joint_2 - M_PI * 2; 
         }
@@ -494,6 +610,11 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
             joint_4 = joint_4 - M_PI * 2; 
         }
 
+        // if (joint_1 > -1.94 or joint_1 < -4.34) {
+        //   ROS_INFO("Target joint 1 infisible: %f", target_joint_group_positions.at(2)); 
+        //   target_joints_infeasible = true; 
+        // }
+        //
         if (joint_2 > -0.17 or joint_2 < -1.74) { 
           ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
           target_joints_infeasible = true; 
@@ -512,251 +633,96 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
         if (target_joints_infeasible) {
 
           ros::Duration(3.0).sleep(); 
-          m_arm_group.setMaxVelocityScalingFactor(0.5);
+          m_gantry_group.setMaxVelocityScalingFactor(0.5);
           m_joint_group_positions = current_joint_group_positions; 
-          m_arm_group.setJointValueTarget(m_joint_group_positions);
+          m_gantry_group.setJointValueTarget(m_joint_group_positions);
           this->move_arm_group(); 
-          m_arm_group.setMaxVelocityScalingFactor(1.0);
+          m_gantry_group.setMaxVelocityScalingFactor(1.0);
           continue; 
         }
 
         m_joint_group_positions.at(0) = target_joint_group_positions.at(0); 
         m_joint_group_positions.at(1) = target_joint_group_positions.at(1); 
-        m_arm_group.setJointValueTarget(m_joint_group_positions);
+        m_gantry_group.setJointValueTarget(m_joint_group_positions);
         this->move_arm_group(); 
 
         m_joint_group_positions = target_joint_group_positions; 
-        m_arm_group.setJointValueTarget(m_joint_group_positions);
+        m_gantry_group.setJointValueTarget(m_joint_group_positions);
         this->move_arm_group(); 
-        m_arm_group.clearPathConstraints();
+        m_gantry_group.clearPathConstraints();
         return true; 
       }
   }
 
   this->copyCurrentJointsPosition(); 
-  m_arm_group.clearPathConstraints();
+  m_gantry_group.clearPathConstraints();
   return false; 
 
 }
 
-bool KittingArm::pickPart(std::string part_type, 
+bool GantryArm::pickPart(std::string part_type, 
                           const geometry_msgs::Pose& part_init_pose,
-                          std::string camera_id,
-                          bool flip) 
+                          std::string camera_id) 
 {
     ROS_INFO("---Start pick part"); 
-    ROS_INFO("Picking under camera %s", camera_id.c_str()); 
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_gantry_group.setMaxVelocityScalingFactor(1.0);
 
-    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
     auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
     arm_ee_link_pose.orientation.z = flat_orientation.getZ();
     arm_ee_link_pose.orientation.w = flat_orientation.getW();
-    
+
+    arm_ee_link_pose.position.x = part_init_pose.position.x; 
+    arm_ee_link_pose.position.y = part_init_pose.position.y; 
+
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.075;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.0052;
-        }
-    }
-    if (part_type.find("sensor") != std::string::npos) {
-        z_pos = 0.05;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
+        z_pos = 0.083;
     }
     if (part_type.find("battery") != std::string::npos) {
         z_pos = 0.052;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
-    }
-    if (part_type.find("regulator") != std::string::npos) {
-        z_pos = 0.057;
-        if (camera_id.find("ks") != std::string::npos) {
-          z_pos -= 0.005;
-        }
     }
 
-    
+    arm_ee_link_pose.position.z = part_init_pose.position.z + z_pos;
 
-    // post-grasp pose 
-    // store the pose of the arm before it goes down to pick the part
-    // we will bring the arm back to this pose after picking up the part
-    auto postgrasp_pose = part_init_pose;
-    postgrasp_pose.orientation = arm_ee_link_pose.orientation;
-    postgrasp_pose.position.z = part_init_pose.position.z + z_pos + 0.05;
-
-    if (not flip) {
-        if (this->check_emergency_interrupt()) {
-            return false; 
-        }
-    }
-    
-
-    // m_arm_group.setPoseTarget(postgrasp_pose);
-    // m_arm_group.move();
-    ROS_INFO("Move to postgrasp pose"); 
-    if (not this->moveTargetPose(postgrasp_pose)) {
-      ROS_INFO("---End pick part: IK not found for postgrasp"); 
-      return false; 
-    }
-
-    if (not flip) {
-        if (this->check_emergency_interrupt()) {
-            return false; 
-        }
-    }
-
-    // pregrasp pose: right above the part
-    auto pregrasp_pose = part_init_pose;
-    pregrasp_pose.orientation = arm_ee_link_pose.orientation;
-    pregrasp_pose.position.z = part_init_pose.position.z + z_pos;
-
-    // activate gripper
-    // sometimes it does not activate right away
-    // so we are doing this in a loop
     while (!m_gripper_state.enabled) {
         activateGripper();
     }
+    m_gantry_group.setPoseTarget(arm_ee_link_pose); 
+    m_gantry_group.move();
 
-    ROS_INFO("Move to pregrasp pose"); 
-    if (not this->moveTargetPose(pregrasp_pose)) {
-      ROS_INFO("IK not found for grasp"); 
-      deactivateGripper();
-      this->lift(); 
-      return false; 
-    }
-
-    if (not flip) {
-        if (this->check_emergency_interrupt()) {
-            return false; 
-        }
-    }
-
-    ros::Duration(0.5).sleep();
-    
-    m_arm_group.setMaxVelocityScalingFactor(0.5);
-    auto grasp_pose = pregrasp_pose; 
-    // this->setPickConstraints(); 
-    ROS_INFO("Start grasping"); 
-    // move the arm 1 mm down until the part is attached
-    int count = 0; 
-    int trial = 0; 
+    auto grasp_pose = arm_ee_link_pose; 
     double step = 0.001;
     while (!m_gripper_state.attached) {
         grasp_pose.position.z -= step;
-        m_arm_group.setPoseTarget(grasp_pose);
-        m_arm_group.move();
-        count++; 
+        m_gantry_group.setPoseTarget(grasp_pose);
+        m_gantry_group.move();
         ros::Duration(0.3).sleep();
-        // if (step > 0.0008) {
-          // step -= 0.0001; 
-        // }
-        geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-        if (arm_ee_link_pose.position.z < 0.76) {
-          ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
-          this->resetArm(); 
-          deactivateGripper();
-          return false; 
-        }
-
-        if (trial > 3) {
-          ROS_INFO("Hard to grasp. Abort"); 
-          this->resetArm(); 
-          deactivateGripper();
-          return false; 
-        }
-
-        if (count > 2) {
-          if (not flip) {
-              if (this->check_emergency_interrupt()) {
-                  return false; 
-              }
-          }
-        }
-
-        if (count > 7) {
-          this->lift(); 
-          ROS_INFO("Hard to grasp. Move back to pregrasp pose"); 
-          if (not this->moveTargetPose(pregrasp_pose)) {
-            ROS_INFO("IK not found for grasp"); 
-            deactivateGripper();
-            this->lift(); 
-            return false; 
-          }
-
-          grasp_pose = pregrasp_pose; 
-          count = 0; 
-          trial++; 
-        }
     }
-    // m_arm_group.clearPathConstraints();
+    ROS_INFO("grasp success"); 
     
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
-    m_arm_group.setMaxAccelerationScalingFactor(1.0);
-    ROS_INFO_STREAM("[Gripper] = object attached");
-    ros::Duration(0.5).sleep();
-
-    ROS_INFO("Move back to postgrasp pose"); 
-    if (not this->moveTargetPose(postgrasp_pose)) {
-      ROS_INFO("---End pick part: IK not found for postgrasp"); 
-      this->lift(); 
-      return false; 
-    }
-    // m_arm_group.setPoseTarget(postgrasp_pose);
-    // m_arm_group.move();
-    ros::Duration(0.5).sleep();
-
-    this->lift(); 
-
-    ariac_group1::IsPartPicked srv; 
-    srv.request.camera_id = camera_id; 
-    srv.request.part.type = part_type; 
-    srv.request.part.pose = part_init_pose; 
-    if (m_is_part_picked_client.call(srv)) {
-      if (srv.response.picked) {
-        ROS_INFO("---End pick part: pick success"); 
-        return true; 
-      }
-      else {
-        ROS_INFO("---End pick part: pick fails"); 
-        deactivateGripper();
-        return false; 
-      }
-    } 
-    else {
-      ROS_INFO("---End pick part: no such camera: %s", camera_id.c_str()); 
-      deactivateGripper();
-      return false; 
-    }
 }
 
-geometry_msgs::Pose KittingArm::placePart(std::string part_type, 
+geometry_msgs::Pose GantryArm::placePart(std::string part_type, 
                                           geometry_msgs::Pose part_init_pose, 
                                           geometry_msgs::Pose part_pose_in_frame, 
-                                          std::string agv, 
-                                          bool flip)
+                                          std::string station)
 {
-    goToPresetLocation(agv);
 
     // get the target pose of the part in the world frame
-    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+    auto target_pose_in_world = Utility::motioncontrol::transformBriefcaseToWorldFrame(
          part_pose_in_frame,
-         agv);
+         station);
 
     ROS_INFO("---Start place part"); 
     Utility::print_pose(target_pose_in_world); 
 
-   
-
-    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
     auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
-    arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
     arm_ee_link_pose.orientation.z = flat_orientation.getZ();
@@ -778,25 +744,7 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     arm_ee_link_pose.position.x = target_pose_in_world.position.x;
     arm_ee_link_pose.position.y = target_pose_in_world.position.y;
     // move the arm
-    m_arm_group.setMaxVelocityScalingFactor(0.8);
-
-    ROS_INFO("Move to place pose above"); 
-    while (not this->moveTargetPose(arm_ee_link_pose)) {
-      ROS_INFO("IK not found for place pose above"); 
-      goToPresetLocation(agv);
-
-      std::random_device rd; 
-      std::mt19937 gen(rd());
-      std::normal_distribution<double> gauss_dist(-0.1, 0.1); 
-      auto random_dist = gauss_dist(gen); 
-      m_joint_group_positions.at(0) += random_dist; 
-      this->moveBaseTo(m_joint_group_positions.at(0));
-      ros::Duration(3.0).sleep();
-    }
-
-    // m_arm_group.setPoseTarget(arm_ee_link_pose);
-    // m_arm_group.move();
-
+    m_gantry_group.setMaxVelocityScalingFactor(0.8);
   
     // orientation of the part in the bin, in world frame
     tf2::Quaternion q_init_part(
@@ -819,53 +767,58 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     tf2::Quaternion q_rslt = q_rot * q_current;
     q_rslt.normalize();
 
-    double z_margin{};
-    if (part_type.find("pump") != std::string::npos) {
-        z_margin = 0.14;
+    double y_margin{};
+    if (part_type.find("battery") != std::string::npos) {
+        y_margin = -0.25;
     }
-    else {
-      z_margin = 0.11; 
-    }
-    
+    double z_margin = 0.1;
+
+    // else if (part_type.find("regulator") != std::string::npos) {
+      // z_margin = 0.11; 
+    // }
+    //
     // orientation of the gripper when placing the part in the tray
     target_pose_in_world.orientation.x = q_rslt.x();
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-    target_pose_in_world.position.z += z_margin;
-    
-    ROS_INFO("Move to place pose"); 
-    if (flip) {
-        ROS_INFO("flip part"); 
-        target_pose_in_world.orientation.z += 5; 
-        m_arm_group.setPoseTarget(target_pose_in_world); 
-        m_arm_group.move(); 
-    }
-    else {
-        while (not this->moveTargetPose(target_pose_in_world)) {
-          ROS_INFO("IK not found for place"); 
-          goToPresetLocation(agv);
 
-          std::random_device rd; 
-          std::mt19937 gen(rd());
-          std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
-          auto random_dist = gauss_dist(gen); 
-          m_joint_group_positions.at(0) += random_dist; 
-          this->moveBaseTo(m_joint_group_positions.at(0));
-          ros::Duration(0.1).sleep();
-        }
+    target_pose_in_world.position.y += y_margin;
+    target_pose_in_world.position.z += z_margin;
+
+    m_gantry_group.setPoseTarget(target_pose_in_world); 
+    m_gantry_group.move();
+
+    if (part_type.find("battery") != std::string::npos) {
+        ROS_INFO("move for battery"); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(1) = m_current_joint_states.position.at(10) - 0.25; 
+        six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+        m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+        m_torso_gantry_group.move(); 
     }
 
     ros::Duration(1.0).sleep();
     deactivateGripper();
 
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
-    this->lift(); 
+    if (part_type.find("battery") != std::string::npos) {
+        ROS_INFO("move for battery"); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(1) = m_current_joint_states.position.at(10) + 0.25; 
+        six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+        m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+        m_torso_gantry_group.move(); 
+        m_gantry_group.setJointValueTarget(six.gantry_arm); 
+        m_gantry_group.move(); 
+    }
+
+    m_gantry_group.setMaxVelocityScalingFactor(1.0);
     ROS_INFO("---End place part"); 
 
     return target_pose_in_world;
 }
-bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string target_agv)
+
+bool GantryArm::discard_faulty(const nist_gear::Model& faulty_part, std::string target_agv)
 {
       std::string camera_id; 
       if (target_agv.compare("agv1") == 0) {
@@ -915,7 +868,7 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
           std::normal_distribution<double> gauss_dist(-0.05, 0.05); 
           auto random_dist = gauss_dist(gen); 
           m_joint_group_positions.at(0) += random_dist; 
-          m_arm_group.setJointValueTarget(m_joint_group_positions);
+          m_gantry_group.setJointValueTarget(m_joint_group_positions);
           this->move_arm_group(); 
         }
 
@@ -938,7 +891,7 @@ bool KittingArm::discard_faulty(const nist_gear::Model& faulty_part, std::string
       return true; 
 }
 
-bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
+bool GantryArm::check_faulty(const nist_gear::Model& faulty_part)
 {
   ariac_group1::IsFaulty srv; 
   
@@ -949,7 +902,7 @@ bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
   return srv.response.faulty; 
 }
 
-bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
+bool GantryArm::movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
     auto part_init_pose_in_world = part_init_info.part.pose;
     auto camera_id = part_init_info.camera_id; 
     auto part_type = part_init_info.part.type; 
@@ -958,20 +911,6 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
 
     if (this->check_emergency_interrupt()) {
         return false; 
-    }
-
-    auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_frame); 
-
-    bool flip = false; 
-    if (abs(target_rpy.at(0)) > 0.1) {
-        ROS_INFO("Flipped part!"); 
-        flip = true; 
-        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part_init_pose_in_world);
-        auto rectified_orientation = Utility::motioncontrol::quaternionFromEuler(part_rpy.at(0), part_rpy.at(1), 0);
-        target_pose_in_frame.orientation.x = rectified_orientation.getX();
-        target_pose_in_frame.orientation.y = rectified_orientation.getY();
-        target_pose_in_frame.orientation.z = rectified_orientation.getZ();
-        target_pose_in_frame.orientation.w = rectified_orientation.getW();
     }
 
     // use -0.3 to reduce awkward pick trajectory
@@ -1011,124 +950,18 @@ bool KittingArm::movePart(const ariac_group1::PartInfo& part_init_info, const ar
             // discard later
             return true; 
           }
-        } 
-        else {
-          if (flip) {
-            bool flip_success = this->flip_part(part_task);
-            if (not flip_success) {
-               ROS_INFO("Flip fails"); 
-            }
-          }
-          ROS_INFO("Part not faulty"); 
-          return true; 
         }
+        ROS_INFO("Part not faulty"); 
+        return true; 
     }
     else {
       return false; 
     }
 }
 
-bool KittingArm::flip_part(const ariac_group1::PartTask& part_task) 
+bool GantryArm::check_emergency_interrupt()
 {
-    bool flip = true; 
-    auto part_type = part_task.part.type; 
-    auto target_agv = part_task.agv_id; 
-    auto target_pose_in_frame = part_task.part.pose; 
-
-    ariac_group1::PartsUnderCamera srv; 
-    srv.request.camera_id = "ks"; 
-    srv.request.camera_id += part_task.agv_id.back(); 
-
-    bool srv_success = m_parts_under_camera_client.call(srv);
-    if (not srv_success) {
-        ROS_INFO("Sensor blackout don't flip'"); 
-        return false; 
-    }
-
-    ros::Duration(0.5).sleep(); 
-
-    std::string camera_id_flip = "logical_camera_ks"; 
-    camera_id_flip += part_task.agv_id.back(); 
-
-    nist_gear::Model target_part; 
-    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
-         target_pose_in_frame,
-         target_agv);
-
-    target_part.type = part_type; 
-    target_part.pose = target_pose_in_world;
-
-    for (auto part: srv.response.parts) {
-        if (Utility::is_same_part(part, target_part, 0.1) and
-            part.type == target_part.type) {
-            target_part = part; 
-            break; 
-        }
-    }
-    auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_part.pose);
-    // if target roll close to 0, then do two flip
-    if (abs(target_rpy.at(0)) < 0.1) {
-    
-        moveBaseTo(target_part.pose.position.y - 0.3);
-
-        // flip first 90 degree
-        if (pickPart(part_type, target_part.pose, camera_id_flip)) {
-            auto flip_pose_in_world_1 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
-        }
-        else {
-            return false; 
-        }
-
-        ros::Duration(0.5).sleep(); 
-        srv_success = m_parts_under_camera_client.call(srv);
-        if (not srv_success) {
-            ROS_INFO("Sensor blackout don't flip'"); 
-            return false; 
-        }
-
-        for (auto part: srv.response.parts) {
-            auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
-            if (abs(part_rpy.at(0)) > 0.1) {
-                target_part = part; 
-                break; 
-            }
-        }
-    }
-
-    // flip second 90 degree
-    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
-        auto flip_pose_in_world_2 = placePart(part_type, target_part.pose, target_pose_in_frame, target_agv, flip);
-    }
-    else {
-        return false; 
-    }
-
-    srv_success = m_parts_under_camera_client.call(srv);
-    if (not srv_success) {
-        ROS_INFO("Sensor blackout don't flip'"); 
-        return false; 
-    }
-
-    for (auto part: srv.response.parts) {
-        auto part_rpy = Utility::motioncontrol::eulerFromQuaternion(part.pose);
-        if (abs(part_rpy.at(0)) > 0.1) {
-            target_part = part; 
-            break; 
-        }
-    }
-
-    // turn to correct orientation
-    if (pickPart(part_type, target_part.pose, camera_id_flip)) {
-        auto flip_pose_in_world_3 = placePart(part_type, target_part.pose, part_task.part.pose, target_agv);
-    }
-    else {
-        return false; 
-    }
-}
-
-bool KittingArm::check_emergency_interrupt()
-{
-  // ROS_INFO("Checking for emergency interrupt"); 
+  ROS_INFO("Checking for emergency interrupt"); 
   ariac_group1::GetBeltProximitySensor belt_proximity_sensor_srv; 
 
   bool interrupt = false; 
@@ -1168,10 +1001,10 @@ bool KittingArm::check_emergency_interrupt()
   return interrupt; 
 }
 
-void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part)
+void GantryArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_part)
 {
     this->goToPresetLocation("belt_intercept"); 
-    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
     auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(2, 0, 1.57);
     arm_ee_link_pose.orientation.x = flat_orientation.getX();
     arm_ee_link_pose.orientation.y = flat_orientation.getY();
@@ -1181,14 +1014,56 @@ void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_par
     arm_ee_link_pose.position.x = belt_part.position.x; 
     arm_ee_link_pose.position.z = belt_part.position.z;
 
-    m_arm_group.setPoseTarget(arm_ee_link_pose); 
-    m_arm_group.move(); 
+    m_gantry_group.setPoseTarget(arm_ee_link_pose); 
+    m_gantry_group.move(); 
 }
 
-bool KittingArm::get_belt_part(double range)
+bool GantryArm::get_belt_part(double range)
 {
+    // ariac_group1::GetBeltPart srv; 
+    // do {
+    //     m_get_belt_part_client.call(srv); 
+    //     ros::Duration(0.2).sleep(); 
+    //
+    // } while(srv.response.part.type.empty()); 
+    //
     ROS_INFO("Get belt part"); 
-        while (!m_gripper_state.enabled) {
+    // Utility::print_part_pose(srv.response.part); 
+    //
+
+    // geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
+    // auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    // arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    // arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    // arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    // arm_ee_link_pose.orientation.w = flat_orientation.getW();
+    //
+    // // preset z depending on the part type
+    // auto part_type = srv.response.part.type; 
+    // double z_pos{};
+    // if (part_type.find("pump") != std::string::npos) {
+    //     z_pos = 0.07;
+    // }
+    // if (part_type.find("sensor") != std::string::npos) {
+    //     z_pos = 0.05;
+    // }
+    // if (part_type.find("battery") != std::string::npos) {
+    //     z_pos = 0.052;
+    // }
+    // if (part_type.find("regulator") != std::string::npos) {
+    //     z_pos = 0.057;
+    // }
+
+    // pregrasp pose: right above the part
+    // auto pregrasp_pose = srv.response.part.pose;
+    // pregrasp_pose.orientation = arm_ee_link_pose.orientation;
+    // pregrasp_pose.position.y = srv.response.part.pose.position.y - 0.5;
+    // pregrasp_pose.position.z = srv.response.part.pose.position.z + z_pos;
+    //
+    // activate gripper
+    // sometimes it does not activate right away
+    // so we are doing this in a loop
+    while (!m_gripper_state.enabled) {
         activateGripper();
     }
 
@@ -1199,7 +1074,7 @@ bool KittingArm::get_belt_part(double range)
 
     this->move_to_belt_intercept_pose(belt_part); 
 
-    m_arm_group.setMaxVelocityScalingFactor(0.6);
+    m_gantry_group.setMaxVelocityScalingFactor(0.6);
     int count = 0; 
     while (!m_gripper_state.attached) {
         ROS_INFO("Not attached"); 
@@ -1215,17 +1090,17 @@ bool KittingArm::get_belt_part(double range)
 
     ROS_INFO("Attached!!!"); 
 
-    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_gantry_group.setMaxVelocityScalingFactor(1.0);
     this->resetArm(); 
     ros::Duration(0.1).sleep(); 
     return true; 
 
 }
 
-void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt)
+void GantryArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool from_belt)
 {
     ROS_INFO("Place to vacancy"); 
-    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
 
     tf2::Quaternion flat_orientation; 
     if (from_belt) {
@@ -1244,38 +1119,23 @@ void KittingArm::place_to_vacancy(const geometry_msgs::Pose& vacancy_pose, bool 
     arm_ee_link_pose.position.y = vacancy_pose.position.y - 0.05; 
     arm_ee_link_pose.position.z = vacancy_pose.position.z + 0.2;
 
-    m_arm_group.setPoseTarget(arm_ee_link_pose); 
-    m_arm_group.move();
+    m_gantry_group.setPoseTarget(arm_ee_link_pose); 
+    m_gantry_group.move();
     ros::Duration(0.1).sleep(); 
     deactivateGripper();
     ros::Duration(0.1).sleep(); 
     this->lift(); 
 }
 
-void KittingArm::wait_for_belt(int wait_time)
-{
-  ariac_group1::GetCompetitionTime get_comp_time_srv; 
-  double competition_time; 
-  do {
-    ROS_INFO("Waiting for belt"); 
-    if (this->check_emergency_interrupt()) {
-        return; 
-    }
-    m_get_competition_time_client.call(get_comp_time_srv); 
-    competition_time = get_comp_time_srv.response.competition_time;
-    ros::Duration(1.0).sleep(); 
-  } while(competition_time < wait_time);
-}
-
-bool KittingArm::get_order()
+bool GantryArm::get_order()
 {
   ros::Duration(1.0).sleep();
   ros::Rate wait_rate(20); 
-  this->check_emergency_interrupt();  
+  // this->check_emergency_interrupt();  
   // check if there are tasks and make sure ROS is running 
   while (ros::ok()) {
-    ROS_INFO_THROTTLE(3, "Waiting for part task.");
-    this->check_emergency_interrupt();  
+    ROS_INFO_THROTTLE(3, "Waiting for gantry part task.");
+    // this->check_emergency_interrupt();  
 
     m_shipments.update_part_task_queue(m_part_task_queue); 
 
@@ -1290,13 +1150,13 @@ bool KittingArm::get_order()
   return true; 
 }
 
-void KittingArm::plan()
+void GantryArm::plan()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
   std::sort(m_part_task_queue.begin(), m_part_task_queue.end()); 
 }
 
-void KittingArm::execute()
+void GantryArm::execute()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
 
@@ -1305,85 +1165,70 @@ void KittingArm::execute()
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
-
-  nist_gear::Model wrong_part; 
-  auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
-  m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
-  this->process_shipment_state(shipment_state, part_task, priority, wrong_part); 
-  if (shipment_state != ShipmentState::NOT_READY) {
-    return; 
-  }
-
+  
   ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
   ROS_INFO("Priority: %d", priority); 
   ROS_INFO("AGV: %s", part_task.agv_id.c_str()); 
   ROS_INFO("Station id: %s", part_task.station_id.c_str()); 
   ROS_INFO("Part type: %s", part_task.part.type.c_str()); 
-  // ros::Duration(30.0).sleep();
-  //
-  ariac_group1::GetParts get_parts_srv; 
-  get_parts_srv.request.type = part_task.part.type; 
+  // // ros::Duration(30.0).sleep();
+  // //
+  std::string camera_id = part_task.station_id; 
+  camera_id += "_"; 
+  camera_id += part_task.agv_id.back(); 
 
-  m_get_parts_client.call(get_parts_srv); 
+  ROS_INFO("camera_id: %s", camera_id.c_str()); 
 
-  auto& parts_info = get_parts_srv.response.parts_info; 
 
-  if (not parts_info.empty()) {
-    auto part_init_info = parts_info[0]; 
-    int idx = 0; 
+  ariac_group1::PartsUnderCamera parts_under_camera_srv; 
+  parts_under_camera_srv.request.camera_id = camera_id; 
+  m_parts_under_camera_client.call(parts_under_camera_srv); 
 
-    // don't use part on ks unless necessary
-    while (part_init_info.camera_id.find("ks") != std::string::npos) {
-      if (idx >= (parts_info.size() - 1)) {
-        if (priority >= Constants::PriorityWeight::Level::HIGH) {
-          ROS_INFO("High priority gets part from agv"); 
-          break; 
-        }
-        ROS_INFO("No enough part for %s", part_task.part.type.c_str()); 
-        priority += Constants::PriorityWeight::Penalty::NO_PART;  
-        if (this->check_insufficient_shipment(priority)) {
-          ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-          this->clear_part_task(part_task, priority); 
-        }
-        return; 
+  auto& parts = parts_under_camera_srv.response.parts; 
+  ROS_INFO("Parts: %d", (int)parts.size()); 
+  if (parts.size() == 0 or 
+      m_agvs_dict[part_task.agv_id]->get_station() != part_task.station_id) {
+      return; 
+  }
+
+  nist_gear::Model target_part; 
+  for (auto& part: parts) {
+      if (part_task.part.type == part.type) {
+        target_part = part;  
+        break; 
       }
-      idx++; 
-      part_init_info = parts_info[idx]; 
-    }
-
-    ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
-    ROS_INFO("Part location: "); 
-    Utility::print_part_pose(part_init_info.part); 
-
-    bool success = this->movePart(part_init_info, part_task); 
-    if (success) {
-      ROS_INFO("Move part success"); 
-      this->clear_part_task(part_task, priority); 
-      return; 
-
-    }
-    else {
-      ROS_INFO("Move part fails"); 
-      priority += Constants::PriorityWeight::Penalty::MOVE_FAILS; 
-      return; 
-    }
-  }
-  else {
-    ROS_INFO("No valid %s, back to task queue", part_task.part.type.c_str()); 
-    priority += Constants::PriorityWeight::Penalty::NO_PART;  
-    ROS_INFO("Priority decrease to %d", priority); 
-    
-    if (this->check_insufficient_shipment(priority)) {
-      ROS_INFO("Part task %s %s infeasible, discard part task", part_task.shipment_type.c_str(), part_task.part.type.c_str()); 
-      this->clear_part_task(part_task, priority); 
-    }
-     
-    return; 
   }
 
+  Utility::print_part_pose(target_part); 
+
+  this->goToPresetLocation(camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->pickPart(target_part.type, target_part.pose, camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation(camera_id); 
+
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation("at_" + part_task.station_id); 
+
+  this->placePart(target_part.type, target_part.pose, part_task.part.pose, part_task.station_id); 
+  ros::Duration(0.5).sleep(); 
+
+  this->goToPresetLocation("at_" + part_task.station_id); 
+  m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+
+  if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+    this->submit_shipment(part_task.shipment_type, part_task.station_id); 
+  }
+
+  m_part_task_queue.pop_back();
 }
 
-bool KittingArm::check_insufficient_shipment(int priority)
+bool GantryArm::check_insufficient_shipment(int priority)
 {
   if (priority < -6) {
     ariac_group1::GetCompetitionTime get_comp_time_srv; 
@@ -1396,7 +1241,7 @@ bool KittingArm::check_insufficient_shipment(int priority)
   return false; 
 }
 
-void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priority)
+void GantryArm::clear_part_task(ariac_group1::PartTask& part_task, int& priority)
 {
   m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
   ROS_INFO("Part left in shipment %s: %d", part_task.shipment_type.c_str(),
@@ -1411,7 +1256,7 @@ void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priorit
   }
 }
 
-ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
+ShipmentState GantryArm::check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
   static bool missing_check = false;  
 
@@ -1433,18 +1278,13 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has wrong pose in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_WRONG_POSE; 
       }
-      else if (result == "flip_part") {
-        ROS_INFO("Has flip part in shipment %s", part_task.shipment_type.c_str()); 
-        return ShipmentState::HAS_FLIP_PART; 
-      }
       else if (result == "missing_part" and missing_check) {
         // only check missing part if wrong type happens before
         missing_check = false; 
         ROS_INFO("Has missing part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_MISSING_PART; 
       }
-      //todo
-      //else if (result == "redundant_part") {
+      // else if (result == "redundant_part") {
       //   return ShipmentState::HAS_REDUNDANT_PART; 
       // }
       
@@ -1471,7 +1311,7 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
   }
 }
 
-void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority, nist_gear::Model& wrong_part)
+void GantryArm::process_shipment_state(ShipmentState shipment_state, ariac_group1::PartTask& part_task, int& priority, nist_gear::Model& wrong_part)
 {
   switch(shipment_state) {
     case ShipmentState::READY: 
@@ -1518,30 +1358,6 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         }
         break; 
       }
-    case ShipmentState::HAS_FLIP_PART: 
-      {
-        auto wrong_part_rpy = Utility::motioncontrol::eulerFromQuaternion(wrong_part.pose);
-        // auto yaw = wrong_part_rpy.at(2); 
-        // if (yaw < 0) {
-        //     yaw = 2 * M_PI + yaw; 
-        // }
-        ariac_group1::PartInfo part_info; 
-        part_info.part = wrong_part; 
-        part_info.roll = wrong_part_rpy.at(0); 
-        part_info.pitch = wrong_part_rpy.at(1); 
-        part_info.yaw = wrong_part_rpy.at(2); 
-        std::string camera_id = "logical_camera_ks"; 
-        camera_id += part_task.agv_id.back(); 
-        part_info.camera_id = camera_id; 
-
-        this->movePart(part_info, part_task); 
-        // }
-        // else {
-        //     this->flip_part(part_task); 
-        // }
-
-        break; 
-      }
 
     case ShipmentState::HAS_MISSING_PART: 
       {
@@ -1575,4 +1391,48 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         break; 
   }
   
+}
+
+void GantryArm::submit_shipment(const std::string& shipment_type, const std::string& station_id)
+{  
+  AssemSubmit srv; 
+  srv.request.shipment_type = shipment_type; 
+
+  if (station_id == "as1") {
+    if (m_submit_shipment_as1_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+  else if (station_id == "as2") {
+    if (m_submit_shipment_as2_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+  else if (station_id == "as3") {
+    if (m_submit_shipment_as3_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+  else if (station_id == "as4") {
+    if (m_submit_shipment_as4_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+
 }

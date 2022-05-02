@@ -156,6 +156,7 @@ add_library(sensors_lib src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(station_lib src/lib/station.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(agv_lib src/lib/agv.cpp src/lib/sensors.cpp src/lib/utility.cpp)
 add_library(kitting_arm_lib src/lib/kitting_arm.cpp src/lib/utility.cpp src/lib/shipments.cpp src/lib/agv.cpp)
+add_library(gantry_arm_lib src/lib/gantry_arm.cpp src/lib/utility.cpp src/lib/assembly_shipments.cpp src/lib/agv.cpp)
 add_library(sensor_manager_lib src/lib/sensor_manager.cpp src/lib/sensors.cpp src/lib/utility.cpp) 
 add_library(orders_lib src/lib/orders.cpp)
 add_library(shipments_lib src/lib/shipments.cpp)
@@ -167,6 +168,7 @@ add_dependencies(sensors_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(station_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(agv_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(kitting_arm_lib ${catkin_EXPORTED_TARGETS})
+add_dependencies(gantry_arm_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(sensor_manager_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(orders_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(shipments_lib ${catkin_EXPORTED_TARGETS})
@@ -226,6 +228,20 @@ add_executable(${PROJECT_NAME}_test_utils_node src/test/test_utils.cpp)
 add_dependencies(${PROJECT_NAME}_test_utils_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_test_utils_node
   utility_lib
+  ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_gantry_arm_node src/nodes/gantry_arm.cpp)
+add_dependencies(${PROJECT_NAME}_gantry_arm_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_gantry_arm_node
+  gantry_arm_lib
+  ${catkin_LIBRARIES}
+)
+
+add_executable(${PROJECT_NAME}_gantry_arm_test_node src/test/test_gantry_arm.cpp)
+add_dependencies(${PROJECT_NAME}_gantry_arm_test_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_gantry_arm_test_node
+  gantry_arm_lib
   ${catkin_LIBRARIES}
 )
  

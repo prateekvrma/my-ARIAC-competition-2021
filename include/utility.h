@@ -17,6 +17,8 @@
 
 namespace Utility 
 {
+  double distance(const nist_gear::Model& part1, const nist_gear::Model& part2);
+  double angle_distance(const nist_gear::Model& part1, const nist_gear::Model& part2, std::string rpy="yaw");  
   bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance); 
 
   void print_part_pose(const nist_gear::Model& part); 
@@ -28,6 +30,8 @@ namespace Utility
   namespace motioncontrol {
     geometry_msgs::Pose transformToWorldFrame(const geometry_msgs::Pose& target,std::string agv);
     geometry_msgs::Pose transformToWorldFrame(std::string part_in_camera_frame);
+    geometry_msgs::Pose transformBriefcaseToWorldFrame(const geometry_msgs::Pose& target, std::string station); 
+
     geometry_msgs::Pose transformToTrayFrame(const geometry_msgs::Pose& target,std::string agv); 
     std::array<double, 3> eulerFromQuaternion(const geometry_msgs::Pose& pose);
     std::array<double, 3> eulerFromQuaternion(double x, double y, double z, double w);

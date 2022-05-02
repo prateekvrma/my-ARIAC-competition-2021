@@ -89,10 +89,10 @@ class SensorManager {
     ros::ServiceServer m_parts_under_camera_service; 
 
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
-                                                     // "as1_1", "as2_1", "as1_2", "as2_2",
-                                                     // "as3_3", "as4_3", "as3_4", "as4_4", 
+                                                     "as1_1", "as2_1", "as1_2", "as2_2",
+                                                     "as3_3", "as4_3", "as3_4", "as4_4", 
                                                      // Briefcase
-                                                     // "bfc1", "bfc2", "bfc3", "bfc4",  
+                                                     "bfc1", "bfc2", "bfc3", "bfc4",  
                                                      // Kitting Station
                                                      "ks1", "ks2", "ks3", "ks4",
                                                      // Belt,

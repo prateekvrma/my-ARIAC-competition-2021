@@ -12,6 +12,6 @@
   <!--  factory manager -->
   <node pkg="ariac_group1" 
         type="ariac_group1_rwa2_node" 
-        name="rwa2" output="screen"></node>
+        name="rwa4" output="screen"></node>
 
 </launch>

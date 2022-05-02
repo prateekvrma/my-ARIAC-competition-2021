@@ -14,22 +14,58 @@
 
 namespace Utility
 {
-  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance = 0.05)
-  {
-    // double epsilon = 0.1; 
-
+  double distance(const nist_gear::Model& part1, const nist_gear::Model& part2) {
     auto x1 = part1.pose.position.x; 
     auto y1 = part1.pose.position.y; 
-    auto z1 = part1.pose.position.z; 
 
     auto x2 = part2.pose.position.x; 
     auto y2 = part2.pose.position.y; 
-    auto z2 = part2.pose.position.z; 
 
-    // auto dist = sqrt(pow((x2-x1), 2) + pow((y2-y1), 2) + pow((z2-z1), 2)); 
-    // ROS_INFO("distance: %f", dist); 
+    return sqrt(pow((x2-x1), 2) + pow((y2-y1), 2)); 
+  }
 
-    if (sqrt(pow((x2-x1), 2) + pow((y2-y1), 2)) < tolerance)
+  double angle_distance(const nist_gear::Model& part1, const nist_gear::Model& part2, std::string rpy) {
+    auto part1_rpy = Utility::motioncontrol::eulerFromQuaternion(part1.pose);
+    auto part2_rpy = Utility::motioncontrol::eulerFromQuaternion(part2.pose);
+
+    if (rpy == "roll") {
+        auto r1 = part1_rpy.at(0); 
+        auto r2 = part2_rpy.at(0); 
+        if (r1 < 0) {
+           r1 = 2 * M_PI + r1; 
+        }
+        if (r2 < 0) {
+           r2 = 2 * M_PI + r2; 
+        }
+        return abs(r1 - r2);  
+    }
+    else if (rpy == "pitch") {
+        auto p1 = part1_rpy.at(1); 
+        auto p2 = part2_rpy.at(1); 
+        if (p1 < 0) {
+           p1 = 2 * M_PI + p1; 
+        }
+        if (p2 < 0) {
+           p2 = 2 * M_PI + p2; 
+        }
+        return abs(p1 - p2);
+    }
+    else if (rpy == "yaw") {
+        auto y1 = part1_rpy.at(2); 
+        auto y2 = part2_rpy.at(2); 
+        if (y1 < 0) {
+           y1 = 2 * M_PI + y1; 
+        }
+        if (y2 < 0) {
+           y2 = 2 * M_PI + y2; 
+        }
+        return abs(y1 - y2);
+    }
+  }
+
+  bool is_same_part(const nist_gear::Model& part1, const nist_gear::Model& part2, double tolerance = 0.05)
+  {
+    if (distance(part1, part2) < tolerance)
       return true; 
     else
       return false; 
@@ -211,6 +247,70 @@ namespace Utility
         return world_target;
     }
     
+    geometry_msgs::Pose transformBriefcaseToWorldFrame(
+        const geometry_msgs::Pose& target,
+        std::string station) {
+        static tf2_ros::StaticTransformBroadcaster br;
+        geometry_msgs::TransformStamped transformStamped;
+
+        std::string briefcase;
+        if (station.compare("as1") == 0)
+            briefcase = "briefcase_1";
+        else if (station.compare("as2") == 0)
+            briefcase = "briefcase_2";
+        else if (station.compare("as3") == 0)
+            briefcase = "briefcase_3";
+        else if (station.compare("as4") == 0)
+            briefcase = "briefcase_4";
+
+        transformStamped.header.stamp = ros::Time::now();
+        transformStamped.header.frame_id = briefcase;
+        transformStamped.child_frame_id = "target_frame_briefcase";
+        transformStamped.transform.translation.x = target.position.x;
+        transformStamped.transform.translation.y = target.position.y;
+        transformStamped.transform.translation.z = target.position.z;
+        transformStamped.transform.rotation.x = target.orientation.x;
+        transformStamped.transform.rotation.y = target.orientation.y;
+        transformStamped.transform.rotation.z = target.orientation.z;
+        transformStamped.transform.rotation.w = target.orientation.w;
+
+
+        for (int i{ 0 }; i < 15; ++i)
+            br.sendTransform(transformStamped);
+
+        tf2_ros::Buffer tfBuffer;
+        tf2_ros::TransformListener tfListener(tfBuffer);
+        ros::Rate rate(10);
+        ros::Duration timeout(1.0);
+
+
+        geometry_msgs::TransformStamped world_pose_tf;
+        geometry_msgs::TransformStamped ee_target_tf;
+
+
+        for (int i = 0; i < 10; i++) {
+            try {
+                world_pose_tf = tfBuffer.lookupTransform("world", "target_frame_briefcase",
+                    ros::Time(0), timeout);
+            }
+            catch (tf2::TransformException& ex) {
+                ROS_WARN("%s", ex.what());
+                ros::Duration(1.0).sleep();
+                continue;
+            }
+        }
+
+        geometry_msgs::Pose world_pose{};
+        world_pose.position.x = world_pose_tf.transform.translation.x;
+        world_pose.position.y = world_pose_tf.transform.translation.y;
+        world_pose.position.z = world_pose_tf.transform.translation.z;
+        world_pose.orientation.x = world_pose_tf.transform.rotation.x;
+        world_pose.orientation.y = world_pose_tf.transform.rotation.y;
+        world_pose.orientation.z = world_pose_tf.transform.rotation.z;
+        world_pose.orientation.w = world_pose_tf.transform.rotation.w;
+
+        return world_pose;
+    }
 
     geometry_msgs::Pose transformToWorldFrame(
         const geometry_msgs::Pose& target,

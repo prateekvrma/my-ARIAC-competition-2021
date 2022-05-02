@@ -29,53 +29,35 @@ git clone https://github.com/longhongc/my-ARIAC-competition-2021.git
 ```
 catkin_make or cakin build
 ```
+Might need to build 2~3 times because of custom messages and services.    
 
-## RWA3
+## Run 
+### RWA4
 ```
-roslaunch ariac_group1 ariac_testing.launch trial_config:=rwa3_trial_1
-roslaunch ariac_group1 kitting_arm.launch
-roslaunch ariac_group1 rwa3.launch
+roslaunch ariac_group1 ariac_testing.launch trial_config:=rwa4/complete
+roslaunch ariac_group1 arms.launch  
+rslaunch ariac_group1 rwa4.launch  
 ```
-pass in the trial_config argument, default is 1.    
-kitting_arm.launch shows messages about kitting arm state and it's current task.
-rwa3.launch shows messages about sensor blackout and order informations.
 
-Kitting robot assumes every part is not faulty when sensor blackout happens.
-It will discard all the miss placed faulty part before final shipping. 
+The trial config argument can be any file name under the folder config/trial_config without the yaml ending.   
 
-### trial configuration
-```
-rwa3_trial_1:  
-  Parts: sensor, battery  
-  Challenges:   
-    High-Priority Order  
-    Sensor Blackout  
-    Faulty Parts  
+### Other trial configs: 
+flip: testing for fliping part 
+- half_flip: flip part only 90 degrees    
+- sensor_blackout: dealing with sensor blackout during flip part   
+- on_agv: dealing with flip part on the agv    
 
-rwa3_trial_1_no_sensor_blackout:
-  Parts: sensor, battery  
-  Challenges:   
-    High-Priority Order  
-    Faulty Parts  
+shipment: shipment error handling  
+- swap: swap parts between agv and bins  
+- wrong_pose: fix wrong pose part on agv     
+- wrong_type fix wrong type part on agv      
 
-rwa3_trial_2:  
-  Parts: pump, regulator   
-  Challenges:  
-    High-Priority Order  
-    Sensor Blackout  
-    Faulty Parts
+insufficient: insufficient shipments handling
+- high_priority: insufficient high_priority order   
+- multi: multiple insufficient orders  
+- steal: high_priority order steal order from others causing insufficient order  
 
-rwa3_all_faulty:
-  All the parts are faulty, the kitting robot should throw all the parts away
 
-rwa3_insufficient:
-  Test for insufficient order
 
-agv_test:
-   agv_test/agv1
-   agv_test/agv2
-   agv_test/agv3
-   agv_test/agv4
-```
-     
+
 
