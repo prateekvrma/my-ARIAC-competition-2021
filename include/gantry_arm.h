@@ -139,6 +139,11 @@ class GantryArm {
     ros::ServiceClient m_get_vacancy_pose_client;  
     ros::ServiceClient m_parts_under_camera_client; 
 
+    ros::ServiceClient m_submit_shipment_as1_client;   
+    ros::ServiceClient m_submit_shipment_as2_client;   
+    ros::ServiceClient m_submit_shipment_as3_client;   
+    ros::ServiceClient m_submit_shipment_as4_client;   
+
     // publishers
     ros::Publisher m_arm_joint_trajectory_publisher;
     // joint states subscribers

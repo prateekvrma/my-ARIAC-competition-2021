@@ -113,6 +113,22 @@ GantryArm::GantryArm():
       m_nh.serviceClient<ariac_group1::PartsUnderCamera>("/sensor_manager/parts_under_camera"); 
   m_parts_under_camera_client.waitForExistence();
 
+  m_submit_shipment_as1_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as1/submit_shipment"); 
+  m_submit_shipment_as1_client.waitForExistence();
+
+  m_submit_shipment_as2_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as2/submit_shipment"); 
+  m_submit_shipment_as2_client.waitForExistence();
+
+  m_submit_shipment_as3_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as3/submit_shipment"); 
+  m_submit_shipment_as3_client.waitForExistence();
+
+  m_submit_shipment_as4_client = 
+      m_nh.serviceClient<AssemSubmit>("/ariac/as4/submit_shipment"); 
+  m_submit_shipment_as4_client.waitForExistence();
+
   for (auto& id: m_agvs_id) {
       m_agvs_dict[id] = std::make_unique<AGV>(&m_nh, id); 
   }
@@ -1206,7 +1222,7 @@ void GantryArm::execute()
   m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
 
   if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
-    m_agvs_dict[part_task.agv_id]->submit_shipment(part_task.shipment_type, part_task.station_id); 
+    this->submit_shipment(part_task.shipment_type, part_task.station_id); 
   }
 
   m_part_task_queue.pop_back();
@@ -1379,25 +1395,44 @@ void GantryArm::process_shipment_state(ShipmentState shipment_state, ariac_group
 
 void GantryArm::submit_shipment(const std::string& shipment_type, const std::string& station_id)
 {  
-
-  auto service_name = "/ariac/" + station_id + "/submit_shipment"; 
-  static auto client = m_nh.serviceClient<AssemSubmit>(service_name); 
-
-  if (!client.exists()) {
-    ROS_INFO("Waiting for the competition to be ready...");
-    client.waitForExistence();
-    ROS_INFO("Competition is now ready.");
-  }
-
   AssemSubmit srv; 
   srv.request.shipment_type = shipment_type; 
 
-  if (client.call(srv)) {
-    ROS_INFO("Calling service %s", service_name.c_str()); 
-    ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+  if (station_id == "as1") {
+    if (m_submit_shipment_as1_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
   }
-  else{
-    ROS_ERROR("Failed to call %s", service_name.c_str()); 
+  else if (station_id == "as2") {
+    if (m_submit_shipment_as2_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+  else if (station_id == "as3") {
+    if (m_submit_shipment_as3_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
+  }
+  else if (station_id == "as4") {
+    if (m_submit_shipment_as4_client.call(srv)) {
+      ROS_INFO("Submitting shipment %s", shipment_type.c_str()); 
+      ROS_INFO_STREAM("inspection result: " << srv.response.inspection_result); 
+    }
+    else{
+      ROS_ERROR("Failed to submit shipment %s", shipment_type.c_str()); 
+    }
   }
 
 }
