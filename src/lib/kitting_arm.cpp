@@ -232,26 +232,6 @@ void KittingArm::gripper_state_callback(const nist_gear::VacuumGripperState::Con
     m_gripper_state = *gripper_state_msg;
 }
 
-// void KittingArm::part_task_callback(const ariac_group1::PartTask::ConstPtr& msg)
-// {
-//   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-//   // add tasks to task vector
-//   m_part_task_queue.emplace_back(std::make_tuple(msg->priority * Constants::PriorityWeight::Ratio::HIGH_PRIORITY,
-//                                                  std::make_unique<ariac_group1::PartTask>(*msg))); 
-//   if (not m_shipments_total_parts.count(msg->shipment_type)) {
-//     m_shipments_total_parts[msg->shipment_type] = msg->total_parts; 
-//     ROS_INFO("Receive shipment %s including %d parts", msg->shipment_type.c_str(), msg->total_parts); 
-//   }
-// }
-
-// void KittingArm::print_shipments_total_parts() {
-//   ROS_INFO("Shipment total parts: "); 
-//   for (auto& part_count: m_shipments.shipment_record) {
-//     ROS_INFO("  %s: %d", part_count.first.c_str(), part_count.second); 
-//   }
-//
-// }
-
 nist_gear::VacuumGripperState KittingArm::getGripperState()
 {
     return m_gripper_state;
@@ -424,14 +404,6 @@ void KittingArm::setPickConstraints()
   moveit_msgs::Constraints constraints;
 
   moveit_msgs::JointConstraint joint_constraint; 
-  // joint_constraint.joint_name = "shoulder_pan_joint"; 
-  // joint_constraint.position = -M_PI;  
-  // joint_constraint.tolerance_above = 1.2; 
-  // joint_constraint.tolerance_below = 1.2; 
-  // joint_constraint.weight = 1; 
-  //
-  // constraints.joint_constraints.push_back(joint_constraint); 
-  //
 
   joint_constraint.joint_name = "shoulder_lift_joint"; 
   joint_constraint.position = -1.25;  
@@ -509,10 +481,7 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
         auto joint_2 = target_joint_group_positions.at(2);  
         auto joint_3 = target_joint_group_positions.at(3);  
         auto joint_4 = target_joint_group_positions.at(4);  
-        // if (joint_1 > 0) {
-        //     joint_1 = joint_1 - M_PI * 2; 
-        // }
-        //
+
         if (joint_2 > 0) {
             joint_2 = joint_2 - M_PI * 2; 
         }
@@ -525,11 +494,6 @@ bool KittingArm::moveTargetPose(const geometry_msgs::Pose& pose)
             joint_4 = joint_4 - M_PI * 2; 
         }
 
-        // if (joint_1 > -1.94 or joint_1 < -4.34) {
-        //   ROS_INFO("Target joint 1 infisible: %f", target_joint_group_positions.at(2)); 
-        //   target_joints_infeasible = true; 
-        // }
-        //
         if (joint_2 > -0.17 or joint_2 < -1.74) { 
           ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
           target_joints_infeasible = true; 
@@ -862,30 +826,14 @@ geometry_msgs::Pose KittingArm::placePart(std::string part_type,
     else {
       z_margin = 0.11; 
     }
-
-    // else if (part_type.find("regulator") != std::string::npos) {
-      // z_margin = 0.11; 
-    // }
-    //
+    
     // orientation of the gripper when placing the part in the tray
     target_pose_in_world.orientation.x = q_rslt.x();
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
     target_pose_in_world.position.z += z_margin;
-
-    // auto target_rpy = Utility::motioncontrol::eulerFromQuaternion(target_pose_in_world);
-    // auto q_target_pose_flat = Utility::motioncontrol::quaternionFromEuler(target_rpy.at(0), target_rpy.at(1), target_rpy.at(2));
-
-    // target_pose_in_world.orientation.x = q_target_pose_flat.x();
-    // target_pose_in_world.orientation.y = q_target_pose_flat.y();
-    // target_pose_in_world.orientation.z = q_target_pose_flat.z();
-    // target_pose_in_world.orientation.w = q_target_pose_flat.w();
-
-    // m_arm_group.setMaxVelocityScalingFactor(0.1);
-    // m_arm_group.setPoseTarget(target_pose_in_world);
-    // m_arm_group.move();
-    //
+    
     ROS_INFO("Move to place pose"); 
     if (flip) {
         ROS_INFO("flip part"); 
@@ -1226,50 +1174,8 @@ void KittingArm::move_to_belt_intercept_pose(const geometry_msgs::Pose& belt_par
 
 bool KittingArm::get_belt_part(double range)
 {
-    // ariac_group1::GetBeltPart srv; 
-    // do {
-    //     m_get_belt_part_client.call(srv); 
-    //     ros::Duration(0.2).sleep(); 
-    //
-    // } while(srv.response.part.type.empty()); 
-    //
     ROS_INFO("Get belt part"); 
-    // Utility::print_part_pose(srv.response.part); 
-    //
-
-    // geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
-    // auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
-    // arm_ee_link_pose.orientation.x = flat_orientation.getX();
-    // arm_ee_link_pose.orientation.y = flat_orientation.getY();
-    // arm_ee_link_pose.orientation.z = flat_orientation.getZ();
-    // arm_ee_link_pose.orientation.w = flat_orientation.getW();
-    //
-    // // preset z depending on the part type
-    // auto part_type = srv.response.part.type; 
-    // double z_pos{};
-    // if (part_type.find("pump") != std::string::npos) {
-    //     z_pos = 0.07;
-    // }
-    // if (part_type.find("sensor") != std::string::npos) {
-    //     z_pos = 0.05;
-    // }
-    // if (part_type.find("battery") != std::string::npos) {
-    //     z_pos = 0.052;
-    // }
-    // if (part_type.find("regulator") != std::string::npos) {
-    //     z_pos = 0.057;
-    // }
-
-    // pregrasp pose: right above the part
-    // auto pregrasp_pose = srv.response.part.pose;
-    // pregrasp_pose.orientation = arm_ee_link_pose.orientation;
-    // pregrasp_pose.position.y = srv.response.part.pose.position.y - 0.5;
-    // pregrasp_pose.position.z = srv.response.part.pose.position.z + z_pos;
-    //
-    // activate gripper
-    // sometimes it does not activate right away
-    // so we are doing this in a loop
-    while (!m_gripper_state.enabled) {
+        while (!m_gripper_state.enabled) {
         activateGripper();
     }
 
@@ -1509,7 +1415,8 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has missing part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_MISSING_PART; 
       }
-      // else if (result == "redundant_part") {
+      //todo
+      //else if (result == "redundant_part") {
       //   return ShipmentState::HAS_REDUNDANT_PART; 
       // }
       
