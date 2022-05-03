@@ -233,23 +233,74 @@ GantryArm::GantryArm():
   at_as3.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as3.name = "at_as3";
 
+  // at AS4
+  at_as4.gantry_torso = { -8.7 , -2.8 + 6.063705, 1.57 };
+  at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as4.gantry_full = { -8.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as4.name = "at_as4";
+
   // at agv4 at as3
   at_agv4_at_as3.gantry_torso = { -2.72 , -1.26 + 6.063705, 1.57 };
   at_agv4_at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv4_at_as3.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv4_at_as3.name = "at_agv4_at_as3";
 
+  // at agv3 at as3
+  at_agv3_at_as3.gantry_torso = { -2.72 , -1.26 + 2.7, 1.57 };
+  at_agv3_at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv3_at_as3.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv3_at_as3.name = "at_agv3_at_as3";
+
+  // at agv4 at as4
+  at_agv4_at_as4.gantry_torso = { -7.72 , -1.26 + 6.063705, 1.57 };
+  at_agv4_at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv4_at_as4.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv4_at_as4.name = "at_agv4_at_as4";
+
+  // at agv3 at as4
+  at_agv3_at_as4.gantry_torso = { -7.72 , -1.26 + 2.7, 1.57 };
+  at_agv3_at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv3_at_as4.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv3_at_as4.name = "at_agv3_at_as4";
+
   // at agv2 at as1
   at_agv2_at_as1.gantry_torso = { -2.72 , -1.26 , 1.57 };
   at_agv2_at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv2_at_as1.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv2_at_as1.name = "at_agv2_at_as1";
+  
+  // at agv2 at as2
+  at_agv2_at_as2.gantry_torso = { -7.72 , -1.26 , 1.57 };
+  at_agv2_at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv2_at_as2.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv2_at_as2.name = "at_agv2_at_as2";
+
+  // at agv1 at as1
+  at_agv1_at_as1.gantry_torso = { -2.72 , -1.26 - 3.36 , 1.57 };
+  at_agv1_at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv1_at_as1.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv1_at_as1.name = "at_agv1_at_as1";
+
+  // at agv1 at as2
+  at_agv1_at_as2.gantry_torso = { -7.72 , -1.26 - 3.36, 1.57 };
+  at_agv1_at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  at_agv1_at_as2.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_agv1_at_as2.name = "at_agv1_at_as2";
+
+
 
   // at as1
   at_as1.gantry_torso = { -3.7 , -2.8, 1.57 };
   at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as1.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as1.name = "at_as1";
+
+  // at as2
+  at_as2.gantry_torso = { -8.7 , -2.8, 1.57 };
+  at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as2.gantry_full = { -8.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as2.name = "at_as2";
+
 
   // raw pointers are frequently used to refer to the planning group for improved performance.
   // to start, we will create a pointer that references the current robot’s state.
@@ -431,7 +482,43 @@ void GantryArm::goToPresetLocation(std::string location_name)
         ROS_INFO("Moving to at_agv2_at_as1"); 
         location = at_agv2_at_as1;
     }
+
+    else if (location_name.compare("as2") == 0) {
+        ROS_INFO("Moving to at_as2"); 
+        location = at_as2;
+    }
+
+    else if (location_name.compare("as4") == 0) {
+        ROS_INFO("Moving to at_as4"); 
+        location = at_as4;
+    }
     
+    else if (location_name.compare("agv2_at_as2") == 0) {
+        ROS_INFO("Moving to agv2_at_as2"); 
+        location = at_agv2_at_as2;
+    }
+
+    else if (location_name.compare("agv4_at_as4") == 0) {
+        ROS_INFO("Moving to agv4_at_as4"); 
+        location = at_agv4_at_as4;
+    }
+
+    else if (location_name.compare("agv3_at_as3") == 0) {
+        ROS_INFO("Moving to agv3_at_as3"); 
+        location = at_agv3_at_as3;
+    }
+    else if (location_name.compare("agv3_at_as4") == 0) {
+        ROS_INFO("Moving to agv3_at_as4"); 
+        location = at_agv3_at_as4;
+    }
+    else if (location_name.compare("agv1_at_as1") == 0) {
+        ROS_INFO("Moving to agv1_at_as1"); 
+        location = at_agv1_at_as1;
+    }
+    else if (location_name.compare("agv1_at_as2") == 0) {
+        ROS_INFO("Moving to agv1_at_as2"); 
+        location = at_agv1_at_as2;
+    }
     else {
         ROS_ERROR("[Arm][goToPresetLocation] ERROR: location_name not found!");
     }
@@ -1435,4 +1522,11 @@ void GantryArm::submit_shipment(const std::string& shipment_type, const std::str
     }
   }
 
+}
+
+void GantryArm::waypoints_planning(){
+  std::vector<std::vector<double>> waypoints;
+  this->goToPresetLocation("one");
+  waypoints.push_back(two.gantry_torso);
+  waypoints.push_back(eight.gantry_torso);
 }
