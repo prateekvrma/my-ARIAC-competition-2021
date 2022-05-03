@@ -51,8 +51,8 @@ KittingArm::KittingArm():
   m_gripper_state_subscriber = 
       m_nh.subscribe("/ariac/kitting/arm/gripper/state", 10, &KittingArm::gripper_state_callback, this);
 
-  // m_part_task_subscriber =
-  //     m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
+  // server
+  m_get_working_station_service = m_nh.advertiseService("/kitting_arm/get_working_station", &KittingArm::get_working_station, this); 
 
   // clients
   m_gripper_control_client =
@@ -310,6 +310,7 @@ void KittingArm::execute()
     ROS_INFO("Part location: "); 
     Utility::print_part_pose(part_init_info.part); 
 
+    m_working_station = part_task.agv_id; 
     bool success = this->move_part(part_init_info, part_task); 
     if (success) {
       ROS_INFO("Move part success"); 
@@ -1385,6 +1386,7 @@ bool KittingArm::check_emergency_interrupt()
     get_belt_part_available = range > 0 and not vacancy_poses.empty(); 
     if (get_belt_part_available) {
       ROS_INFO("Belt sensor triggered"); 
+      m_working_station = "belt"; 
       deactivate_gripper();
       ros::Duration(0.1).sleep(); 
       this->reset_arm(); 
@@ -1609,4 +1611,9 @@ void KittingArm::print_joint_group_positions() {
   }
 }
 
-
+bool KittingArm::get_working_station(ariac_group1::GetWorkingStation::Request &req,
+                                      ariac_group1::GetWorkingStation::Response &res)
+{
+    res.working_station = m_working_station; 
+    return true; 
+}

@@ -91,6 +91,7 @@ add_service_files(
   GetBeltPart.srv
   GetBeltProximitySensor.srv
   PartsUnderCamera.srv
+  GetWorkingStation.srv
 )
 
 
