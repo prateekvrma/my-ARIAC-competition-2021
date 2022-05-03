@@ -74,8 +74,13 @@ class GantryArm {
     void plan(); 
     void execute(); 
 
+    void waypoints_planning();
     //--preset locations;
-    ArmPresetLocation one, two, three, four, five, six, seven, eight, nine, at_bins3, at_bins4, at_bins7, at_bins8, at_agv1, at_agv2, at_agv3, at_agv4, at_as3, at_agv4_at_as3, at_agv2_at_as1, at_as1; 
+    ArmPresetLocation one, two, three, four, five, six, seven, eight, nine,
+    at_bins3, at_bins4, at_bins7, at_bins8, 
+    at_agv1, at_agv2, at_agv3, at_agv4, 
+    at_agv4_at_as3, at_agv4_at_as4, at_agv2_at_as2, at_agv2_at_as1, at_agv3_at_as3, at_agv3_at_as4, at_agv1_at_as1, at_agv1_at_as2,
+    at_as3, at_as1, at_as2, at_as4; 
 
   private:
     std::map<std::string, double> m_model_height;
