@@ -1194,6 +1194,17 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
     ariac_group1::CheckQualitySensor srv; 
     srv.request.agv_id = part_task.agv_id; 
     if (m_check_quality_sensor_client.call(srv)) {
+      if (srv.response.faulty_parts.empty()) {
+        ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
+      }
+      else { 
+        ROS_INFO("Has faulty in shipment %s", part_task.shipment_type.c_str()); 
+        //push faulty task back to queue
+        nist_gear::Model faulty_part = srv.response.faulty_parts[0]; 
+        part_task.part.type = faulty_part.type;  
+        part_task.part.pose = faulty_part.pose;  
+        return ShipmentState::HAS_FAULTY; 
+      }
 
       std::string result = m_shipments.check_shipment_parts(part_task, wrong_part); 
       if (result == "wrong_type") {
@@ -1217,23 +1228,14 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has missing part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_MISSING_PART; 
       }
+      else if (result == "shipment_correct") {
+        ROS_INFO("Shipment %s correct", part_task.shipment_type.c_str()); 
+        return ShipmentState::READY; 
+      }
       //todo
       //else if (result == "redundant_part") {
       //   return ShipmentState::HAS_REDUNDANT_PART; 
       // }
-      
-      if (srv.response.faulty_parts.empty()) {
-        ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
-        return ShipmentState::READY; 
-      }
-      else { 
-        ROS_INFO("Has faulty in shipment %s", part_task.shipment_type.c_str()); 
-        //push faulty task back to queue
-        nist_gear::Model faulty_part = srv.response.faulty_parts[0]; 
-        part_task.part.type = faulty_part.type;  
-        part_task.part.pose = faulty_part.pose;  
-        return ShipmentState::HAS_FAULTY; 
-      }
     } 
     else {
       ROS_INFO("Sensor blackout, postpone shipment %s", part_task.shipment_type.c_str()); 
@@ -1584,7 +1586,6 @@ void KittingArm::set_pick_constraints()
   joint_constraint.weight = 1; 
 
   constraints.joint_constraints.push_back(joint_constraint); 
-
 
   m_arm_group.setPathConstraints(constraints);
 
