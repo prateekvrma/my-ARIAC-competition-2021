@@ -1,14 +1,24 @@
 #ifndef SENSOR_MANAGER_H
 #define SENSOR_MANAGER_H
 
+// ros
+#include <ros/ros.h>
+
+// standard library
 #include <vector>
 #include <string>
 #include <memory>
 #include <map>
 #include <mutex>
 
-#include <ros/ros.h>
+// custom library
+#include "sensors.h"
+#include "utility.h"
 
+// services and messages
+#include <std_srvs/Trigger.h>
+
+// custom
 #include <ariac_group1/PartInfo.h>
 #include <ariac_group1/GetParts.h>
 #include <ariac_group1/IsFaulty.h>
@@ -18,13 +28,9 @@
 #include <ariac_group1/GetPartPosition.h>
 #include <ariac_group1/CheckQualitySensor.h>
 #include <ariac_group1/GetVacancyPose.h>
-#include <std_srvs/Trigger.h>
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
 #include <ariac_group1/PartsUnderCamera.h>
-
-#include "sensors.h"
-#include "utility.h"
 
 class SensorManager {
   public:
@@ -35,8 +41,11 @@ class SensorManager {
     void check_blackout(); 
 
   private:
+    // utils
     void print_bins_occupancy(); 
+    std::string convert_id_to_internal(std::string global_id); 
 
+    // ros services server function
     bool get_parts(ariac_group1::GetParts::Request &req, 
                    ariac_group1::GetParts::Response &res); 
 
@@ -73,8 +82,10 @@ class SensorManager {
     bool parts_under_camera(ariac_group1::PartsUnderCamera::Request &req,
                             ariac_group1::PartsUnderCamera::Response &res); 
 
-    std::string convert_id_to_internal(std::string global_id); 
- 
+    // ros
+    ros::NodeHandle m_nh; 
+
+    // ros service server
     ros::ServiceServer m_get_parts_service; 
     ros::ServiceServer m_is_faulty_service;
     ros::ServiceServer m_is_shipment_ready_service;
@@ -88,6 +99,7 @@ class SensorManager {
     ros::ServiceServer m_get_belt_proximity_sensor_service;
     ros::ServiceServer m_parts_under_camera_service; 
 
+    // sensors
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station
                                                      "as1_1", "as2_1", "as1_2", "as2_2",
                                                      "as3_3", "as4_3", "as3_4", "as4_4", 
@@ -119,14 +131,14 @@ class SensorManager {
     std::string m_belt_proximity_sensor_id = "proximity_sensor_0"; 
     std::unique_ptr<ProximitySensor> m_belt_proximity_sensor; 
 
+    // parts data
     std::map<std::string, std::vector<std::unique_ptr<ariac_group1::PartInfo>>> m_parts_database; 
-
 
     const std::vector<std::string> m_bins_id{"bin1", "bin2", "bin3", "bin4", "bin5", "bin6", "bin7", "bin8"}; 
     std::map<std::string, std::vector<bool>> bins_occupancy; 
 
-    ros::NodeHandle m_nh; 
 
+    // state
     bool m_sensors_blackout = false; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 

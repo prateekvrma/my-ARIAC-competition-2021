@@ -1,17 +1,24 @@
 #ifndef FACTORY_MANAGER_H
 #define FACTORY_MANAGER_H
 
+// ros
+#include <ros/ros.h>
+
+// standard library
 #include <vector>
 #include <memory>
 #include <mutex>
 #include <map>
 
-#include <ros/ros.h>
-
-#include <ariac_group1/Busy.h>
-
+// custom library
 #include "orders.h"
+
+// services and messages
+// nist
 #include <ariac_group1/GetCompetitionTime.h>
+
+// custom
+#include <ariac_group1/Busy.h>
 
 class FactoryManager {
   public:
@@ -21,82 +28,47 @@ class FactoryManager {
 
   private: 
 
+    // callback
     void busy_callback(const ariac_group1::Busy& msg); 
 
+    // flow
     void start_competition(); 
-
     void end_competition(); 
-
     void plan(); 
 
-    bool work_done(); 
-    /**
-     * @Brief Assigning kitting tasks to AGVs 
-     *
-     * @Param shipment
-     */
-    void assign_kitting_task(nist_gear::KittingShipment& shipment);
 
-    /**
-     * @Brief Assigning assembly tasks to AssemblyStations
-     *
-     * @Param shipment
-     */
+    // order managing
+    void assign_kitting_task(nist_gear::KittingShipment& shipment);
     void assign_assembly_task(nist_gear::AssemblyShipment& shipment);
 
     bool get_competition_time(ariac_group1::GetCompetitionTime::Request &req,
                               ariac_group1::GetCompetitionTime::Response &res); 
 
+    bool work_done(); 
+
+    // ros
+    ros::NodeHandle m_nh; 
+
+    // ros publisher
+    ros::Publisher m_kitting_publisher; 
+    ros::Publisher m_assembly_publisher; 
+
+    // ros subscriber
+    ros::Subscriber m_busy_subscriber;
+
+    // ros service server
+    ros::ServiceServer m_get_competition_time_service; 
+
     Orders m_orders; 
 
-    /**
-     * @Brief The id of all the controllable machine in ARIAC 
-     *
-     */
     const std::vector<std::string> m_workers{"agv1", "agv2", "agv3", "agv4",
                                              "as1", "as2", "as3", "as4"}; 
 
-    /**
-     * @Brief node handle for AssemblyStation
-     * 
-     */
-    ros::NodeHandle m_nh; 
-
+    // states
     ros::Time m_start_time; 
-
-    /**
-     * @Brief Publisher to assign kitting task to AGVs  
-     *
-     */
-    ros::Publisher m_kitting_publisher; 
-
-    /**
-     * @Brief Publisher to assign assembly task to AssemblyStation
-     *
-     */
-    ros::Publisher m_assembly_publisher; 
-
-    /**
-     * @Brief Subscriber forr getting working status of all the worker machine 
-     *
-     */
-    ros::Subscriber m_busy_subscriber;
-
-    ros::ServiceServer m_get_competition_time_service; 
-
-    /**
-     * @Brief The working status of all the worker machine  
-     *        Busy is true if the machien still have task in its task queue
-     *
-     */
     std::map<std::string, bool> m_busy_state; 
 
-    /**
-     * @brief mutex to control the accessibility of the orders vector
-     * 
-     */
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
-
 }; 
 
 #endif 

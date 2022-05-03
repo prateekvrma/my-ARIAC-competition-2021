@@ -25,30 +25,6 @@ Shipments::Shipments(ros::NodeHandle* nodehandle):
 
 }
 
-void Shipments::shipment_callback(const nist_gear::KittingShipment::ConstPtr& msg)
-{
-  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-  // add tasks to task vector
-  m_new_shipments_id.push_back(msg->shipment_type); 
-  m_shipments_id.push_back(msg->shipment_type); 
-  shipments_record[msg->shipment_type] = std::make_unique<ShipmentInfo>(msg->shipment_type, msg); 
-
-  ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
-  get_shipment_priority_srv.request.shipment_type = msg->shipment_type;
-  m_get_shipment_priority_client.call(get_shipment_priority_srv); 
-  shipments_record[msg->shipment_type]->priority = get_shipment_priority_srv.response.priority; 
-
-  if (shipments_record[msg->shipment_type]->priority != 0) {
-    m_high_priorities_id.push_back(msg->shipment_type); 
-  }
-
-}
-
-bool Shipments::has_shipment() 
-{
-  return not m_new_shipments_id.empty(); 
-}
-
 void Shipments::update_part_task_queue(std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>>& part_task_queue)
 {
   ros::spinOnce(); 
@@ -105,36 +81,6 @@ bool Shipments::is_high_priority_alert()
     return alert; 
 }
 
-bool Shipments::is_part_task_done(const ariac_group1::PartTask& part_task) 
-{
-    ariac_group1::PartsUnderCamera srv; 
-    srv.request.camera_id = "ks"; 
-    srv.request.camera_id += part_task.agv_id.back(); 
-    ROS_INFO("%s", srv.request.camera_id.c_str()); 
-    m_parts_under_camera_client.call(srv); 
-
-    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
-         part_task.part.pose,
-         part_task.agv_id);
-
-    nist_gear::Model target_part; 
-    target_part.type = part_task.part.type; 
-    target_part.pose = target_pose_in_world; 
-
-    for (auto& part: srv.response.parts) {
-      if (Utility::is_same_part(target_part, part, 0.05)) {
-        ROS_INFO("agv has type: %s", part_task.part.type.c_str()); 
-        shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
-        if (shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
-            // leave one last task for arm to submit shipment
-            return false; 
-        }
-        return true; 
-      }
-    }
-
-    return false; 
-}
 
 std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
@@ -195,4 +141,60 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
     return "shipment_correct"; 
 
 }
+
+void Shipments::shipment_callback(const nist_gear::KittingShipment::ConstPtr& msg)
+{
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+  // add tasks to task vector
+  m_new_shipments_id.push_back(msg->shipment_type); 
+  m_shipments_id.push_back(msg->shipment_type); 
+  shipments_record[msg->shipment_type] = std::make_unique<ShipmentInfo>(msg->shipment_type, msg); 
+
+  ariac_group1::GetShipmentPriority get_shipment_priority_srv; 
+  get_shipment_priority_srv.request.shipment_type = msg->shipment_type;
+  m_get_shipment_priority_client.call(get_shipment_priority_srv); 
+  shipments_record[msg->shipment_type]->priority = get_shipment_priority_srv.response.priority; 
+
+  if (shipments_record[msg->shipment_type]->priority != 0) {
+    m_high_priorities_id.push_back(msg->shipment_type); 
+  }
+
+}
+
+bool Shipments::has_shipment() 
+{
+  return not m_new_shipments_id.empty(); 
+}
+
+bool Shipments::is_part_task_done(const ariac_group1::PartTask& part_task) 
+{
+    ariac_group1::PartsUnderCamera srv; 
+    srv.request.camera_id = "ks"; 
+    srv.request.camera_id += part_task.agv_id.back(); 
+    ROS_INFO("%s", srv.request.camera_id.c_str()); 
+    m_parts_under_camera_client.call(srv); 
+
+    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+         part_task.part.pose,
+         part_task.agv_id);
+
+    nist_gear::Model target_part; 
+    target_part.type = part_task.part.type; 
+    target_part.pose = target_pose_in_world; 
+
+    for (auto& part: srv.response.parts) {
+      if (Utility::is_same_part(target_part, part, 0.05)) {
+        ROS_INFO("agv has type: %s", part_task.part.type.c_str()); 
+        shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+        if (shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+            // leave one last task for arm to submit shipment
+            return false; 
+        }
+        return true; 
+      }
+    }
+
+    return false; 
+}
+
 
