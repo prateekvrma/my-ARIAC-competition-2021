@@ -49,13 +49,13 @@ class Shipments {
     void update_part_task_queue(std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>>& part_task_queue); 
     bool is_high_priority_alert(); 
     std::string check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
+    bool is_part_task_done(const ariac_group1::PartTask& part_task); 
 
     std::map<std::string, std::unique_ptr<ShipmentInfo>> shipments_record; 
 
   private: 
     void shipment_callback(const nist_gear::KittingShipment::ConstPtr& msg); 
     bool has_shipment(); 
-    bool is_part_task_done(const ariac_group1::PartTask& part_task); 
 
     // ros
     ros::NodeHandle m_nh; 

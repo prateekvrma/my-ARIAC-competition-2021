@@ -252,6 +252,15 @@ void KittingArm::execute()
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
 
+  ROS_INFO("unfinished part task %d", m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks); 
+  // check if part_task has already been done, if so reduce unfinished_part_tasks
+  if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks > 0) {
+      // is_part_task_done will also decrease unfinished part task if done
+      if (m_shipments.is_part_task_done(part_task)) {
+        ROS_INFO("Part task %s at %s is already done !!", part_task.part.type.c_str(), part_task.agv_id.c_str()); 
+      }
+  }
+
   nist_gear::Model wrong_part; 
   auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
   m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
