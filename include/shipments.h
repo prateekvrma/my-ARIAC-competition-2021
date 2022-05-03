@@ -27,8 +27,8 @@
 #include <ariac_group1/PartsUnderCamera.h>
 
 
-enum class ShipmentState{NOT_READY, READY,
-                         HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_FLIP_PART, HAS_MISSING_PART, HAS_FAULTY,
+enum class ShipmentState{NOT_READY, READY, INSUFFICIENT,
+                         HAS_REDUNDANT, HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_FLIP_PART, HAS_MISSING_PART, HAS_FAULTY,
                          POSTPONE, FINISH}; 
 
 class ShipmentInfo {
@@ -38,6 +38,7 @@ class ShipmentInfo {
 
     std::string shipment_id;  
     std::unique_ptr<nist_gear::KittingShipment> shipment; 
+    std::vector<nist_gear::Model> target_parts_in_world; 
     int unfinished_part_tasks; 
     int priority = 0; 
     ShipmentState state = ShipmentState::NOT_READY; 
@@ -48,6 +49,7 @@ class Shipments {
     Shipments(ros::NodeHandle* nodehandle);  
     void update_part_task_queue(std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>>& part_task_queue); 
     bool is_high_priority_alert(); 
+    bool check_redundant(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
     std::string check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
     bool is_part_task_done(const ariac_group1::PartTask& part_task); 
 

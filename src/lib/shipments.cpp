@@ -41,6 +41,16 @@ void Shipments::update_part_task_queue(std::vector<std::tuple<int, std::unique_p
         part_task.station_id = shipments_record[id]->shipment->station_id; 
         part_task.priority = shipments_record[id]->priority; 
 
+        // transform part task pose from tray frame to world frame
+        // then store in shipment record
+        auto product_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
+             product.pose,
+             part_task.agv_id);
+
+        part_task.part_in_world.type = product.type; 
+        part_task.part_in_world.pose = product_pose_in_world; 
+        shipments_record[id]->target_parts_in_world.push_back(part_task.part_in_world); 
+
         if (this->is_part_task_done(part_task)) {
             continue; 
         }
@@ -81,6 +91,40 @@ bool Shipments::is_high_priority_alert()
     return alert; 
 }
 
+bool Shipments::check_redundant(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
+{
+    ariac_group1::PartsUnderCamera srv; 
+    srv.request.camera_id = "ks"; 
+    srv.request.camera_id += part_task.agv_id.back();
+    m_parts_under_camera_client.call(srv); 
+
+    if (srv.response.parts.empty()) {
+        return false; 
+    }
+
+    for (auto& part: srv.response.parts) {
+      bool product_redundant = true; 
+      for (auto& target_part: shipments_record[part_task.shipment_type]->target_parts_in_world) {
+
+        ROS_INFO("Target part type %s", target_part.type.c_str()); 
+        ROS_INFO("Part type %s", part.type.c_str()); 
+        ROS_INFO("dist: %f, angle: %f", Utility::distance(target_part, part), Utility::angle_distance(target_part, part)); 
+        if (Utility::is_same_part(target_part, part, 0.06)) {
+          if (target_part.type == part.type) {
+            ROS_INFO("part not redundant"); 
+            product_redundant = false; 
+            break; 
+          }
+        }
+      }
+      if (product_redundant) {
+          wrong_part = part;
+          return true; 
+      }
+    }
+
+    return false; 
+}
 
 std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
@@ -91,20 +135,16 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
     m_parts_under_camera_client.call(srv); 
 
     // check for wrong type
-    for (auto& product: shipments_record[part_task.shipment_type]->shipment->products) {
-      auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
-           product.pose,
-           part_task.agv_id);
-
-      nist_gear::Model target_part; 
-      target_part.type = product.type; 
-      target_part.pose = target_pose_in_world; 
+    for (int i; i < part_task.total_parts; i++) {
+      auto& product = shipments_record[part_task.shipment_type]->shipment->products.at(i); 
+      auto& target_part = shipments_record[part_task.shipment_type]->target_parts_in_world.at(i); 
 
       bool has_product = false; 
       for (auto& part: srv.response.parts) {
         if (Utility::is_same_part(target_part, part, 0.06)) {
           if (target_part.type != part.type) {
               part_task.part = product; 
+              part_task.part_in_world = target_part; 
               wrong_part = part;  
               return "wrong_type"; 
           }
@@ -117,6 +157,7 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
           if (abs(target_rpy.at(0)) > 0.1 and
               Utility::angle_distance(target_part, part, "roll") > 0.1) {  
               part_task.part = product; 
+              part_task.part_in_world = target_part; 
               wrong_part = part;  
               return "flip_part"; 
           }
@@ -126,6 +167,7 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
           if (Utility::distance(target_part, part) > 0.03 or
               Utility::angle_distance(target_part, part) > 0.1) {
               part_task.part = product; 
+              part_task.part_in_world = target_part; 
               wrong_part = part;  
               return "wrong_pose"; 
           }
@@ -135,6 +177,7 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
 
       if (not has_product) {
           part_task.part = product; 
+          part_task.part_in_world = target_part; 
           return "missing_part"; 
       }
     }
@@ -177,23 +220,19 @@ bool Shipments::is_part_task_done(const ariac_group1::PartTask& part_task)
     ROS_INFO("%s", srv.request.camera_id.c_str()); 
     m_parts_under_camera_client.call(srv); 
 
-    auto target_pose_in_world = Utility::motioncontrol::transformToWorldFrame(
-         part_task.part.pose,
-         part_task.agv_id);
-
-    nist_gear::Model target_part; 
-    target_part.type = part_task.part.type; 
-    target_part.pose = target_pose_in_world; 
+    auto& target_part = part_task.part_in_world; 
 
     for (auto& part: srv.response.parts) {
       if (Utility::is_same_part(target_part, part, 0.05)) {
-        ROS_INFO("agv has type: %s", part_task.part.type.c_str()); 
-        shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
-        if (shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
-            // leave one last task for arm to submit shipment
-            return false; 
+        if (target_part.type == part.type) {
+            ROS_INFO("agv has type: %s", part_task.part.type.c_str()); 
+            shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+            if (shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+                // leave one last task for arm to submit shipment
+                return false; 
+            }
+            return true; 
         }
-        return true; 
       }
     }
 

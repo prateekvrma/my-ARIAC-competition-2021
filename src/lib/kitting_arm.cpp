@@ -1187,6 +1187,11 @@ void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priorit
 
 ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
+  if (m_shipments.check_redundant(part_task, wrong_part)) {
+      ROS_INFO("Has redundant part in shipment %s", part_task.shipment_type.c_str()); 
+      return ShipmentState::HAS_REDUNDANT; 
+  }
+
   static bool missing_check = false;  
 
   // Check if shipment is ready to submit
@@ -1261,6 +1266,7 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         break; 
       }
 
+    case ShipmentState::HAS_REDUNDANT: 
     case ShipmentState::HAS_WRONG_TYPE: 
       {
         ariac_group1::GetVacancyPose vacancy_pose_srv; 
@@ -1270,7 +1276,9 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         if (vacancy_poses.empty()) {
           bool discard_success = this->discard_faulty(wrong_part, part_task.agv_id); 
           if (discard_success) {
-            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            if (shipment_state == ShipmentState::HAS_WRONG_TYPE) {
+              m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            }
           }
           return; 
         }
@@ -1279,7 +1287,9 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
           camera_id += part_task.agv_id.back(); 
           if (pick_part(wrong_part.type, wrong_part.pose, camera_id)) {
             place_to_vacancy(vacancy_poses[0], false); 
-            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            if (shipment_state == ShipmentState::HAS_WRONG_TYPE) {
+              m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            }
           }
         }
         break; 
