@@ -88,31 +88,6 @@ void SensorManager::update_parts()
   
 }
 
-void SensorManager::print_bins_occupancy()
-{
-  for (auto& bin_id: m_bins_id) {
-    ROS_INFO("%s: ", bin_id.c_str()); 
-    std::string pos_1 = " "; 
-    std::string pos_2 = " "; 
-    std::string pos_3 = " "; 
-    std::string pos_4 = " "; 
-    if (bins_occupancy[bin_id].at(0)) {
-      pos_1 = "O"; 
-    }
-    if (bins_occupancy[bin_id].at(1)) {
-      pos_2 = "O"; 
-    }
-    if (bins_occupancy[bin_id].at(2)) {
-      pos_3 = "O"; 
-    }
-    if (bins_occupancy[bin_id].at(3)) {
-      pos_4 = "O"; 
-    }
-    ROS_INFO("  %s  %s", pos_1.c_str(), pos_2.c_str()); 
-    ROS_INFO("  %s  %s", pos_3.c_str(), pos_4.c_str()); 
-  }
-}
-
 void SensorManager::show_database()
 {
   for (auto& data: m_parts_database) {
@@ -151,6 +126,32 @@ void SensorManager::check_blackout()
     test_count = 0; 
   }
 
+}
+
+
+void SensorManager::print_bins_occupancy()
+{
+  for (auto& bin_id: m_bins_id) {
+    ROS_INFO("%s: ", bin_id.c_str()); 
+    std::string pos_1 = " "; 
+    std::string pos_2 = " "; 
+    std::string pos_3 = " "; 
+    std::string pos_4 = " "; 
+    if (bins_occupancy[bin_id].at(0)) {
+      pos_1 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(1)) {
+      pos_2 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(2)) {
+      pos_3 = "O"; 
+    }
+    if (bins_occupancy[bin_id].at(3)) {
+      pos_4 = "O"; 
+    }
+    ROS_INFO("  %s  %s", pos_1.c_str(), pos_2.c_str()); 
+    ROS_INFO("  %s  %s", pos_3.c_str(), pos_4.c_str()); 
+  }
 }
 
 bool SensorManager::get_parts(ariac_group1::GetParts::Request &req, 

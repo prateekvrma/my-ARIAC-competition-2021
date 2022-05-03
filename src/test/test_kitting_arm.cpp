@@ -32,23 +32,23 @@ int main(int argc, char** argv) {
     part_goal_pose_in_frame.orientation.w = flat_orientation.getW(); 
     //
     std::string camera_id = "logical_camera_bins0"; 
-    kitting_arm.pickPart("pump", part_init_pose, camera_id); 
-    kitting_arm.placePart("pump", part_init_pose, part_goal_pose_in_frame, "agv1"); 
+    kitting_arm.pick_part("pump", part_init_pose, camera_id); 
+    kitting_arm.place_part("pump", part_init_pose, part_goal_pose_in_frame, "agv1"); 
 
     // ROS_INFO("Moving to agv1"); 
-    // kitting_arm.goToPresetLocation("agv1"); 
+    // kitting_arm.go_to_preset_location("agv1"); 
     // kitting_arm.print_joints_position(); 
     //
     // ROS_INFO("Moving to agv2"); 
-    // kitting_arm.goToPresetLocation("agv2"); 
+    // kitting_arm.go_to_preset_location("agv2"); 
     // kitting_arm.print_joints_position(); 
     //
     // ROS_INFO("Moving to agv3"); 
-    // kitting_arm.goToPresetLocation("agv3"); 
+    // kitting_arm.go_to_preset_location("agv3"); 
     // kitting_arm.print_joints_position(); 
     //
     // ROS_INFO("Moving to agv4"); 
-    // kitting_arm.goToPresetLocation("agv4"); 
+    // kitting_arm.go_to_preset_location("agv4"); 
     // kitting_arm.print_joints_position(); 
     //
     // ROS_INFO("Turn to belt"); 
@@ -58,10 +58,10 @@ int main(int argc, char** argv) {
     // kitting_arm.turnToBins(); 
     // kitting_arm.print_joints_position(); 
     // ROS_INFO("Move to 3"); 
-    // kitting_arm.moveBaseTo(3); 
+    // kitting_arm.move_base_to(3); 
     // kitting_arm.print_joints_position(); 
     // ROS_INFO("Move to -3"); 
-    // kitting_arm.moveBaseTo(-3); 
+    // kitting_arm.move_base_to(-3); 
     // kitting_arm.print_joints_position(); 
     ros::waitForShutdown();
 }

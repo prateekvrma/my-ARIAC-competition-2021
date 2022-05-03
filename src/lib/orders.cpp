@@ -35,52 +35,6 @@ Orders::Orders(ros::NodeHandle* nodehandle):
   m_order_subscriber = m_nh.subscribe("/ariac/orders", 10, &Orders::order_callback, this); 
 }
 
-void Orders::order_callback(const nist_gear::Order::ConstPtr& msg)
-{
-  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
-
-  int priority = 0; 
-  // High priority order if it is not the first order
-  if (orders_record.size() > 0) {
-    ROS_INFO("High-priority order is announced"); 
-    priority = 1; 
-  }
-
-  // New order
-  m_new_orders_id.push_back(msg->order_id); 
-
-  // Order id for searching orders record
-  m_orders_id.push_back(msg->order_id); 
-
-  // Store all the order
-  orders_record[msg->order_id] = std::make_unique<OrderInfo>(msg->order_id, msg, priority); 
-
-  for (auto &shipment: msg->kitting_shipments) {
-    m_shipments_id.push_back(shipment.shipment_type); 
-    m_shipments_priority[shipment.shipment_type] = priority;  
-  }
-
-  for (auto &shipment: msg->assembly_shipments) {
-    m_shipments_id.push_back(shipment.shipment_type); 
-    m_shipments_priority[shipment.shipment_type] = priority;  
-  }
-}
-
-bool Orders::get_shipment_priority(ariac_group1::GetShipmentPriority::Request &req, 
-                                   ariac_group1::GetShipmentPriority::Response &res) 
-{
-  if (m_shipments_priority.count(req.shipment_type)) {
-    res.priority = m_shipments_priority[req.shipment_type]; 
-  }
-  else {
-    // error, no shipment type
-    res.priority = -1; 
-  }
-
-  return true; 
-}
-
-
 bool Orders::get_order()
 {
   ros::Rate wait_rate(1); 
@@ -130,6 +84,36 @@ void Orders::clear_new_orders_id()
   m_new_orders_id.clear(); 
 }
 
+void Orders::order_callback(const nist_gear::Order::ConstPtr& msg)
+{
+  const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
+
+  int priority = 0; 
+  // High priority order if it is not the first order
+  if (orders_record.size() > 0) {
+    ROS_INFO("High-priority order is announced"); 
+    priority = 1; 
+  }
+
+  // New order
+  m_new_orders_id.push_back(msg->order_id); 
+
+  // Order id for searching orders record
+  m_orders_id.push_back(msg->order_id); 
+
+  // Store all the order
+  orders_record[msg->order_id] = std::make_unique<OrderInfo>(msg->order_id, msg, priority); 
+
+  for (auto &shipment: msg->kitting_shipments) {
+    m_shipments_id.push_back(shipment.shipment_type); 
+    m_shipments_priority[shipment.shipment_type] = priority;  
+  }
+
+  for (auto &shipment: msg->assembly_shipments) {
+    m_shipments_id.push_back(shipment.shipment_type); 
+    m_shipments_priority[shipment.shipment_type] = priority;  
+  }
+}
 
 bool Orders::has_order() 
 {
@@ -207,3 +191,19 @@ bool Orders::check_order(const std::string& order_id)
 
   return order_valid; 
 }
+
+bool Orders::get_shipment_priority(ariac_group1::GetShipmentPriority::Request &req, 
+                                   ariac_group1::GetShipmentPriority::Response &res) 
+{
+  if (m_shipments_priority.count(req.shipment_type)) {
+    res.priority = m_shipments_priority[req.shipment_type]; 
+  }
+  else {
+    // error, no shipment type
+    res.priority = -1; 
+  }
+
+  return true; 
+}
+
+

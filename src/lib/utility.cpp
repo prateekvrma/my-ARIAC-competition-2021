@@ -37,7 +37,7 @@ namespace Utility
         if (r2 < 0) {
            r2 = 2 * M_PI + r2; 
         }
-        return abs(r1 - r2);  
+        return std::min(abs(r1 - r2), 2 * M_PI - abs(r1 - r2));  
     }
     else if (rpy == "pitch") {
         auto p1 = part1_rpy.at(1); 
@@ -48,7 +48,7 @@ namespace Utility
         if (p2 < 0) {
            p2 = 2 * M_PI + p2; 
         }
-        return abs(p1 - p2);
+        return std::min(abs(p1 - p2), 2 * M_PI - abs(p1 - p2));  
     }
     else if (rpy == "yaw") {
         auto y1 = part1_rpy.at(2); 
@@ -59,7 +59,7 @@ namespace Utility
         if (y2 < 0) {
            y2 = 2 * M_PI + y2; 
         }
-        return abs(y1 - y2);
+        return std::min(abs(y1 - y2), 2 * M_PI - abs(y1 - y2));  
     }
   }
 

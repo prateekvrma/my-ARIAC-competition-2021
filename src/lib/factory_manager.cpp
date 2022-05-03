@@ -27,10 +27,6 @@ FactoryManager::FactoryManager(ros::NodeHandle* nodehandle):
 
 }
 
-void FactoryManager::busy_callback(const ariac_group1::Busy& msg){
-  m_busy_state[msg.id] = msg.state; 
-}
-
 void FactoryManager::run_competition()
 {
   this->start_competition(); 
@@ -45,6 +41,11 @@ void FactoryManager::run_competition()
     }
   }
   this->end_competition(); 
+}
+
+
+void FactoryManager::busy_callback(const ariac_group1::Busy& msg){
+  m_busy_state[msg.id] = msg.state; 
 }
 
 void FactoryManager::start_competition()
@@ -130,6 +131,15 @@ void FactoryManager::assign_assembly_task(nist_gear::AssemblyShipment& shipment)
   m_assembly_publisher.publish(msg); 
 }
 
+bool FactoryManager::get_competition_time(ariac_group1::GetCompetitionTime::Request &req,
+                                         ariac_group1::GetCompetitionTime::Response &res)
+{
+  auto competition_time = ros::Time::now() - m_start_time; 
+  res.competition_time = competition_time.toSec(); 
+
+  return true; 
+}
+
 bool FactoryManager::work_done()
 {
   for (const auto& worker_busy_state: m_busy_state) {
@@ -141,11 +151,4 @@ bool FactoryManager::work_done()
   return true; 
 }
 
-bool FactoryManager::get_competition_time(ariac_group1::GetCompetitionTime::Request &req,
-                                         ariac_group1::GetCompetitionTime::Response &res)
-{
-  auto competition_time = ros::Time::now() - m_start_time; 
-  res.competition_time = competition_time.toSec(); 
 
-  return true; 
-}

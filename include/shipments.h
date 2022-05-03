@@ -1,6 +1,10 @@
 #ifndef SHIPMENTS_H
 #define SHIPMENTS_H
 
+// ros
+#include <ros/ros.h>
+
+// standard library
 #include <string>
 #include <vector>
 #include <memory>
@@ -8,15 +12,20 @@
 #include <tuple>
 #include <map>
 
-#include <ros/ros.h>
+// custom library
+#include "constants.h"
+#include "utility.h"
 
+// services and messages
 #include <std_msgs/String.h>
+
+// nist
 #include <nist_gear/KittingShipment.h>
+
+// custom
 #include <ariac_group1/PartTask.h>
 #include <ariac_group1/PartsUnderCamera.h>
 
-#include "constants.h"
-#include "utility.h"
 
 enum class ShipmentState{NOT_READY, READY,
                          HAS_WRONG_TYPE, HAS_WRONG_POSE, HAS_FLIP_PART, HAS_MISSING_PART, HAS_FAULTY,
@@ -37,7 +46,6 @@ class ShipmentInfo {
 class Shipments {
   public:
     Shipments(ros::NodeHandle* nodehandle);  
-    bool get_shipment(); 
     void update_part_task_queue(std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>>& part_task_queue); 
     bool is_high_priority_alert(); 
     std::string check_shipment_parts(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part); 
@@ -49,9 +57,13 @@ class Shipments {
     bool has_shipment(); 
     bool is_part_task_done(const ariac_group1::PartTask& part_task); 
 
+    // ros
     ros::NodeHandle m_nh; 
+
+    // ros subscriber
     ros::Subscriber m_shipment_subscriber;
 
+    // ros service client
     ros::ServiceClient m_get_shipment_priority_client;
     ros::ServiceClient m_parts_under_camera_client; 
 
