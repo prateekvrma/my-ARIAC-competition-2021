@@ -782,7 +782,7 @@ geometry_msgs::Pose KittingArm::place_part(std::string part_type,
 
     double z_margin{};
     if (part_type.find("pump") != std::string::npos) {
-        z_margin = 0.14;
+        z_margin = 0.16;
     }
     else {
       z_margin = 0.11; 

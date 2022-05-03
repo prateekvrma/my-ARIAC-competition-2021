@@ -102,7 +102,7 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
 
       bool has_product = false; 
       for (auto& part: srv.response.parts) {
-        if (Utility::is_same_part(target_part, part, 0.07)) {
+        if (Utility::is_same_part(target_part, part, 0.06)) {
           if (target_part.type != part.type) {
               part_task.part = product; 
               wrong_part = part;  
@@ -120,13 +120,16 @@ std::string Shipments::check_shipment_parts(ariac_group1::PartTask& part_task, n
               wrong_part = part;  
               return "flip_part"; 
           }
-          
-          if (Utility::distance(target_part, part) > 0.07 or
+        }
+        if (has_product) {
+          ROS_INFO("dist: %f, angle: %f", Utility::distance(target_part, part), Utility::angle_distance(target_part, part)); 
+          if (Utility::distance(target_part, part) > 0.03 or
               Utility::angle_distance(target_part, part) > 0.1) {
               part_task.part = product; 
               wrong_part = part;  
               return "wrong_pose"; 
           }
+          break; 
         }
       }
 
