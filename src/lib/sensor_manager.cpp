@@ -173,7 +173,8 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
   std::vector<std::string> working_areas; 
 
   if (req.client == "kitting_arm") {
-    working_areas = kitting_arm_areas; 
+    // working_areas = kitting_arm_areas; 
+    working_areas = all_areas; 
   }
   else if (req.client == "gantry_arm") {
     working_areas = gantry_arm_areas; 
@@ -189,6 +190,15 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
     auto part_loc = Utility::location::get_pose_location(part_info_ptr->part.pose); 
     for (auto& loc: working_areas) {
         if (part_loc == loc) {
+            if (req.client == "kitting_arm") {
+                if (Utility::location::is_back_row_bins(loc)) {
+                    if (Utility::location::get_pose_location_in_bin(part_info_ptr->part.pose, loc) < 2) {
+                        Utility::print_part_pose(part_info_ptr->part); 
+                        ROS_INFO("At %s back row", loc.c_str()); 
+                        break; 
+                    }
+                }
+            }
             res.parts_info.push_back(*part_info_ptr); 
             Utility::print_part_pose(part_info_ptr->part); 
             break; 

@@ -309,10 +309,17 @@ void KittingArm::execute()
 
     ROS_INFO("Found %s upder %s", part_task.part.type.c_str(), part_init_info.camera_id.c_str()); 
     ROS_INFO("Part location: "); 
+    m_working_station = part_task.agv_id; 
     Utility::print_part_pose(part_init_info.part); 
 
-    m_working_station = part_task.agv_id; 
-    bool success = this->move_part(part_init_info, part_task); 
+    auto part_bin = Utility::location::get_pose_location(part_init_info.part.pose); 
+    bool from_back_row_bins = false; 
+    if (Utility::location::is_back_row_bins(part_bin)) {
+        from_back_row_bins = true; 
+    }
+
+    bool success = this->move_part(part_init_info, part_task, from_back_row_bins); 
+
     if (success) {
       ROS_INFO("Move part success"); 
       this->clear_part_task(part_task, priority); 
@@ -722,7 +729,189 @@ bool KittingArm::pick_part(std::string part_type,
 }
 
 bool KittingArm::pick_part_from_back_row(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id) {
-    return true; 
+    bool from_back_row_bin = true; 
+
+    ROS_INFO("---Start pick part"); 
+    ROS_INFO("Picking under camera %s", camera_id.c_str()); 
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
+
+    geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+    auto flat_orientation = Utility::motioncontrol::quaternionFromEuler(0, 1.57, 0);
+    arm_ee_link_pose.orientation.x = flat_orientation.getX();
+    arm_ee_link_pose.orientation.y = flat_orientation.getY();
+    arm_ee_link_pose.orientation.z = flat_orientation.getZ();
+    arm_ee_link_pose.orientation.w = flat_orientation.getW();
+    
+    // preset z depending on the part type
+    double z_pos{};
+    if (part_type.find("pump") != std::string::npos) {
+        z_pos = 0.075;
+        if (camera_id.find("ks") != std::string::npos) {
+          z_pos -= 0.0052;
+        }
+    }
+    if (part_type.find("sensor") != std::string::npos) {
+        z_pos = 0.05;
+        if (camera_id.find("ks") != std::string::npos) {
+          z_pos -= 0.005;
+        }
+    }
+    if (part_type.find("battery") != std::string::npos) {
+        z_pos = 0.052;
+        if (camera_id.find("ks") != std::string::npos) {
+          z_pos -= 0.005;
+        }
+    }
+    if (part_type.find("regulator") != std::string::npos) {
+        z_pos = 0.057;
+        if (camera_id.find("ks") != std::string::npos) {
+          z_pos -= 0.005;
+        }
+    }
+
+    // post-grasp pose 
+    // store the pose of the arm before it goes down to pick the part
+    // we will bring the arm back to this pose after picking up the part
+    auto postgrasp_pose = part_init_pose;
+    postgrasp_pose.orientation = arm_ee_link_pose.orientation;
+    postgrasp_pose.position.z = part_init_pose.position.z + z_pos + 0.05;
+
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+    
+
+    // m_arm_group.setPoseTarget(postgrasp_pose);
+    // m_arm_group.move();
+    ROS_INFO("Move to postgrasp pose"); 
+    if (not this->move_target_pose(postgrasp_pose, from_back_row_bin)) {
+      ROS_INFO("---End pick part: IK not found for postgrasp"); 
+      return false; 
+    }
+
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+
+    // pregrasp pose: right above the part
+    auto pregrasp_pose = part_init_pose;
+    pregrasp_pose.orientation = arm_ee_link_pose.orientation;
+    pregrasp_pose.position.z = part_init_pose.position.z + z_pos;
+
+    // activate gripper
+    // sometimes it does not activate right away
+    // so we are doing this in a loop
+    while (!m_gripper_state.enabled) {
+        activate_gripper();
+    }
+
+    ROS_INFO("Move to pregrasp pose"); 
+    if (not this->move_target_pose(pregrasp_pose, from_back_row_bin)) {
+      ROS_INFO("IK not found for grasp"); 
+      deactivate_gripper();
+      this->lift(); 
+      return false; 
+    }
+
+    if (this->check_emergency_interrupt()) {
+        return false; 
+    }
+
+    ros::Duration(0.5).sleep();
+    
+    m_arm_group.setMaxVelocityScalingFactor(0.5);
+    auto grasp_pose = pregrasp_pose; 
+    // this->set_pick_constraints(); 
+    ROS_INFO("Start grasping"); 
+    // move the arm 1 mm down until the part is attached
+    int count = 0; 
+    int trial = 0; 
+    double step = 0.001;
+    while (!m_gripper_state.attached) {
+        grasp_pose.position.z -= step;
+        m_arm_group.setPoseTarget(grasp_pose);
+        m_arm_group.move();
+        count++; 
+        ros::Duration(0.3).sleep();
+        // if (step > 0.0008) {
+          // step -= 0.0001; 
+        // }
+        geometry_msgs::Pose arm_ee_link_pose = m_arm_group.getCurrentPose().pose;
+        if (arm_ee_link_pose.position.z < 0.76) {
+          ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
+          this->reset_arm(); 
+          deactivate_gripper();
+          return false; 
+        }
+
+        if (trial > 3) {
+          ROS_INFO("Hard to grasp. Abort"); 
+          this->reset_arm(); 
+          deactivate_gripper();
+          return false; 
+        }
+
+        if (count > 2) {
+          if (this->check_emergency_interrupt()) {
+              return false; 
+          }
+        }
+
+        if (count > 7) {
+          this->lift(); 
+          ROS_INFO("Hard to grasp. Move back to pregrasp pose"); 
+          if (not this->move_target_pose(pregrasp_pose, from_back_row_bin)) {
+            ROS_INFO("IK not found for grasp"); 
+            deactivate_gripper();
+            this->lift(); 
+            return false; 
+          }
+
+          grasp_pose = pregrasp_pose; 
+          count = 0; 
+          trial++; 
+        }
+    }
+    // m_arm_group.clearPathConstraints();
+    
+    m_arm_group.setMaxVelocityScalingFactor(1.0);
+    m_arm_group.setMaxAccelerationScalingFactor(1.0);
+    ROS_INFO_STREAM("[Gripper] = object attached");
+    ros::Duration(0.5).sleep();
+
+    ROS_INFO("Move back to postgrasp pose"); 
+    if (not this->move_target_pose(postgrasp_pose, from_back_row_bin)) {
+      ROS_INFO("---End pick part: IK not found for postgrasp"); 
+      this->reset_arm(); 
+      return false; 
+    }
+    // m_arm_group.setPoseTarget(postgrasp_pose);
+    // m_arm_group.move();
+    ros::Duration(0.5).sleep();
+
+    // this->lift(); 
+    this->reset_arm(); 
+
+    ariac_group1::IsPartPicked srv; 
+    srv.request.camera_id = camera_id; 
+    srv.request.part.type = part_type; 
+    srv.request.part.pose = part_init_pose; 
+    if (m_is_part_picked_client.call(srv)) {
+      if (srv.response.picked) {
+        ROS_INFO("---End pick part: pick success"); 
+        return true; 
+      }
+      else {
+        ROS_INFO("---End pick part: pick fails"); 
+        deactivate_gripper();
+        return false; 
+      }
+    } 
+    else {
+      ROS_INFO("---End pick part: no such camera: %s", camera_id.c_str()); 
+      deactivate_gripper();
+      return false; 
+    }
 }
 
 geometry_msgs::Pose KittingArm::place_part(std::string part_type, 
@@ -1471,9 +1660,9 @@ void KittingArm::deactivate_gripper()
 }
 
 // auxiliary functions
-bool KittingArm::move_target_pose(const geometry_msgs::Pose& pose)
+bool KittingArm::move_target_pose(const geometry_msgs::Pose& pose, bool from_back_row_bins)
 {
-  this->set_pick_constraints(); 
+  this->set_pick_constraints(from_back_row_bins); 
 
   unsigned int max_attempts = 1; 
   int attempts = 0; 
@@ -1506,36 +1695,38 @@ bool KittingArm::move_target_pose(const geometry_msgs::Pose& pose)
         current_state->copyJointGroupPositions(joint_model_group, target_joint_group_positions);
         bool target_joints_infeasible = false; 
 
-        auto joint_1 = target_joint_group_positions.at(1);  
-        auto joint_2 = target_joint_group_positions.at(2);  
-        auto joint_3 = target_joint_group_positions.at(3);  
-        auto joint_4 = target_joint_group_positions.at(4);  
+        if (not from_back_row_bins) {
+            auto joint_1 = target_joint_group_positions.at(1);  
+            auto joint_2 = target_joint_group_positions.at(2);  
+            auto joint_3 = target_joint_group_positions.at(3);  
+            auto joint_4 = target_joint_group_positions.at(4);  
 
-        if (joint_2 > 0) {
-            joint_2 = joint_2 - M_PI * 2; 
-        }
+            if (joint_2 > 0) {
+                joint_2 = joint_2 - M_PI * 2; 
+            }
 
-        if (joint_3 < 0) {
-            joint_3 = joint_3 + M_PI * 2; 
-        }
+            if (joint_3 < 0) {
+                joint_3 = joint_3 + M_PI * 2; 
+            }
 
-        if (joint_4 > 0) {
-            joint_4 = joint_4 - M_PI * 2; 
-        }
+            if (joint_4 > 0) {
+                joint_4 = joint_4 - M_PI * 2; 
+            }
 
-        if (joint_2 > -0.17 or joint_2 < -1.74) { 
-          ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
-          target_joints_infeasible = true; 
-        }
+            if (joint_2 > -0.17 or joint_2 < -1.74) { 
+              ROS_INFO("Target joint 2 infisible: %f", target_joint_group_positions.at(2)); 
+              target_joints_infeasible = true; 
+            }
 
-        if (joint_3 > 2.5 or joint_3 < 0.05) { 
-          ROS_INFO("Target joint 3 infisible: %f", target_joint_group_positions.at(3)); 
-          target_joints_infeasible = true; 
-        }
+            if (joint_3 > 2.5 or joint_3 < 0.05) { 
+              ROS_INFO("Target joint 3 infisible: %f", target_joint_group_positions.at(3)); 
+              target_joints_infeasible = true; 
+            }
 
-        if (joint_4 > -0.7 or joint_4 < -3.45) { 
-          ROS_INFO("Target joint 4 infisible: %f", target_joint_group_positions.at(4)); 
-          target_joints_infeasible = true; 
+            if (joint_4 > -0.7 or joint_4 < -3.45) { 
+              ROS_INFO("Target joint 4 infisible: %f", target_joint_group_positions.at(4)); 
+              target_joints_infeasible = true; 
+            }
         }
 
         if (target_joints_infeasible) {
@@ -1579,12 +1770,26 @@ bool KittingArm::check_faulty(const nist_gear::Model& faulty_part)
   return srv.response.faulty; 
 }
 
-void KittingArm::set_pick_constraints()
+void KittingArm::set_pick_constraints(bool from_back_row_bins)
 {
   // set constraint to shoulder lift and elbow
   moveit_msgs::Constraints constraints;
 
   moveit_msgs::JointConstraint joint_constraint; 
+
+  joint_constraint.joint_name = "wrist_2_joint"; 
+  joint_constraint.position = -1.57;  
+  joint_constraint.tolerance_above = 0.1; 
+  joint_constraint.tolerance_below = 0.1; 
+  joint_constraint.weight = 1; 
+
+  constraints.joint_constraints.push_back(joint_constraint); 
+
+
+  if (from_back_row_bins) {
+      m_arm_group.setPathConstraints(constraints);
+      return; 
+  }
 
   joint_constraint.joint_name = "shoulder_lift_joint"; 
   joint_constraint.position = -1.25;  
@@ -1607,14 +1812,6 @@ void KittingArm::set_pick_constraints()
   joint_constraint.tolerance_above = 1.4; 
   joint_constraint.tolerance_below = 1.4; 
   joint_constraint.weight = 0.8; 
-
-  constraints.joint_constraints.push_back(joint_constraint); 
-
-  joint_constraint.joint_name = "wrist_2_joint"; 
-  joint_constraint.position = -1.57;  
-  joint_constraint.tolerance_above = 0.1; 
-  joint_constraint.tolerance_below = 0.1; 
-  joint_constraint.weight = 1; 
 
   constraints.joint_constraints.push_back(joint_constraint); 
 

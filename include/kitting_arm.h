@@ -95,9 +95,9 @@ class KittingArm {
     nist_gear::VacuumGripperState get_gripper_state();
 
     // auxiliary functions
-    bool move_target_pose(const geometry_msgs::Pose& pose); 
+    bool move_target_pose(const geometry_msgs::Pose& pose, bool from_back_row_bins=false); 
     bool check_faulty(const nist_gear::Model& faulty_part); 
-    void set_pick_constraints(); 
+    void set_pick_constraints(bool from_back_row_bins=false); 
 
     // utils
     void print_joint_group_positions();  
