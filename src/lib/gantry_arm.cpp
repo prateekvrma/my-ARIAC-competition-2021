@@ -43,6 +43,12 @@ GantryArm::GantryArm():
   m_torso_gantry_group{m_torso_gantry_options}, 
   m_shipments{&m_nh}
 {
+
+  isNewShipment = true;
+  atHome1 = false;
+  atHome2 = false;
+  gantry_cloc = "loc";
+  
   // publishers to directly control the joints without moveit
   m_arm_joint_trajectory_publisher =
       m_nh.advertise<trajectory_msgs::JointTrajectory>("/ariac/gantry/gantry_arm_controller/command", 10);
@@ -134,9 +140,9 @@ GantryArm::GantryArm():
   }
 
   // five
-  five.gantry_torso ={ -3.50, 0, 0 };
+  five.gantry_torso ={ -2.0, 0, 1.57};
   five.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
-  five.gantry_full = { -3.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  five.gantry_full = { -2.0, 1.57, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   five.name = "five";
   // two
   two.gantry_torso ={ -1.50, 0, 0 };
@@ -144,7 +150,7 @@ GantryArm::GantryArm():
   two.gantry_full = { -1.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   two.name = "two";
   // eight
-  eight.gantry_torso ={ -8.50, 0, 0 };
+  eight.gantry_torso ={ -6.50, 0, 1.57 };
   eight.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   eight.gantry_full = { -8.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   eight.name = "eight";
@@ -228,14 +234,14 @@ GantryArm::GantryArm():
   at_agv4.name = "at_agv4";
 
   // at AS3
-  at_as3.gantry_torso = { -3.7 , -2.8 + 6.063705, 1.57 };
-  at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as3.gantry_torso = { -3.0 , -2.8 + 6.063705, 1.57 };
+  at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_as3.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as3.name = "at_as3";
 
   // at AS4
-  at_as4.gantry_torso = { -8.7 , -2.8 + 6.063705, 1.57 };
-  at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as4.gantry_torso = { -8.0 , -2.8 + 6.063705, 1.57 };
+  at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83  };
   at_as4.gantry_full = { -8.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as4.name = "at_as4";
 
@@ -290,14 +296,14 @@ GantryArm::GantryArm():
 
 
   // at as1
-  at_as1.gantry_torso = { -3.7 , -2.8, 1.57 };
-  at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as1.gantry_torso = { -3.0 , -2.8, 1.57 };
+  at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83  };
   at_as1.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as1.name = "at_as1";
 
   // at as2
-  at_as2.gantry_torso = { -8.7 , -2.8, 1.57 };
-  at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
+  at_as2.gantry_torso = { -8.0 , -2.8, 1.57 };
+  at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83  };
   at_as2.gantry_full = { -8.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as2.name = "at_as2";
 
@@ -394,6 +400,7 @@ void GantryArm::goToPresetLocation(std::string location_name)
 {
 
     ArmPresetLocation location;
+    gantry_cloc = location_name;
     if (location_name.compare("one") == 0) {
         ROS_INFO("Moving to one"); 
         location = one;
@@ -483,39 +490,39 @@ void GantryArm::goToPresetLocation(std::string location_name)
         location = at_agv2_at_as1;
     }
 
-    else if (location_name.compare("as2") == 0) {
+    else if (location_name.compare("at_as2") == 0) {
         ROS_INFO("Moving to at_as2"); 
         location = at_as2;
     }
 
-    else if (location_name.compare("as4") == 0) {
+    else if (location_name.compare("at_as4") == 0) {
         ROS_INFO("Moving to at_as4"); 
         location = at_as4;
     }
     
-    else if (location_name.compare("agv2_at_as2") == 0) {
+    else if (location_name.compare("as2_2") == 0) {
         ROS_INFO("Moving to agv2_at_as2"); 
         location = at_agv2_at_as2;
     }
 
-    else if (location_name.compare("agv4_at_as4") == 0) {
+    else if (location_name.compare("as4_4") == 0) {
         ROS_INFO("Moving to agv4_at_as4"); 
         location = at_agv4_at_as4;
     }
 
-    else if (location_name.compare("agv3_at_as3") == 0) {
+    else if (location_name.compare("as3_3") == 0) {
         ROS_INFO("Moving to agv3_at_as3"); 
         location = at_agv3_at_as3;
     }
-    else if (location_name.compare("agv3_at_as4") == 0) {
+    else if (location_name.compare("as4_3") == 0) {
         ROS_INFO("Moving to agv3_at_as4"); 
         location = at_agv3_at_as4;
     }
-    else if (location_name.compare("agv1_at_as1") == 0) {
+    else if (location_name.compare("as1_1") == 0) {
         ROS_INFO("Moving to agv1_at_as1"); 
         location = at_agv1_at_as1;
     }
-    else if (location_name.compare("agv1_at_as2") == 0) {
+    else if (location_name.compare("as2_1") == 0) {
         ROS_INFO("Moving to agv1_at_as2"); 
         location = at_agv1_at_as2;
     }
@@ -859,7 +866,7 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
         y_margin = -0.25;
     }
     double z_margin = 0.1;
-
+    double x_margin = 0.7;
     // else if (part_type.find("regulator") != std::string::npos) {
       // z_margin = 0.11; 
     // }
@@ -869,7 +876,7 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     target_pose_in_world.orientation.y = q_rslt.y();
     target_pose_in_world.orientation.z = q_rslt.z();
     target_pose_in_world.orientation.w = q_rslt.w();
-
+    target_pose_in_world.position.x += x_margin;
     target_pose_in_world.position.y += y_margin;
     target_pose_in_world.position.z += z_margin;
 
@@ -878,11 +885,19 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
 
     if (part_type.find("battery") != std::string::npos) {
         ROS_INFO("move for battery"); 
-        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) - 0.7; 
         six.gantry_torso.at(1) = m_current_joint_states.position.at(10) - 0.25; 
         six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
         m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
         m_torso_gantry_group.move(); 
+    }
+    else{
+      six.gantry_torso.at(0) = m_current_joint_states.position.at(7) - 0.7; 
+      six.gantry_torso.at(1) = m_current_joint_states.position.at(10) ; 
+      six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+      m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+      m_torso_gantry_group.move(); 
+
     }
 
     ros::Duration(1.0).sleep();
@@ -890,13 +905,22 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
 
     if (part_type.find("battery") != std::string::npos) {
         ROS_INFO("move for battery"); 
-        six.gantry_torso.at(0) = m_current_joint_states.position.at(7); 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) + 0.7; 
         six.gantry_torso.at(1) = m_current_joint_states.position.at(10) + 0.25; 
         six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
         m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
         m_torso_gantry_group.move(); 
         m_gantry_group.setJointValueTarget(six.gantry_arm); 
         m_gantry_group.move(); 
+    }
+    else{
+      six.gantry_torso.at(0) = m_current_joint_states.position.at(7) + 0.7; 
+      six.gantry_torso.at(1) = m_current_joint_states.position.at(10) ; 
+      six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
+      m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+      m_torso_gantry_group.move(); 
+      m_gantry_group.setJointValueTarget(six.gantry_arm); 
+      m_gantry_group.move();
     }
 
     m_gantry_group.setMaxVelocityScalingFactor(1.0);
@@ -1243,6 +1267,19 @@ void GantryArm::plan()
   std::sort(m_part_task_queue.begin(), m_part_task_queue.end()); 
 }
 
+void GantryArm::goToHome(std::string station)
+{
+  if((station == "as1" || station == "as3") && gantry_cloc != "five")
+  {
+    this->goToPresetLocation("five");
+
+  }
+  if((station == "as2" || station == "as4" ) && gantry_cloc != "eight")
+  {
+    this->goToPresetLocation("eight");
+  }
+}
+
 void GantryArm::execute()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
@@ -1288,6 +1325,11 @@ void GantryArm::execute()
 
   Utility::print_part_pose(target_part); 
 
+  if(isNewShipment == true)
+  {
+    goToHome(part_task.station_id.c_str());
+    isNewShipment = false;
+  }
   this->goToPresetLocation(camera_id); 
 
   ros::Duration(0.5).sleep(); 
@@ -1306,10 +1348,14 @@ void GantryArm::execute()
   ros::Duration(0.5).sleep(); 
 
   this->goToPresetLocation("at_" + part_task.station_id); 
+  ros::Duration(0.5).sleep(); 
   m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
 
   if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
     this->submit_shipment(part_task.shipment_type, part_task.station_id); 
+    ros::Duration(0.5).sleep();
+    goToHome(part_task.station_id);
+    isNewShipment =true;
   }
 
   m_part_task_queue.pop_back();

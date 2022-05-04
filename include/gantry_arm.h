@@ -42,6 +42,11 @@ struct ArmPresetLocation {
 class GantryArm {
   public: 
     GantryArm();
+    
+    bool isNewShipment;
+    bool atHome1;
+    bool atHome2;
+    std::string gantry_cloc;
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
     bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
@@ -59,6 +64,7 @@ class GantryArm {
     // Send command message to robot controller
     bool sendJointPosition(trajectory_msgs::JointTrajectory command_msg);
     void goToPresetLocation(std::string location_name);
+    void goToHome(std::string station);
 
     bool move_arm_group(); 
     void moveBaseTo(double linear_arm_actuator_joint_position);
