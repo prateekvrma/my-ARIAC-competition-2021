@@ -1,4 +1,6 @@
 #include "assembly_shipments.h"
+#include "constants.h"
+
 
 #include <ariac_group1/GetShipmentPriority.h>
 
@@ -62,18 +64,31 @@ void AssemblyShipments::update_part_task_queue(std::vector<std::tuple<int, std::
         part_task.part = product;  
         part_task.total_parts = shipments_record[id]->shipment->products.size(); 
         part_task.station_id = shipments_record[id]->shipment->station_id; 
-        if (part_task.station_id == "as3" or
-            part_task.station_id == "as4") {
-            part_task.agv_id = "agv4"; 
-        }
-        else {
-            part_task.agv_id = "agv2"; 
+        // if (part_task.station_id == "as3" or
+        //     part_task.station_id == "as4") {
+        //     part_task.agv_id = "agv3"; 
+        // }
+        // else {
+        //     part_task.agv_id = "agv1"; 
+        // }
+
+        part_task.priority = shipments_record[id]->priority * Constants::PriorityWeight::Priority::order; 
+
+        if(part_task.part.type == "assembly_pump_blue" || part_task.part.type == "assembly_pump_red" ||part_task.part.type == "assembly_pump_green" ){
+          part_task.priority += Constants::PriorityWeight::Priority::pump;
         }
 
-        part_task.priority = shipments_record[id]->priority; 
-
-        if (part_task.agv_id == "agv4") {
-            part_task.priority++; 
+        if (part_task.station_id == "as1") {
+            part_task.priority += Constants::PriorityWeight::Priority::as1 ; 
+        }
+        else if (part_task.station_id == "as2") {
+            part_task.priority += Constants::PriorityWeight::Priority::as2 ; 
+        }
+        else if (part_task.station_id == "as3") {
+            part_task.priority += Constants::PriorityWeight::Priority::as3 ; 
+        }
+        else if (part_task.station_id == "as4") {
+            part_task.priority += Constants::PriorityWeight::Priority::as4 ; 
         }
 
         // if (this->is_part_task_done(part_task)) {
