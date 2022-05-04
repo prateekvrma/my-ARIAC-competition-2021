@@ -346,7 +346,7 @@ void GantryArm::arm_controller_state_callback(const control_msgs::JointTrajector
 {
     m_gantry_controller_state = *msg;
 }
-pickgear::VacuumGripperState::ConstPtr& gripper_state_msg)
+void GantryArm::gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg)
 {
     m_gripper_state = *gripper_state_msg;
 }
@@ -783,7 +783,7 @@ bool GantryArm::pickPart(std::string part_type,
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.085;
+        z_pos = 0.083;
     }
     if (part_type.find("battery") != std::string::npos) {
         z_pos = 0.052;
