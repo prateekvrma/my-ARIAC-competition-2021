@@ -234,13 +234,13 @@ GantryArm::GantryArm():
   at_agv4.name = "at_agv4";
 
   // at AS3
-  at_as3.gantry_torso = { -3.7 , -2.8 + 6.063705, 1.57 };
+  at_as3.gantry_torso = { -3.0 , -2.8 + 6.063705, 1.57 };
   at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_as3.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as3.name = "at_as3";
 
   // at AS4
-  at_as4.gantry_torso = { -8.7 , -2.8 + 6.063705, 1.57 };
+  at_as4.gantry_torso = { -8.0 , -2.8 + 6.063705, 1.57 };
   at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83  };
   at_as4.gantry_full = { -8.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as4.name = "at_as4";
@@ -296,7 +296,7 @@ GantryArm::GantryArm():
 
 
   // at as1
-  at_as1.gantry_torso = { -3.7 , -2.8, 1.57 };
+  at_as1.gantry_torso = { -3.0 , -2.8, 1.57 };
   at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83  };
   at_as1.gantry_full = { -3.7 , -2.8, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_as1.name = "at_as1";
