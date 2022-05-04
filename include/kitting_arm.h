@@ -56,8 +56,9 @@ class KittingArm {
     void go_to_preset_location(std::string location_name);
     void move_base_to(double linear_arm_actuator_joint_position);
     void reset_arm(); 
-    bool move_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
+    bool move_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task, bool from_back_row_bins=false); 
     bool pick_part(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id, bool flip=false);
+    bool pick_part_from_back_row(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
     geometry_msgs::Pose place_part(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv, bool flip=false);
     bool discard_faulty(const nist_gear::Model& faulty_part, std::string agv_id); 
     bool flip_part(const ariac_group1::PartTask& part_task); 
@@ -94,9 +95,9 @@ class KittingArm {
     nist_gear::VacuumGripperState get_gripper_state();
 
     // auxiliary functions
-    bool move_target_pose(const geometry_msgs::Pose& pose); 
+    bool move_target_pose(const geometry_msgs::Pose& pose, bool from_back_row_bins=false); 
     bool check_faulty(const nist_gear::Model& faulty_part); 
-    void set_pick_constraints(); 
+    void set_pick_constraints(bool from_back_row_bins=false); 
 
     // utils
     void print_joint_group_positions();  

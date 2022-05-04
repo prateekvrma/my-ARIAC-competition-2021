@@ -819,6 +819,17 @@ namespace Utility
 
           return pose; 
       }
+      bool is_back_row_bins(const std::string& bin) 
+      {
+          std::vector<std::string> back_row_bins = {"bin3", "bin4", "bin7", "bin8"}; 
+          for(auto& back_row_bin: back_row_bins) {
+              if (bin == back_row_bin) {
+                  return true; 
+              }
+          }
+
+          return false; 
+      }
   }
   
 }

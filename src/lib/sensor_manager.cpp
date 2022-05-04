@@ -17,6 +17,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_get_belt_part_service = m_nh.advertiseService("/sensor_manager/get_belt_part", &SensorManager::get_belt_part, this); 
   m_get_belt_proximity_sensor_service = m_nh.advertiseService("/sensor_manager/get_belt_proximity_sensor", &SensorManager::get_belt_proximity_sensor, this); 
   m_parts_under_camera_service = m_nh.advertiseService("/sensor_manager/parts_under_camera", &SensorManager::parts_under_camera, this); 
+  m_get_empty_kitting_agv_service = m_nh.advertiseService("/sensor_manager/get_empty_kitting_agv", &SensorManager::get_empty_kitting_agv, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -161,14 +162,43 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
 
   std::vector<std::string> kitting_arm_areas = {"bin1", "bin2", "bin5", "bin6",
                                                 "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> gantry_arm_areas = {"bin3", "bin4", "bin7", "bin8",
+                                                "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> all_areas = {"bin1", "bin2", "bin5", "bin6",
+                                        "bin3", "bin4", "bin7", "bin8",
+                                        "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> working_areas; 
+
+  if (req.client == "kitting_arm") {
+    // working_areas = kitting_arm_areas; 
+    working_areas = all_areas; 
+  }
+  else if (req.client == "gantry_arm") {
+    working_areas = gantry_arm_areas; 
+  }
+  else if (req.client == "factory_manager") {
+    working_areas = all_areas; 
+  }
    
   for (auto& part_info_ptr: m_parts_database[req.type]) {
     if (part_info_ptr == nullptr) {
         continue; 
     }
     auto part_loc = Utility::location::get_pose_location(part_info_ptr->part.pose); 
-    for (auto& loc: kitting_arm_areas) {
+    for (auto& loc: working_areas) {
         if (part_loc == loc) {
+            if (req.client == "kitting_arm") {
+                if (Utility::location::is_back_row_bins(loc)) {
+                    if (Utility::location::get_pose_location_in_bin(part_info_ptr->part.pose, loc) < 2) {
+                        Utility::print_part_pose(part_info_ptr->part); 
+                        ROS_INFO("At %s back row", loc.c_str()); 
+                        break; 
+                    }
+                }
+            }
             res.parts_info.push_back(*part_info_ptr); 
             Utility::print_part_pose(part_info_ptr->part); 
             break; 
@@ -558,4 +588,23 @@ bool SensorManager::parts_under_camera(ariac_group1::PartsUnderCamera::Request &
       ROS_INFO("No camera: %s", req.camera_id.c_str()); 
       return false; 
     }
+}
+
+bool SensorManager::get_empty_kitting_agv(ariac_group1::GetEmptyKittingAGV::Request &req,
+                                          ariac_group1::GetEmptyKittingAGV::Response &res)
+{
+    if (m_sensors_blackout) {
+      return false; 
+    }
+
+    std::vector<std::string> cameras = {"ks1", "ks2", "ks3", "ks4"}; 
+    std::vector<std::string> agvs = {"agv1", "agv2", "agv3", "agv4"}; 
+
+    for (int i=0; i<agvs.size(); i++) {
+      if (m_logical_cameras_dict[cameras[i]]->parts_world_frame.empty()) {
+          res.agvs.push_back(agvs[i]); 
+      }
+    }
+
+    return true; 
 }

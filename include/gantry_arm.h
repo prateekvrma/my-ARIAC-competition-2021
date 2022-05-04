@@ -47,6 +47,7 @@ class GantryArm {
     bool atHome1;
     bool atHome2;
     std::string gantry_cloc;
+    std::string getAgvAtStation(std::string station);
 
     bool movePart(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
     bool pickPart(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);

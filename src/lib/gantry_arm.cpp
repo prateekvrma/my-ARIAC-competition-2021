@@ -1280,6 +1280,30 @@ void GantryArm::goToHome(std::string station)
   }
 }
 
+std::string GantryArm::getAgvAtStation(std::string station)
+{
+  std::string st = "NULL";
+  if(m_agvs_dict["agv1"]->get_station() == station)
+  {
+    st = "agv1";
+  }
+  if(m_agvs_dict["agv2"]->get_station() == station)
+  {
+    st = "agv2";
+  }
+  if(m_agvs_dict["agv3"]->get_station() == station)
+  {
+    st = "agv3";
+  }
+  if(m_agvs_dict["agv4"]->get_station() == station)
+  {
+    st = "agv4";
+  }
+  
+  return st;
+  
+}
+
 void GantryArm::execute()
 {
   const std::lock_guard<std::mutex> lock(*m_mutex_ptr); 
@@ -1289,7 +1313,7 @@ void GantryArm::execute()
   auto& part_task_info = m_part_task_queue.back(); 
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
-  
+  part_task.agv_id = getAgvAtStation(part_task.station_id.c_str());
   ROS_INFO("Shipment: %s", part_task.shipment_type.c_str()); 
   ROS_INFO("Priority: %d", priority); 
   ROS_INFO("AGV: %s", part_task.agv_id.c_str()); 

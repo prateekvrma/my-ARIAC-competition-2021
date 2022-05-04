@@ -58,6 +58,7 @@ namespace Utility
     // conveyer belt
     int get_pose_location_in_bin(const geometry_msgs::Pose& pose, const std::string& bin_id);  
     geometry_msgs::Pose get_pose_from_bin_location(const std::string& bin_id, int i);  
+    bool is_back_row_bins(const std::string& bin); 
   }
 }
 
