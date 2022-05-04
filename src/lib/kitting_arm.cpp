@@ -1221,14 +1221,15 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has wrong type in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_WRONG_TYPE; 
       }
-      else if (result == "wrong_pose"){
-        ROS_INFO("Has wrong pose in shipment %s", part_task.shipment_type.c_str()); 
-        return ShipmentState::HAS_WRONG_POSE; 
-      }
       else if (result == "flip_part") {
         ROS_INFO("Has flip part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_FLIP_PART; 
       }
+      else if (result == "wrong_pose"){
+        ROS_INFO("Has wrong pose in shipment %s", part_task.shipment_type.c_str()); 
+        return ShipmentState::HAS_WRONG_POSE; 
+      }
+      
       else if (result == "missing_part" and missing_check) {
         // only check missing part if wrong type happens before
         missing_check = false; 
