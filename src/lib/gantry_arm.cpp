@@ -264,7 +264,7 @@ GantryArm::GantryArm():
   at_agv4_at_as4.name = "at_agv4_at_as4";
 
   // at agv3 at as4
-  at_agv3_at_as4.gantry_torso = { -7.72 , -1.26 + 2.7, 1.15 };
+  at_agv3_at_as4.gantry_torso = { -7.70 , -1.26 + 2.75, 1.15 };
   at_agv3_at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv3_at_as4.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv3_at_as4.name = "at_agv3_at_as4";
@@ -346,9 +346,7 @@ void GantryArm::arm_controller_state_callback(const control_msgs::JointTrajector
 {
     m_gantry_controller_state = *msg;
 }
-
-
-void GantryArm::gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg)
+pickgear::VacuumGripperState::ConstPtr& gripper_state_msg)
 {
     m_gripper_state = *gripper_state_msg;
 }
@@ -785,7 +783,7 @@ bool GantryArm::pickPart(std::string part_type,
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
-        z_pos = 0.083;
+        z_pos = 0.085;
     }
     if (part_type.find("battery") != std::string::npos) {
         z_pos = 0.052;
