@@ -432,7 +432,7 @@ void KittingArm::reset_arm()
     this->move_arm_group(); 
 }
 
-bool KittingArm::move_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task) {
+bool KittingArm::move_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task, bool from_back_row_bins) {
     auto part_init_pose_in_world = part_init_info.part.pose;
     auto camera_id = part_init_info.camera_id; 
     auto part_type = part_init_info.part.type; 
@@ -459,13 +459,26 @@ bool KittingArm::move_part(const ariac_group1::PartInfo& part_init_info, const a
 
     // use -0.3 to reduce awkward pick trajectory
     // go_to_preset_location(camera_id);
-    move_base_to(part_init_pose_in_world.position.y - 0.3);
+    if (Utility::location::get_pose_location(part_init_pose_in_world) == "bin6") {
+        move_base_to(part_init_pose_in_world.position.y - 0.5);
+    }
+    else {
+        move_base_to(part_init_pose_in_world.position.y - 0.3);
+    }
 
     if (this->check_emergency_interrupt()) {
         return false; 
     }
 
-    if (pick_part(part_type, part_init_pose_in_world, camera_id)) {
+    bool pick_from_bins_success = false;   
+    if (from_back_row_bins) {
+        pick_from_bins_success = pick_part_from_back_row(part_type, part_init_pose_in_world, camera_id); 
+    }
+    else {
+        pick_from_bins_success = pick_part(part_type, part_init_pose_in_world, camera_id); 
+    }
+
+    if (pick_from_bins_success) {
         auto target_pose_in_world = place_part(part_type, part_init_pose_in_world, target_pose_in_frame, target_agv);
         ros::Duration(1).sleep(); 
 
@@ -706,6 +719,10 @@ bool KittingArm::pick_part(std::string part_type,
       deactivate_gripper();
       return false; 
     }
+}
+
+bool KittingArm::pick_part_from_back_row(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id) {
+    return true; 
 }
 
 geometry_msgs::Pose KittingArm::place_part(std::string part_type, 
