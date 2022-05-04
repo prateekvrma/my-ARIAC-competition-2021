@@ -803,6 +803,11 @@ bool GantryArm::pickPart(std::string part_type,
         grasp_pose.position.z -= step;
         m_gantry_group.setPoseTarget(grasp_pose);
         m_gantry_group.move();
+        geometry_msgs::Pose arm_ee_link_pose = m_gantry_group.getCurrentPose().pose;
+        if (arm_ee_link_pose.position.z < 0.76) {
+          ROS_INFO("---End pick part: Arm moving lower then part, abort"); 
+          return true; 
+        }
         ros::Duration(0.3).sleep();
     }
     ROS_INFO("grasp success"); 
@@ -896,6 +901,7 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
 
     m_gantry_group.setPoseTarget(target_pose_in_world); 
     moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+    ROS_INFO("Start place planning"); 
     bool success = (m_gantry_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
     if (success){
       m_gantry_group.move();
@@ -910,8 +916,6 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
       }
       
       m_gantry_group.move();
-
-
     }
 
     if (part_type.find("battery") != std::string::npos) {
@@ -1365,17 +1369,38 @@ void GantryArm::execute()
 
   auto& parts = parts_under_camera_srv.response.parts; 
   ROS_INFO("Parts: %d", (int)parts.size()); 
-  if (parts.size() == 0 or 
-      m_agvs_dict[part_task.agv_id]->get_station() != part_task.station_id) {
+  if (parts.size() == 0) {
+    this->submit_shipment(part_task.shipment_type, part_task.station_id); 
+    ros::Duration(0.5).sleep();
+    goToHome(part_task.station_id);
+    isNewShipment =true;
+    m_part_task_queue.pop_back();
+    return; 
+  }
+  if (m_agvs_dict[part_task.agv_id]->get_station() != part_task.station_id) {
       return; 
   }
 
   nist_gear::Model target_part; 
+  bool found_part = false; 
   for (auto& part: parts) {
       if (part_task.part.type == part.type) {
         target_part = part;  
+        found_part = true; 
         break; 
       }
+  }
+
+  if (not found_part) {
+      m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks--; 
+      if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks == 0) {
+        this->submit_shipment(part_task.shipment_type, part_task.station_id); 
+        ros::Duration(0.5).sleep();
+        goToHome(part_task.station_id);
+        isNewShipment =true;
+      }
+      m_part_task_queue.pop_back();
+      return; 
   }
 
   Utility::print_part_pose(target_part); 
