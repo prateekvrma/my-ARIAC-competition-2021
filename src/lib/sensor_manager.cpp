@@ -161,13 +161,32 @@ bool SensorManager::get_parts(ariac_group1::GetParts::Request &req,
 
   std::vector<std::string> kitting_arm_areas = {"bin1", "bin2", "bin5", "bin6",
                                                 "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> gantry_arm_areas = {"bin3", "bin4", "bin7", "bin8",
+                                                "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> all_areas = {"bin1", "bin2", "bin5", "bin6",
+                                        "bin3", "bin4", "bin7", "bin8",
+                                        "ks1", "ks2", "ks3", "ks4"}; 
+
+  std::vector<std::string> working_areas; 
+
+  if (req.client == "kitting_arm") {
+    working_areas = kitting_arm_areas; 
+  }
+  else if (req.client == "gantry_arm") {
+    working_areas = gantry_arm_areas; 
+  }
+  else if (req.client == "factory_manager") {
+    working_areas = all_areas; 
+  }
    
   for (auto& part_info_ptr: m_parts_database[req.type]) {
     if (part_info_ptr == nullptr) {
         continue; 
     }
     auto part_loc = Utility::location::get_pose_location(part_info_ptr->part.pose); 
-    for (auto& loc: kitting_arm_areas) {
+    for (auto& loc: working_areas) {
         if (part_loc == loc) {
             res.parts_info.push_back(*part_info_ptr); 
             Utility::print_part_pose(part_info_ptr->part); 

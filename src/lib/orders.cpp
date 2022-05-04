@@ -166,6 +166,7 @@ bool Orders::check_order(const std::string& order_id)
 
     ariac_group1::GetParts get_parts_srv; 
     get_parts_srv.request.type = type; 
+    get_parts_srv.request.client = "factory_manager"; 
 
     if (client.call(get_parts_srv)) {
 

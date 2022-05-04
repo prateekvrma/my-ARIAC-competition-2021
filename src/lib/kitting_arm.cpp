@@ -278,6 +278,7 @@ void KittingArm::execute()
   //
   ariac_group1::GetParts get_parts_srv; 
   get_parts_srv.request.type = part_task.part.type; 
+  get_parts_srv.request.client = "kitting_arm"; 
 
   m_get_parts_client.call(get_parts_srv); 
 
