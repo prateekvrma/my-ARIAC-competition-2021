@@ -15,29 +15,26 @@ options:
   insert_models_over_stations: false
   enable_robot_camera: false
   belt_population_cycles: 10
-time_limit: -1
-
+  time_limit: -1
 
 agv_infos:
   agv1:
-    location: ks1
+    location: as2
+    products:
+      part_0:
+        type: assembly_battery_green
+        pose:
+          xyz: [0.1, 0.1, 0]
+          rpy: [0, 0, 0]
+      part_1:
+        type: assembly_pump_blue
+        pose:
+          xyz: [-0.1, -0.1, 0]
+          rpy: [pi, 0, pi/2]
   agv2:
-    location: as1
-    products:
-      part_0:
-        type: assembly_battery_green
-        pose:
-          xyz: [0.1, 0.1, 0]
-          rpy: [0, 0, 0]
-      part_1:
-        type: assembly_pump_blue
-        pose:
-          xyz: [-0.1, -0.1, 0]
-          rpy: [pi, 0, pi/2]
+    location: ks2
   agv3:
-    location: ks3
-  agv4:
-    location: as3    
+    location: as4
     products:
       part_0:
         type: assembly_battery_green
@@ -49,6 +46,9 @@ agv_infos:
         pose:
           xyz: [-0.1, -0.1, 0]
           rpy: [pi, 0, pi/2]
+  agv4:
+    location: ks4    
+    
    
 orders:
   order_0:
@@ -59,7 +59,7 @@ orders:
     announcement_condition_value: 0.0
     assembly:
       shipment_count: 2
-      stations: [as3, as1]
+      stations: [as4, as2]
       products:
         part_0:
           type: assembly_battery_green
