@@ -74,7 +74,7 @@ void AssemblyShipments::update_part_task_queue(std::vector<std::tuple<int, std::
 
         part_task.priority = shipments_record[id]->priority * Constants::PriorityWeight::Priority::order; 
 
-        if(part_task.part.type == "assembly_pump_blue" || part_task.part.type == "assembly_pump_red" ||part_task.part.type == "assembly_pump_green" ){
+        if(part_task.part.type == "assembly_battery_blue" || part_task.part.type == "assembly_battery_red" ||part_task.part.type == "assembly_battery_green" ){
           part_task.priority += Constants::PriorityWeight::Priority::pump;
         }
 

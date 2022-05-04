@@ -146,7 +146,7 @@ GantryArm::GantryArm():
   five.name = "five";
   // two
   two.gantry_torso ={ -1.50, 0, 0 };
-  two.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  two.gantry_arm = { -3.25 , -2.43 , 1 ,1.43 ,-1.679 ,0 };
   two.gantry_full = { -1.50, 0, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   two.name = "two";
   // eight
@@ -176,7 +176,7 @@ GantryArm::GantryArm():
   four.name = "four";
   // one
   one.gantry_torso ={ -1.50, 2.5, 0 };
-  one.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
+  one.gantry_arm = { -3.259 , -2.285 , 0.569 , 1.73 ,-1.7 ,-1.57 };
   one.gantry_full = { -1.50, 2.5, 0 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   one.name = "one";
   // seven
@@ -252,7 +252,7 @@ GantryArm::GantryArm():
   at_agv4_at_as3.name = "at_agv4_at_as3";
 
   // at agv3 at as3
-  at_agv3_at_as3.gantry_torso = { -2.72 , -1.26 + 2.7, 1.57 };
+  at_agv3_at_as3.gantry_torso = { -2.72 , -1.26 + 2.7, 1.15 };
   at_agv3_at_as3.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv3_at_as3.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv3_at_as3.name = "at_agv3_at_as3";
@@ -264,31 +264,31 @@ GantryArm::GantryArm():
   at_agv4_at_as4.name = "at_agv4_at_as4";
 
   // at agv3 at as4
-  at_agv3_at_as4.gantry_torso = { -7.72 , -1.26 + 2.7, 1.57 };
+  at_agv3_at_as4.gantry_torso = { -7.70 , -1.26 + 2.75, 1.15 };
   at_agv3_at_as4.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv3_at_as4.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv3_at_as4.name = "at_agv3_at_as4";
 
   // at agv2 at as1
-  at_agv2_at_as1.gantry_torso = { -2.72 , -1.26 , 1.57 };
+  at_agv2_at_as1.gantry_torso = { -2.72 , -1.26 , 1.15 };
   at_agv2_at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv2_at_as1.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv2_at_as1.name = "at_agv2_at_as1";
   
   // at agv2 at as2
-  at_agv2_at_as2.gantry_torso = { -7.72 , -1.26 , 1.57 };
+  at_agv2_at_as2.gantry_torso = { -7.72 , -1.26 , 1.15 };
   at_agv2_at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv2_at_as2.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv2_at_as2.name = "at_agv2_at_as2";
 
   // at agv1 at as1
-  at_agv1_at_as1.gantry_torso = { -2.72 , -1.26 - 3.36 , 1.57 };
+  at_agv1_at_as1.gantry_torso = { -2.72 , -1.26 - 3.36 , 1.15 };
   at_agv1_at_as1.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv1_at_as1.gantry_full = { -2.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv1_at_as1.name = "at_agv1_at_as1";
 
   // at agv1 at as2
-  at_agv1_at_as2.gantry_torso = { -7.72 , -1.26 - 3.36, 1.57 };
+  at_agv1_at_as2.gantry_torso = { -7.72 , -1.26 - 3.36, 1.15 };
   at_agv1_at_as2.gantry_arm = { 0 , -1.13 , 1.88 ,-0.72 ,1.55 ,0.83 };
   at_agv1_at_as2.gantry_full = { -7.72 , -1.26, 1.57 ,0 , -1.13 , 1.88 ,-0.72 ,1.55 ,2.4 };
   at_agv1_at_as2.name = "at_agv1_at_as2";
@@ -346,8 +346,6 @@ void GantryArm::arm_controller_state_callback(const control_msgs::JointTrajector
 {
     m_gantry_controller_state = *msg;
 }
-
-
 void GantryArm::gripper_state_callback(const nist_gear::VacuumGripperState::ConstPtr& gripper_state_msg)
 {
     m_gripper_state = *gripper_state_msg;
@@ -771,6 +769,17 @@ bool GantryArm::pickPart(std::string part_type,
     arm_ee_link_pose.position.x = part_init_pose.position.x; 
     arm_ee_link_pose.position.y = part_init_pose.position.y; 
 
+    // six.gantry_torso.at(0) = part_init_pose.position.x + 1.336 ; 
+    // ROS_INFO_STREAM(six.gantry_torso.at(0));
+    // six.gantry_torso.at(1) = part_init_pose.position.y + 4.45; 
+    // ROS_INFO_STREAM(six.gantry_torso.at(1));
+    // six.gantry_torso.at(2) = 1.15; 
+    // m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
+    // m_torso_gantry_group.move(); 
+    
+
+
+
     // preset z depending on the part type
     double z_pos{};
     if (part_type.find("pump") != std::string::npos) {
@@ -860,13 +869,18 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     // apply this rotation to the current gripper rotation
     tf2::Quaternion q_rslt = q_rot * q_current;
     q_rslt.normalize();
-
+    double x_margin{};
     double y_margin{};
+    double z_margin{};
     if (part_type.find("battery") != std::string::npos) {
         y_margin = -0.25;
+        z_margin = 0.1;
+        x_margin = 0.8;
     }
-    double z_margin = 0.1;
-    double x_margin = 0.7;
+    else{
+      z_margin = 0.1;
+      x_margin = 0.7;
+    }
     // else if (part_type.find("regulator") != std::string::npos) {
       // z_margin = 0.11; 
     // }
@@ -881,11 +895,28 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
     target_pose_in_world.position.z += z_margin;
 
     m_gantry_group.setPoseTarget(target_pose_in_world); 
-    m_gantry_group.move();
+    moveit::planning_interface::MoveGroupInterface::Plan my_plan;
+    bool success = (m_gantry_group.plan(my_plan) == moveit::planning_interface::MoveItErrorCode::SUCCESS);
+    if (success){
+      m_gantry_group.move();
+    }
+    else{
+      ROS_INFO("Path planning Failed, moving manually  ");
+      if(part_type.find("battery") != std::string::npos){
+        m_gantry_group.setJointValueTarget(one.gantry_arm);
+      }
+      else{
+        m_gantry_group.setJointValueTarget(two.gantry_arm);
+      }
+      
+      m_gantry_group.move();
+
+
+    }
 
     if (part_type.find("battery") != std::string::npos) {
         ROS_INFO("move for battery"); 
-        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) - 0.7; 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) - 0.8; 
         six.gantry_torso.at(1) = m_current_joint_states.position.at(10) - 0.25; 
         six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
         m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
@@ -905,7 +936,7 @@ geometry_msgs::Pose GantryArm::placePart(std::string part_type,
 
     if (part_type.find("battery") != std::string::npos) {
         ROS_INFO("move for battery"); 
-        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) + 0.7; 
+        six.gantry_torso.at(0) = m_current_joint_states.position.at(7) + 0.8; 
         six.gantry_torso.at(1) = m_current_joint_states.position.at(10) + 0.25; 
         six.gantry_torso.at(2) = m_current_joint_states.position.at(8); 
         m_torso_gantry_group.setJointValueTarget(six.gantry_torso); 
