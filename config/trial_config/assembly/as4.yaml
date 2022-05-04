@@ -59,7 +59,7 @@ orders:
     announcement_condition_value: 0.0
     assembly:
       shipment_count: 1
-      stations: [as2]
+      stations: [as4]
       products:
         part_0:
           type: assembly_battery_green

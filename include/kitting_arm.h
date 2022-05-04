@@ -57,7 +57,9 @@ class KittingArm {
     void move_base_to(double linear_arm_actuator_joint_position);
     void reset_arm(); 
     bool move_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
+    bool move_back_row_part(const ariac_group1::PartInfo& part_init_info, const ariac_group1::PartTask& part_task); 
     bool pick_part(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id, bool flip=false);
+    bool pick_back_row_part(std::string part_type, const geometry_msgs::Pose& part_init_pose, std::string camera_id);
     geometry_msgs::Pose place_part(std::string part_type, geometry_msgs::Pose part_init_pose, geometry_msgs::Pose part_goal_pose, std::string agv, bool flip=false);
     bool discard_faulty(const nist_gear::Model& faulty_part, std::string agv_id); 
     bool flip_part(const ariac_group1::PartTask& part_task); 

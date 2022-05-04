@@ -31,6 +31,7 @@
 #include <ariac_group1/GetBeltPart.h>
 #include <ariac_group1/GetBeltProximitySensor.h>
 #include <ariac_group1/PartsUnderCamera.h>
+#include <ariac_group1/GetEmptyKittingAGV.h>
 
 class SensorManager {
   public:
@@ -82,6 +83,9 @@ class SensorManager {
     bool parts_under_camera(ariac_group1::PartsUnderCamera::Request &req,
                             ariac_group1::PartsUnderCamera::Response &res); 
 
+    bool get_empty_kitting_agv(ariac_group1::GetEmptyKittingAGV::Request &req,
+                               ariac_group1::GetEmptyKittingAGV::Response &res); 
+
     // ros
     ros::NodeHandle m_nh; 
 
@@ -98,6 +102,7 @@ class SensorManager {
     ros::ServiceServer m_get_belt_part_service;
     ros::ServiceServer m_get_belt_proximity_sensor_service;
     ros::ServiceServer m_parts_under_camera_service; 
+    ros::ServiceServer m_get_empty_kitting_agv_service; 
 
     // sensors
     const std::vector<std::string> m_logical_cameras{// AGV parking spot at Assembly Station

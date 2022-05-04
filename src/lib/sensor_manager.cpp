@@ -17,6 +17,7 @@ SensorManager::SensorManager(ros::NodeHandle* nodehandle):
   m_get_belt_part_service = m_nh.advertiseService("/sensor_manager/get_belt_part", &SensorManager::get_belt_part, this); 
   m_get_belt_proximity_sensor_service = m_nh.advertiseService("/sensor_manager/get_belt_proximity_sensor", &SensorManager::get_belt_proximity_sensor, this); 
   m_parts_under_camera_service = m_nh.advertiseService("/sensor_manager/parts_under_camera", &SensorManager::parts_under_camera, this); 
+  m_get_empty_kitting_agv_service = m_nh.advertiseService("/sensor_manager/get_empty_kitting_agv", &SensorManager::get_empty_kitting_agv, this); 
 
   // All Logical cameras in the environment
   for (auto& camera_id: m_logical_cameras) {
@@ -577,4 +578,23 @@ bool SensorManager::parts_under_camera(ariac_group1::PartsUnderCamera::Request &
       ROS_INFO("No camera: %s", req.camera_id.c_str()); 
       return false; 
     }
+}
+
+bool SensorManager::get_empty_kitting_agv(ariac_group1::GetEmptyKittingAGV::Request &req,
+                                          ariac_group1::GetEmptyKittingAGV::Response &res)
+{
+    if (m_sensors_blackout) {
+      return false; 
+    }
+
+    std::vector<std::string> cameras = {"ks1", "ks2", "ks3", "ks4"}; 
+    std::vector<std::string> agvs = {"agv1", "agv2", "agv3", "agv4"}; 
+
+    for (int i=0; i<agvs.size(); i++) {
+      if (m_logical_cameras_dict[cameras[i]]->parts_world_frame.empty()) {
+          res.agvs.push_back(agvs[i]); 
+      }
+    }
+
+    return true; 
 }
