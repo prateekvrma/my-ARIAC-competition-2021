@@ -51,8 +51,8 @@ KittingArm::KittingArm():
   m_gripper_state_subscriber = 
       m_nh.subscribe("/ariac/kitting/arm/gripper/state", 10, &KittingArm::gripper_state_callback, this);
 
-  // m_part_task_subscriber =
-  //     m_nh.subscribe("/part_task", 10, &KittingArm::part_task_callback, this); 
+  // server
+  m_get_working_station_service = m_nh.advertiseService("/kitting_arm/get_working_station", &KittingArm::get_working_station, this); 
 
   // clients
   m_gripper_control_client =
@@ -252,6 +252,15 @@ void KittingArm::execute()
   auto& priority = std::get<0>(part_task_info); 
   auto& part_task = *std::get<1>(part_task_info); 
 
+  ROS_INFO("unfinished part task %d", m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks); 
+  // check if part_task has already been done, if so reduce unfinished_part_tasks
+  if (m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks > 0) {
+      // is_part_task_done will also decrease unfinished part task if done
+      if (m_shipments.is_part_task_done(part_task)) {
+        ROS_INFO("Part task %s at %s is already done !!", part_task.part.type.c_str(), part_task.agv_id.c_str()); 
+      }
+  }
+
   nist_gear::Model wrong_part; 
   auto shipment_state = this->check_shipment_state(part_task, wrong_part); 
   m_shipments.shipments_record[part_task.shipment_type]->state = shipment_state; 
@@ -301,6 +310,7 @@ void KittingArm::execute()
     ROS_INFO("Part location: "); 
     Utility::print_part_pose(part_init_info.part); 
 
+    m_working_station = part_task.agv_id; 
     bool success = this->move_part(part_init_info, part_task); 
     if (success) {
       ROS_INFO("Move part success"); 
@@ -1178,6 +1188,11 @@ void KittingArm::clear_part_task(ariac_group1::PartTask& part_task, int& priorit
 
 ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task, nist_gear::Model& wrong_part)
 {
+  if (m_shipments.check_redundant(part_task, wrong_part)) {
+      ROS_INFO("Has redundant part in shipment %s", part_task.shipment_type.c_str()); 
+      return ShipmentState::HAS_REDUNDANT; 
+  }
+
   static bool missing_check = false;  
 
   // Check if shipment is ready to submit
@@ -1185,6 +1200,17 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
     ariac_group1::CheckQualitySensor srv; 
     srv.request.agv_id = part_task.agv_id; 
     if (m_check_quality_sensor_client.call(srv)) {
+      if (srv.response.faulty_parts.empty()) {
+        ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
+      }
+      else { 
+        ROS_INFO("Has faulty in shipment %s", part_task.shipment_type.c_str()); 
+        //push faulty task back to queue
+        nist_gear::Model faulty_part = srv.response.faulty_parts[0]; 
+        part_task.part.type = faulty_part.type;  
+        part_task.part.pose = faulty_part.pose;  
+        return ShipmentState::HAS_FAULTY; 
+      }
 
       std::string result = m_shipments.check_shipment_parts(part_task, wrong_part); 
       if (result == "wrong_type") {
@@ -1208,23 +1234,14 @@ ShipmentState KittingArm::check_shipment_state(ariac_group1::PartTask& part_task
         ROS_INFO("Has missing part in shipment %s", part_task.shipment_type.c_str()); 
         return ShipmentState::HAS_MISSING_PART; 
       }
+      else if (result == "shipment_correct") {
+        ROS_INFO("Shipment %s correct", part_task.shipment_type.c_str()); 
+        return ShipmentState::READY; 
+      }
       //todo
       //else if (result == "redundant_part") {
       //   return ShipmentState::HAS_REDUNDANT_PART; 
       // }
-      
-      if (srv.response.faulty_parts.empty()) {
-        ROS_INFO("No faulty part in shipment %s", part_task.shipment_type.c_str()); 
-        return ShipmentState::READY; 
-      }
-      else { 
-        ROS_INFO("Has faulty in shipment %s", part_task.shipment_type.c_str()); 
-        //push faulty task back to queue
-        nist_gear::Model faulty_part = srv.response.faulty_parts[0]; 
-        part_task.part.type = faulty_part.type;  
-        part_task.part.pose = faulty_part.pose;  
-        return ShipmentState::HAS_FAULTY; 
-      }
     } 
     else {
       ROS_INFO("Sensor blackout, postpone shipment %s", part_task.shipment_type.c_str()); 
@@ -1250,6 +1267,7 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         break; 
       }
 
+    case ShipmentState::HAS_REDUNDANT: 
     case ShipmentState::HAS_WRONG_TYPE: 
       {
         ariac_group1::GetVacancyPose vacancy_pose_srv; 
@@ -1259,7 +1277,9 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
         if (vacancy_poses.empty()) {
           bool discard_success = this->discard_faulty(wrong_part, part_task.agv_id); 
           if (discard_success) {
-            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            if (shipment_state == ShipmentState::HAS_WRONG_TYPE) {
+              m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            }
           }
           return; 
         }
@@ -1268,7 +1288,9 @@ void KittingArm::process_shipment_state(ShipmentState shipment_state, ariac_grou
           camera_id += part_task.agv_id.back(); 
           if (pick_part(wrong_part.type, wrong_part.pose, camera_id)) {
             place_to_vacancy(vacancy_poses[0], false); 
-            m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            if (shipment_state == ShipmentState::HAS_WRONG_TYPE) {
+              m_shipments.shipments_record[part_task.shipment_type]->unfinished_part_tasks++; 
+            }
           }
         }
         break; 
@@ -1364,6 +1386,7 @@ bool KittingArm::check_emergency_interrupt()
     get_belt_part_available = range > 0 and not vacancy_poses.empty(); 
     if (get_belt_part_available) {
       ROS_INFO("Belt sensor triggered"); 
+      m_working_station = "belt"; 
       deactivate_gripper();
       ros::Duration(0.1).sleep(); 
       this->reset_arm(); 
@@ -1576,7 +1599,6 @@ void KittingArm::set_pick_constraints()
 
   constraints.joint_constraints.push_back(joint_constraint); 
 
-
   m_arm_group.setPathConstraints(constraints);
 
 }
@@ -1589,4 +1611,9 @@ void KittingArm::print_joint_group_positions() {
   }
 }
 
-
+bool KittingArm::get_working_station(ariac_group1::GetWorkingStation::Request &req,
+                                      ariac_group1::GetWorkingStation::Response &res)
+{
+    res.working_station = m_working_station; 
+    return true; 
+}

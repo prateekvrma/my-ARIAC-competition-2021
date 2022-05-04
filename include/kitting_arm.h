@@ -28,6 +28,8 @@
 #include <ariac_group1/PartTask.h>
 #include <ariac_group1/PartInfo.h>
 #include <ariac_group1/GetParts.h>
+#include <ariac_group1/GetWorkingStation.h>
+
 
 // custom library
 #include "utility.h"
@@ -99,6 +101,9 @@ class KittingArm {
     // utils
     void print_joint_group_positions();  
 
+    bool get_working_station(ariac_group1::GetWorkingStation::Request &req,
+                             ariac_group1::GetWorkingStation::Response &res); 
+
     // ros
     ros::NodeHandle m_nh;
 
@@ -120,6 +125,9 @@ class KittingArm {
     ros::Subscriber m_gripper_state_subscriber;
     ros::Subscriber m_arm_joint_states_subscriber;
     ros::Subscriber m_arm_controller_state_subscriber;
+
+    // ros service server
+    ros::ServiceServer m_get_working_station_service; 
 
     // ros service client
     ros::ServiceClient m_gripper_control_client;
@@ -149,6 +157,9 @@ class KittingArm {
     // Shipments and part tasks
     Shipments m_shipments; 
     std::vector<std::tuple<int, std::unique_ptr<ariac_group1::PartTask>>> m_part_task_queue; 
+
+    // current arm working station
+    std::string m_working_station = "home"; 
 
     std::unique_ptr<std::mutex> m_mutex_ptr = std::make_unique<std::mutex>(); 
 }; 

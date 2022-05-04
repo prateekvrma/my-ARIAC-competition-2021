@@ -1,0 +1,17 @@
+Gantry arm: 
+    get kitting order
+    get assembly order
+    update part task queue
+      if flip part increase priority
+    pick a part task (if kitting task) 
+    if a part task is done
+      remove from queue 
+      back to pick a part task
+    check which ks is kitting arm currently doing
+    if kitting arm is doing ks same as this part task
+      decrease its priority
+      back to sorting queue and pick a part task
+    else 
+      do the part task
+      if cannot do the part task, just place it on the agv. 
+

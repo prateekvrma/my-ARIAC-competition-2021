@@ -91,6 +91,7 @@ add_service_files(
   GetBeltPart.srv
   GetBeltProximitySensor.srv
   PartsUnderCamera.srv
+  GetWorkingStation.srv
 )
 
 
@@ -173,28 +174,6 @@ add_dependencies(sensor_manager_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(orders_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(shipments_lib ${catkin_EXPORTED_TARGETS})
 add_dependencies(factory_manager_lib ${catkin_EXPORTED_TARGETS})
-
-# add_executable(${PROJECT_NAME}_sensors_node src/nodes/sensors_node.cpp)
-# add_dependencies(${PROJECT_NAME}_sensors_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-# target_link_libraries(${PROJECT_NAME}_sensors_node
-#   sensors_lib
-#   ${catkin_LIBRARIES}
-# )
-
-add_executable(${PROJECT_NAME}_station_node src/nodes/station_node.cpp)
-add_dependencies(${PROJECT_NAME}_station_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${PROJECT_NAME}_station_node
-  station_lib
-  ${catkin_LIBRARIES}
-)
-
-# add_executable(${PROJECT_NAME}_rwa1_node src/nodes/rwa1.cpp)
-# add_dependencies(${PROJECT_NAME}_rwa1_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
-# target_link_libraries(${PROJECT_NAME}_rwa1_node
-#   factory_manager_lib
-#   ${catkin_LIBRARIES}
-# )
-
 
 add_executable(${PROJECT_NAME}_rwa2_node src/nodes/rwa2.cpp)
 add_dependencies(${PROJECT_NAME}_rwa2_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
