@@ -25,10 +25,10 @@ namespace Constants {
      namespace Priority{
 	const int order = 100;
 	const int pump = 1;
-	const int as1 = 10;
-	const int as2 = 20;
-	const int as3 = 30;
-	const int as4 = 40;
+	const int as1 = 40;
+	const int as2 = 30;
+	const int as3 = 20;
+	const int as4 = 10;
      }	
   }
 }

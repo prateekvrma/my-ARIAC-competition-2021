@@ -27,11 +27,11 @@ agv_infos:
         pose:
           xyz: [0.1, 0.1, 0]
           rpy: [0, 0, 0]
-      part_1:
-        type: assembly_pump_blue
-        pose:
-          xyz: [0.1, -0.1, 0]
-          rpy: [0, 0, pi/2]
+      # part_1:
+      #   type: assembly_pump_blue
+      #   pose:
+      #     xyz: [0.1, -0.1, 0]
+      #     rpy: [0, 0, pi/2]
   agv2:
     location: as1
     products:
@@ -91,8 +91,8 @@ orders:
     announcement_condition: agv_station_reached
     announcement_condition_value: agv4_at_as3
     assembly:
-      shipment_count: 3
-      stations: [as3, as1, as2]
+      shipment_count: 4
+      stations: [as3, as1, as2, as4]
       products:
         part_0:
           type: assembly_battery_green
